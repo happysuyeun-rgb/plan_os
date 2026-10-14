@@ -35,10 +35,6 @@ export function EditableInlineTitle({
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!editing) setDraft(value)
-  }, [value, editing])
-
-  useEffect(() => {
     if (editing) {
       const input = inputRef.current
       input?.focus()
