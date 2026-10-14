@@ -1,64 +1,37 @@
-# PlanOS 3.0 — Documentation & Progress Index
+# PlanOS 3.0 — 개발 문서 안내
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-14  
-**문서 버전:** v1.1  
-**진행 상태:** 초안  
+**문서 버전:** v1.2  
+**진행 상태:** 관리 중 (브랜치 초안, main 미병합)
 
+## 어디서 무엇을 확인하나요?
 
-Updated: 2026-10-14
-Repository: `happysuyeun-rgb/plan_os`
-**Status:** working drafts on feature branches; not merged to `main`.
-
-## Source of truth
-**전체 개발 현황과 완료/미완료의 기준 문서: [PROGRESS_STATUS.md](PROGRESS_STATUS.md)**
-
-| Document | Status | Purpose |
+| 목적 | 문서 | 내용 |
 |---|---|---|
-| [Progress status](PROGRESS_STATUS.md) | Active tracker | Full roadmap, done/pending/blocked, evidence and dates |
-| [Implementation plan](roadmap/IMPLEMENTATION_PLAN.md) | Draft complete | Phases, estimates, dependencies, acceptance gates |
-| [Development readiness](roadmap/DEVELOPMENT_READINESS.md) | Draft complete | Scope gates, missing decisions, work packages |
-| [Baseline audit](engineering/BASELINE_AUDIT.md) | Partial audit | Verified source findings and open checks |
-| Product PRD (`product/PRD.md`) | Not yet committed | Product vision, MVP and non-goals |
-| 30 task flows (`product/TASK_FLOWS.md`) | Not yet committed | Full user/system journeys |
-| UX IA (`ux/IA.md`) | Not yet committed | Screens, routes and navigation |
-| UX flows (`ux/UX_FLOWS.md`) | Not yet committed | Screen-by-screen actions and errors |
-| Engineering architecture (`engineering/ARCHITECTURE.md`) | Not yet committed | Workers, models, permissions and cost |
-| Data migration plan (`engineering/MIGRATION_PLAN.md`) | Not yet committed | Backward compatibility and rollback |
-| Test plan (`qa/TEST_PLAN.md`) | Not yet committed | Regression, security, E2E acceptance |
-| Release runbook (`operations/RELEASE_RUNBOOK.md`) | Not yet committed | Staging, deployment, rollback |
+| **지금 어디까지 진행됐나?** | [전체 진행 현황](PROGRESS_STATUS.md) | 완료/진행 중/미완료/보류, 증빙, 다음 작업 |
+| **앞으로 무엇을 언제 개발하나?** | [개발 실행계획](roadmap/IMPLEMENTATION_PLAN.md) | 8단계 일정, 선행 조건, 완료 기준, 핵심 기술 결정 |
+| **현재 코드에서 무엇이 확인됐나?** | [기술 감사](engineering/BASELINE_AUDIT.md) | 검증된 코드 현황, 위험 및 미검증 항목 |
 
-## GitHub work tracking
-- [PR #1 — docs readiness / baseline](https://github.com/happysuyeun-rgb/plan_os/pull/1) — Draft, documentation branch.
-- [PR #5 — CI baseline](https://github.com/happysuyeun-rgb/plan_os/pull/5) — Draft, separate CI branch; execution status not verified.
-- [Issue #2 — repository / migration / RLS audit](https://github.com/happysuyeun-rgb/plan_os/issues/2)
-- [Issue #3 — environments / CI / regression](https://github.com/happysuyeun-rgb/plan_os/issues/3)
-- [Issue #4 — execution engine / approvals / budget ADR](https://github.com/happysuyeun-rgb/plan_os/issues/4)
+**기준 문서:** 개발 상태는 `PROGRESS_STATUS.md`, 계획은 `IMPLEMENTATION_PLAN.md`에서만 관리한다. 이 인덱스에 중복 상태표를 작성하지 않는다.
 
-## Progress ledger
-| Stage | Status | Evidence / next action |
+## 관련 GitHub 작업
+- [PR #1 — 문서 정리 (Draft)](https://github.com/happysuyeun-rgb/plan_os/pull/1)
+- [PR #5 — CI 워크플로 (Draft)](https://github.com/happysuyeun-rgb/plan_os/pull/5)
+- [Issue #2 — DB/RLS 감사](https://github.com/happysuyeun-rgb/plan_os/issues/2)
+- [Issue #3 — 빌드/CI/회귀 검증](https://github.com/happysuyeun-rgb/plan_os/issues/3)
+- [Issue #4 — AI 실행 아키텍처](https://github.com/happysuyeun-rgb/plan_os/issues/4)
+
+## 문서 관리 원칙
+1. 모든 문서에 **최초 작성일, 실제 최종 수정일, 버전, 진행 상태**를 기록한다.
+2. 작업마다 [전체 진행 현황](PROGRESS_STATUS.md)을 갱신하고, 완료와 미완료를 구분한다.
+3. 브랜치 작성, PR 생성, CI 통과, main 병합, 운영 반영은 별개 상태다.
+4. 중복 문서는 내용을 대표 문서로 통합한 뒤 제거한다.
+5. 운영 비밀·고객 데이터는 GitHub에 기록하지 않는다.
+
+## 변경 이력
+| 날짜 | 버전 | 변경 내용 |
 |---|---|---|
-| Development readiness | Draft done | readiness document in PR #1 |
-| Phase 0: source baseline | In progress | selected files reviewed; enumerate full repository and all migrations |
-| Phase 0: DB/RLS | Pending | inspect every migration and effective policies; no DB writes |
-| Phase 0: build/lint | Pending verification | workflow proposed in PR #5; check actual CI |
-| Phase 1: PRD/flows/IA | Planned | commit full documents and traceability |
-| Phase 1: architecture ADR | Planned | issue #4 |
-| Phase 2+: implementation | Not started | only after audit and approval gates |
-
-## Reporting conventions
-- Always consult and update [the full progress tracker](PROGRESS_STATUS.md) when changing a development task.
-- Every document includes original creation date, actual last modified date, version and status.
-- Distinguish branch commit, PR opened, checks passed, merge and production deployment.
-
-- **Done:** committed artifact or passing test with link and date.
-- **In progress:** active, unfinished work with next action.
-- **Planned:** not started; never describe as implemented.
-- Update this index whenever an issue, document, PR, or phase changes.
-- Keep operational secrets, credentials, user data, and billing details out of GitHub.
-
-## Immediate next actions
-1. Complete migration/RLS audit and file inventory (Issue #2).
-2. Verify CI results and add test baseline (Issue #3).
-3. Commit complete PRD, 30 flows, UX IA/flows with traceability.
-4. Architecture ADR for server workers and safe AI execution (Issue #4).
+| 2026-10-14 | v1.0 | 문서 인덱스 최초 작성 |
+| 2026-10-14 | v1.1 | 진행 현황 문서 연결 |
+| 2026-10-14 | v1.2 | 중복 현황표 제거, 개발 준비도 문서 실행계획에 통합 |
