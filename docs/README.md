@@ -13,7 +13,7 @@ Repository: `happysuyeun-rgb/plan_os`
 ## Source of truth
 | Document | Status | Purpose |
 |---|---|---|
-| [Development readiness](roadmap/DEVELOPMENT_READINESS.md) | Draft complete | Scope gates, missing decisions, work packages |
+| [Implementation plan](roadmap/IMPLEMENTATION_PLAN.md) | Draft complete | Phases, estimates, dependencies, acceptance gates |\n| [Development readiness](roadmap/DEVELOPMENT_READINESS.md) | Draft complete | Scope gates, missing decisions, work packages |
 | [Baseline audit](engineering/BASELINE_AUDIT.md) | Partial audit | Verified source findings and open checks |
 | Product PRD (`product/PRD.md`) | Not yet committed | Product vision, MVP and non-goals |
 | 30 task flows (`product/TASK_FLOWS.md`) | Not yet committed | Full user/system journeys |
