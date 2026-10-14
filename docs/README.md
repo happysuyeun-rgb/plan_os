@@ -1,5 +1,11 @@
 # PlanOS 3.0 — Documentation & Progress Index
 
+**최초 작성일:** 2026-10-14  
+**최종 수정일:** 2026-10-14  
+**문서 버전:** v1.0  
+**진행 상태:** 초안  
+
+
 Updated: 2026-10-14
 Repository: `happysuyeun-rgb/plan_os`
 **Status:** working drafts on feature branches; not merged to `main`.
