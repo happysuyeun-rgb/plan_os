@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-14  
-**문서 버전:** v1.2  
+**문서 버전:** v1.3  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -56,9 +56,16 @@
 ## 변경 이력
 | 날짜 | 버전 | 내용 | 근거 |
 |---|---|---|---|
-| 2026-10-14 | v1.0 | 전체 로드맵, 완료/미완료 상태, 증빙·보고 규칙 최초 작성 | PR #1, PR #5, Issues #2–4 |\n| 2026-10-14 | v1.1 | 중복 준비도 문서를 실행계획에 통합·삭제, 문서 인덱스 간소화 | PR #1 |\n| 2026-10-14 | v1.2 | 저장소 전체 목록 확인 및 CI 실패 원인 기록 | CI run 38517379376 |
+| 2026-10-14 | v1.0 | 전체 로드맵, 완료/미완료 상태, 증빙·보고 규칙 최초 작성 | PR #1, PR #5, Issues #2–4 |\n| 2026-10-14 | v1.1 | 중복 준비도 문서를 실행계획에 통합·삭제, 문서 인덱스 간소화 | PR #1 |\n| 2026-10-14 | v1.2 | 저장소 전체 목록 확인 및 CI 실패 원인 기록 | CI run 38517379376 |\n| 2026-10-14 | v1.3 | 완료 후 후속 실행 규칙 및 린트 수정 Issue #6 추가 | Issue #6 |
+
+## 연속 실행 원칙
+- 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
+- 권한과 도구가 허용하고 운영 위험이 없는 후속 작업은 추가 지시를 기다리지 않고 이어서 수행한다. 실제 도구 호출 없이 백그라운드 진행을 주장하지 않는다.
+- 운영 DB/배포/결제/PR 병합 등 영향 큰 변경은 별도 승인 이후에만 진행한다.
+- 현재 다음 작업: [Issue #6 — ESLint 수정 및 CI 재검증](https://github.com/happysuyeun-rgb/plan_os/issues/6).
 
 ## 바로 다음 작업
-1. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): 전체 마이그레이션·RLS 전수 감사.
-2. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 실제 결과 및 회귀 기준선.
-3. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
+1. [Issue #6](https://github.com/happysuyeun-rgb/plan_os/issues/6): ESLint 13 errors/3 warnings 수정 및 CI 재검증.
+2. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): 전체 마이그레이션·RLS 전수 감사.
+3. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 실제 결과 및 회귀 기준선.
+4. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
