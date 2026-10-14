@@ -1,5 +1,11 @@
 # Phase 0 — Repository Baseline Audit (in progress)
 
+**최초 작성일:** 2026-10-14  
+**최종 수정일:** 2026-10-14  
+**문서 버전:** v1.0  
+**진행 상태:** 진행 중  
+
+
 Date: 2026-10-14
 Source: GitHub default branch file reads. This is **not** a complete repository tree or deployed database audit.
 
