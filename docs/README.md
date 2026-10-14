@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-14  
-**문서 버전:** v1.0  
+**문서 버전:** v1.1  
 **진행 상태:** 초안  
 
 
@@ -11,9 +11,13 @@ Repository: `happysuyeun-rgb/plan_os`
 **Status:** working drafts on feature branches; not merged to `main`.
 
 ## Source of truth
+**전체 개발 현황과 완료/미완료의 기준 문서: [PROGRESS_STATUS.md](PROGRESS_STATUS.md)**
+
 | Document | Status | Purpose |
 |---|---|---|
-| [Implementation plan](roadmap/IMPLEMENTATION_PLAN.md) | Draft complete | Phases, estimates, dependencies, acceptance gates |\n| [Development readiness](roadmap/DEVELOPMENT_READINESS.md) | Draft complete | Scope gates, missing decisions, work packages |
+| [Progress status](PROGRESS_STATUS.md) | Active tracker | Full roadmap, done/pending/blocked, evidence and dates |
+| [Implementation plan](roadmap/IMPLEMENTATION_PLAN.md) | Draft complete | Phases, estimates, dependencies, acceptance gates |
+| [Development readiness](roadmap/DEVELOPMENT_READINESS.md) | Draft complete | Scope gates, missing decisions, work packages |
 | [Baseline audit](engineering/BASELINE_AUDIT.md) | Partial audit | Verified source findings and open checks |
 | Product PRD (`product/PRD.md`) | Not yet committed | Product vision, MVP and non-goals |
 | 30 task flows (`product/TASK_FLOWS.md`) | Not yet committed | Full user/system journeys |
@@ -43,6 +47,10 @@ Repository: `happysuyeun-rgb/plan_os`
 | Phase 2+: implementation | Not started | only after audit and approval gates |
 
 ## Reporting conventions
+- Always consult and update [the full progress tracker](PROGRESS_STATUS.md) when changing a development task.
+- Every document includes original creation date, actual last modified date, version and status.
+- Distinguish branch commit, PR opened, checks passed, merge and production deployment.
+
 - **Done:** committed artifact or passing test with link and date.
 - **In progress:** active, unfinished work with next action.
 - **Planned:** not started; never describe as implemented.
