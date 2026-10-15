@@ -1,8 +1,8 @@
 # PlanOS 3.0 — 전체 개발 진행 현황
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-14  
-**문서 버전:** v1.6  
+**최종 수정일:** 2026-10-15  
+**문서 버전:** v1.7  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -10,8 +10,8 @@
 ## 전체 로드맵
 | 단계 | 진행 상태 | 완료한 것 | 미완료·다음 확인 |
 |---|---|---|---|
-| 0. 기술 기준선 | **진행 중** | 일부 코드 감사, 감사 문서 초안, CI 워크플로 PR | 212개 저장소 항목 목록 확인, 8개 SQL 정적 검토 완료, 운영 적용 상태·RLS 재현 테스트 미완료, 배포 환경 |
-| 1. 기획·아키텍처 | **미착수** | 통합 실행계획 초안 | PRD, 30 TF, IA/UX, ADR, API/DB/보안 문서 |
+| 0. 기술 기준선 | **진행 중** | 저장소 212개 항목 목록 확인, SQL 8개 정적 감사, CI 실행·실패 원인 확인, 린트 부분 수정 PR #8 | lint/build CI 재검증, 운영 DB 적용 상태, RLS 재현/개선, 배포 환경·회귀 검증 |
+| 1. 기획·아키텍처 | **미착수** | 사전 실행계획 초안 작성(Phase 1 산출물은 아님) | PRD, 30 TF, IA/UX, ModelGateway/워커/권한/비용 ADR, API/DB/보안 설계 |
 | 2. 프로젝트·업무 기반 | **미착수** | 없음 | 업무 상태/CRUD/워크스페이스/호환성 |
 | 3. 통제된 AI 실행 | **미착수** | 없음 | 서버 모델, 큐/워커, 승인, 예산, 복구 |
 | 4. AI PM 통합 | **미착수** | 없음 | 계획→위임→실행→검증→브리핑 |
@@ -29,6 +29,9 @@
 | 감사 | DB/RLS 정적 감사 | **SQL 8개 검토 완료 / 실제 권한 검증 미완료** | [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2) |
 | 품질 | 빌드/테스트/배포 환경 검증 | **미완료** | [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3) |
 | 설계 | 서버 AI 실행/승인/비용 ADR | **미완료** | [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4) |
+| 코드 | 린트 수정 PR #8 | **부분 수정 / CI 통과 미확인** | [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8) |
+| 보안 | RLS 위험 재현·수정 | **정적 위험 발견 / DB 재현 미완료** | [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7) |
+| 모델 | FreeLLMAPI 검토 | **외부 문서 검토 완료 / 설치·성능 시험 미착수** | [실행계획](roadmap/IMPLEMENTATION_PLAN.md) |
 
 ## 상태 정의
 - **완료:** 정의된 수용 기준과 검증을 통과했고 증빙 링크가 있음.
@@ -48,18 +51,25 @@
 7. 작업 보고 시 항상 **전체 계획 / 이번에 완료 / 아직 미완료 / 다음 순서 / 검증·위험**을 포함한다.
 8. GitHub 작업에 대한 완료 보고 전에 이 현황표와 문서 인덱스를 같은 브랜치에서 갱신한다.
 
-## 이번 점검 결과 (2026-10-14)
-- PR #8 추가 수정: `src/lib/api/projects.ts`의 미사용 바인딩 제거 및 복원 요청 사용자 범위 제한. **CI 미실행/미검증, 복원 동작 회귀 확인 필요**.
-- [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8) 생성: React 린트 문제 2개 파일 1차 수정, **전체 린트 통과 여부 미검증**. Issue #6 진행 중.
-- SQL 마이그레이션 8개 원문 모두 검토. RLS 재귀 및 댓글/반응 행 소유권 문제 가능성 발견. **실제 DB 재현 전 확정하지 않음**. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7) 생성.
-- 저장소 tree **212개 항목** 및 SQL 마이그레이션 **8개 파일명** 확인. 파일별 SQL·RLS 검토는 미완료.
-- [CI 실행 결과](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38517379376): 의존성 설치/빌드 **성공**, 린트 **13 errors / 3 warnings**로 실패.
-- 다음 작업: 린트 문제 원인별 수정·CI 재검증, 전체 SQL 정책 검토.
+## 최신 점검 결과 (2026-10-15)
+- **완료(정적 확인):** 저장소 212개 항목 목록 확인, SQL 마이그레이션 8개 원문 정적 검토, CI 실패 로그 분석, FreeLLMAPI 공개 문서·약관 주의사항 검토.
+- **진행 중:** [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8) 린트 부분 수정. **PR #8의 build/lint 성공 증빙 없음**. 프로젝트 복원 기능 변경은 회귀 검증 필요.
+- **미완료:** RLS 실제 권한 재현·개선, 운영 DB 적용 상태 읽기 전용 확인, 배포 설정/환경 분리, 전체 회귀 테스트, Phase 1 ADR.
+- **도입 보류:** FreeLLMAPI는 격리 개발 실험 후보. 고객용 운영 무료 API로 바로 연결하지 않음. 제품 개발의 필수 선행 조건도 아님.
+- **우선순위:** Issue #6 → Issue #7 → Issues #2/#3 마무리 → Issue #4 → Phase 1 진입 판단.
+- 상세 단계별 완료 조건은 [실행계획](roadmap/IMPLEMENTATION_PLAN.md), 위험 증빙은 [기술 감사](engineering/BASELINE_AUDIT.md) 참조.
 
 ## 변경 이력
 | 날짜 | 버전 | 내용 | 근거 |
 |---|---|---|---|
-| 2026-10-14 | v1.0 | 전체 로드맵, 완료/미완료 상태, 증빙·보고 규칙 최초 작성 | PR #1, PR #5, Issues #2–4 |\n| 2026-10-14 | v1.1 | 중복 준비도 문서를 실행계획에 통합·삭제, 문서 인덱스 간소화 | PR #1 |\n| 2026-10-14 | v1.2 | 저장소 전체 목록 확인 및 CI 실패 원인 기록 | CI run 38517379376 |\n| 2026-10-14 | v1.3 | 완료 후 후속 실행 규칙 및 린트 수정 Issue #6 추가 | Issue #6 |\n| 2026-10-14 | v1.4 | SQL 8개 정적 검토 및 보안 재현 작업 Issue #7 등록 | Issue #7 |\n| 2026-10-14 | v1.5 | 린트 1차 수정 PR #8 생성, 검증·잔여 오류 미완료 명시 | PR #8 |\n| 2026-10-14 | v1.6 | 프로젝트 API 린트 오류 수정 및 복원 회귀 검증 필요 기록 | PR #8 |
+| 2026-10-14 | v1.0 | 전체 로드맵, 완료/미완료 상태, 증빙·보고 규칙 최초 작성 | PR #1, PR #5, Issues #2–4 |
+| 2026-10-14 | v1.1 | 중복 준비도 문서를 실행계획에 통합·삭제, 문서 인덱스 간소화 | PR #1 |
+| 2026-10-14 | v1.2 | 저장소 전체 목록 확인 및 CI 실패 원인 기록 | CI run 38517379376 |
+| 2026-10-14 | v1.3 | 완료 후 후속 실행 규칙 및 린트 수정 Issue #6 추가 | Issue #6 |
+| 2026-10-14 | v1.4 | SQL 8개 정적 검토 및 보안 재현 작업 Issue #7 등록 | Issue #7 |
+| 2026-10-14 | v1.5 | 린트 1차 수정 PR #8 생성, 검증·잔여 오류 미완료 명시 | PR #8 |
+| 2026-10-14 | v1.6 | 프로젝트 API 린트 오류 수정 및 복원 회귀 검증 필요 기록 | PR #8 |
+| 2026-10-15 | v1.7 | 완료·미검증 상태 재정리, FreeLLMAPI 검토 반영, CI/RLS/ADR 우선순위 일치 | PR #8, Issues #6/#7 |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
@@ -69,7 +79,7 @@
 
 ## 바로 다음 작업
 1. [Issue #6](https://github.com/happysuyeun-rgb/plan_os/issues/6): ESLint 13 errors/3 warnings 수정 및 CI 재검증.
-2. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): 전체 마이그레이션·RLS 전수 감사.
-3. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 실제 결과 및 회귀 기준선.
-4. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 안전한 DB에서 RLS 재현 및 수정 PR.
+2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 안전한 DB에서 RLS 재현 및 수정 PR.
+3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): SQL 정적 감사 이후 실제 적용 상태 및 권한 검증 마무리.
+4. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 재검증 및 회귀 기준선.
 5. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
