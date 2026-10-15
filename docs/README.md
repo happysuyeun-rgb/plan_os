@@ -1,9 +1,9 @@
 # PlanOS 3.0 — 개발 문서 안내
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-14  
-**문서 버전:** v1.2  
-**진행 상태:** 관리 중 (브랜치 초안, main 미병합)
+**최종 수정일:** 2026-10-15  
+**문서 버전:** v1.3  
+**진행 상태:** 관리 중 (문서 브랜치 초안, main 미병합)
 
 ## 어디서 무엇을 확인하나요?
 
@@ -15,12 +15,19 @@
 
 **기준 문서:** 개발 상태는 `PROGRESS_STATUS.md`, 계획은 `IMPLEMENTATION_PLAN.md`에서만 관리한다. 이 인덱스에 중복 상태표를 작성하지 않는다.
 
+## 읽는 순서 및 주의
+1. 현재 완료·미완료·다음 실행은 [전체 진행 현황](PROGRESS_STATUS.md)에서 확인.
+2. Phase별 의존성과 FreeLLMAPI 검증·도입 조건은 [개발 실행계획](roadmap/IMPLEMENTATION_PLAN.md)에서 확인.
+3. 코드/SQL에서 실제로 확인된 내용과 **아직 재현하지 않은 위험 가설**은 [기술 감사](engineering/BASELINE_AUDIT.md)에서 확인.
+
 ## 관련 GitHub 작업
 - [PR #1 — 문서 정리 (Draft)](https://github.com/happysuyeun-rgb/plan_os/pull/1)
 - [PR #5 — CI 워크플로 (Draft)](https://github.com/happysuyeun-rgb/plan_os/pull/5)
 - [Issue #2 — DB/RLS 감사](https://github.com/happysuyeun-rgb/plan_os/issues/2)
 - [Issue #3 — 빌드/CI/회귀 검증](https://github.com/happysuyeun-rgb/plan_os/issues/3)
 - [Issue #4 — AI 실행 아키텍처](https://github.com/happysuyeun-rgb/plan_os/issues/4)
+- [Issue #6 — 린트 수정](https://github.com/happysuyeun-rgb/plan_os/issues/6) / [PR #8 — 부분 수정 중](https://github.com/happysuyeun-rgb/plan_os/pull/8)
+- [Issue #7 — RLS 재현·보안 검증](https://github.com/happysuyeun-rgb/plan_os/issues/7)
 
 ## 문서 관리 원칙
 1. 모든 문서에 **최초 작성일, 실제 최종 수정일, 버전, 진행 상태**를 기록한다.
@@ -35,3 +42,4 @@
 | 2026-10-14 | v1.0 | 문서 인덱스 최초 작성 |
 | 2026-10-14 | v1.1 | 진행 현황 문서 연결 |
 | 2026-10-14 | v1.2 | 중복 현황표 제거, 개발 준비도 문서 실행계획에 통합 |
+| 2026-10-15 | v1.3 | 3개 기준 문서의 읽는 순서·최신 Issue/PR·FreeLLMAPI 계획 위치 반영 |
