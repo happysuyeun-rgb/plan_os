@@ -181,7 +181,7 @@ export default function DocumentPage() {
     reset: resetComments,
   } = useCommentStore()
 
-  const [viewMode, setViewMode] = useState<'edit' | 'review'>('edit')
+  const [requestedViewMode, setRequestedViewMode] = useState<'edit' | 'review'>('edit')
   const [commentsOpen, setCommentsOpen] = useState(false)
 
   useEffect(() => {
@@ -225,6 +225,7 @@ export default function DocumentPage() {
   const targetUser = getTargetUser(currentProject)
   const canEditDocument = can('document.edit')
   const canComment = can('comment.view')
+  const viewMode = canEditDocument ? requestedViewMode : 'review'
   const editorReadOnly = isReadOnly || !canEditDocument
 
   const loadProject = useCallback(async () => {
@@ -249,10 +250,6 @@ export default function DocumentPage() {
   }, [projectId, fetchMembers])
 
   useEffect(() => {
-    if (!canEditDocument) setViewMode('review')
-  }, [canEditDocument])
-
-  useEffect(() => {
     if (!projectId || !canComment) return
     fetchCounts(projectId)
   }, [projectId, canComment, fetchCounts])
@@ -261,10 +258,6 @@ export default function DocumentPage() {
     if (!projectId || !activeDoc || !canComment) return
     fetchThreads(projectId, activeDoc.id)
   }, [projectId, activeDoc, canComment, commentFilter, commentSearch, fetchThreads])
-
-  useEffect(() => {
-    if (viewMode === 'review' && canComment) setCommentsOpen(true)
-  }, [viewMode, canComment])
 
   useEffect(() => {
     if (!projectId || isLoading) return
@@ -476,13 +469,14 @@ export default function DocumentPage() {
     if (mode === 'edit' && isCommentMode) {
       setCommentMode(false)
     }
-    setViewMode(mode)
+    setRequestedViewMode(mode)
+    if (mode === 'review' && canComment) setCommentsOpen(true)
   }
 
   const handleCommentModeToggle = () => {
     if (!can('comment.create')) return
     if (!isCommentMode) {
-      setViewMode('review')
+      setRequestedViewMode('review')
       setCommentsOpen(true)
     }
     setCommentMode(!isCommentMode)
