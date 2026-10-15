@@ -182,15 +182,12 @@ export default function DocumentPage() {
   } = useCommentStore()
 
   const [requestedViewMode, setRequestedViewMode] = useState<'edit' | 'review'>('edit')
-  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(() => searchParams.get('panel') === 'comments')
 
   useEffect(() => {
     const panel = searchParams.get('panel')
     const thread = searchParams.get('thread')
-    if (panel === 'comments') {
-      setCommentsOpen(true)
-      if (thread) setActiveThreadId(thread)
-    }
+    if (panel === 'comments' && thread) setActiveThreadId(thread)
   }, [searchParams, setActiveThreadId])
   const [showRegenerateModal, setShowRegenerateModal] = useState(false)
   const [showSaveVersionModal, setShowSaveVersionModal] = useState(false)
