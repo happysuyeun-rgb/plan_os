@@ -260,7 +260,7 @@ export default function DocumentPage() {
   useEffect(() => {
     if (!projectId || !activeDoc || !canComment) return
     fetchThreads(projectId, activeDoc.id)
-  }, [projectId, activeDoc?.id, canComment, commentFilter, commentSearch, fetchThreads])
+  }, [projectId, activeDoc, canComment, commentFilter, commentSearch, fetchThreads])
 
   useEffect(() => {
     if (viewMode === 'review' && canComment) setCommentsOpen(true)
@@ -301,7 +301,7 @@ export default function DocumentPage() {
       fetchVersions(activeDoc.id)
       fetchMessages(projectId!, activeDoc.id)
     }
-  }, [activeDoc?.id, projectId, fetchVersions, fetchMessages])
+  }, [activeDoc, projectId, fetchVersions, fetchMessages])
 
   useEffect(() => {
     if (activeVersionId) {
