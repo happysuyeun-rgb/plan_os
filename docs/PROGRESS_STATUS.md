@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-15  
-**문서 버전:** v1.9  
+**문서 버전:** v2.0  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -52,6 +52,9 @@
 8. GitHub 작업에 대한 완료 보고 전에 이 현황표와 문서 인덱스를 같은 브랜치에서 갱신한다.
 
 ## 최신 점검 결과 (2026-10-15)
+- **CI 실측:** PR #8의 워크플로 실행 38679535956에서 `npm ci`/`npm run build` 통과, lint 3 errors/3 warnings 실패(기존 13 errors/3 warnings에서 오류 10건 감소). 이후 추가 커밋의 성공 여부는 미확인.
+- **DocumentPage 수정:** read-only review mode를 파생 값으로 계산하고 리뷰 패널 열기는 사용자 이벤트로 이동; URL comments deep-link는 초기 state로 열도록 수정. `activeDoc` 의존성 경고 2건 수정. **URL이 동일 컴포넌트 내에서 변경되는 경우 댓글 패널 자동 열림 회귀 가능성** 및 버전 동기화 의존성 경고 1건 검증 필요.
+- **검증 중:** 최신 커밋 152e33968a90eea9e23dc58c63e4ba1beedc6dc4에 대한 CI 통과 증빙 없음.
 - **이번 추가 작업:** PR #8에 `ScreenListTable.tsx`, `WireframeSlideView.tsx`의 content 변경 감지 시 render-time 상태 조정 적용(효과 내 직접 setState 제거). `.github/workflows/baseline.yml`도 PR #8 브랜치에 추가. **브랜치 Actions 실행 기록 0건 확인 시점으로, build/lint 통과 증빙 없음.**
 - **검증 위험:** 비동기 저장 중 외부 content 갱신 시 입력 덮어쓰기 가능성, DocumentPage의 남은 lint errors/warnings, 모달 회귀를 테스트해야 함.
 - **추가 코드 변경:** PR #8에 `SaveVersionModal.tsx`, `RenameProjectModal.tsx`의 렌더 중 모달 마운트 기반 입력 상태 초기화 적용. React effect 동기화 오류 2건 수정 의도. **CI 재검증 전이므로 해결 확정 아님**.
@@ -76,6 +79,7 @@
 | 2026-10-15 | v1.7 | 완료·미검증 상태 재정리, FreeLLMAPI 검토 반영, CI/RLS/ADR 우선순위 일치 | PR #8, Issues #6/#7 |
 | 2026-10-15 | v1.8 | 모달 2종 effect 오류 수정 PR #8 추가, CI·회귀 검증 미완료 기록 | PR #8 |
 | 2026-10-15 | v1.9 | 화면 목록·와이어프레임 effect 수정, PR #8 CI 파일 추가 및 실행 미확인 기록 | PR #8 |
+| 2026-10-15 | v2.0 | 실제 CI 오류 3건 확인, DocumentPage 상태 갱신 수정, 남은 회귀 위험 기록 | PR #8, Actions #38679535956 |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
