@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-15  
-**문서 버전:** v1.8  
+**문서 버전:** v1.9  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -52,6 +52,8 @@
 8. GitHub 작업에 대한 완료 보고 전에 이 현황표와 문서 인덱스를 같은 브랜치에서 갱신한다.
 
 ## 최신 점검 결과 (2026-10-15)
+- **이번 추가 작업:** PR #8에 `ScreenListTable.tsx`, `WireframeSlideView.tsx`의 content 변경 감지 시 render-time 상태 조정 적용(효과 내 직접 setState 제거). `.github/workflows/baseline.yml`도 PR #8 브랜치에 추가. **브랜치 Actions 실행 기록 0건 확인 시점으로, build/lint 통과 증빙 없음.**
+- **검증 위험:** 비동기 저장 중 외부 content 갱신 시 입력 덮어쓰기 가능성, DocumentPage의 남은 lint errors/warnings, 모달 회귀를 테스트해야 함.
 - **추가 코드 변경:** PR #8에 `SaveVersionModal.tsx`, `RenameProjectModal.tsx`의 렌더 중 모달 마운트 기반 입력 상태 초기화 적용. React effect 동기화 오류 2건 수정 의도. **CI 재검증 전이므로 해결 확정 아님**.
 - **잔여 작업:** ScreenListTable/WireframeSlideView의 props→state 동기화, DocumentPage의 effect 기반 상태 갱신·의존성 경고, 전체 lint/build 및 모달 회귀 검증.
 - **완료(정적 확인):** 저장소 212개 항목 목록 확인, SQL 마이그레이션 8개 원문 정적 검토, CI 실패 로그 분석, FreeLLMAPI 공개 문서·약관 주의사항 검토.
@@ -73,6 +75,7 @@
 | 2026-10-14 | v1.6 | 프로젝트 API 린트 오류 수정 및 복원 회귀 검증 필요 기록 | PR #8 |
 | 2026-10-15 | v1.7 | 완료·미검증 상태 재정리, FreeLLMAPI 검토 반영, CI/RLS/ADR 우선순위 일치 | PR #8, Issues #6/#7 |
 | 2026-10-15 | v1.8 | 모달 2종 effect 오류 수정 PR #8 추가, CI·회귀 검증 미완료 기록 | PR #8 |
+| 2026-10-15 | v1.9 | 화면 목록·와이어프레임 effect 수정, PR #8 CI 파일 추가 및 실행 미확인 기록 | PR #8 |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
