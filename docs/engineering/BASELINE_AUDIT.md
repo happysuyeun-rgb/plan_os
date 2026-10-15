@@ -1,13 +1,12 @@
 # Phase 0 — Repository Baseline Audit (in progress)
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-14  
-**문서 버전:** v1.2  
+**최종 수정일:** 2026-10-15  
+**문서 버전:** v1.3  
 **진행 상태:** 진행 중  
 
 
-Date: 2026-10-14
-Source: GitHub default branch file reads. This is **not** a complete repository tree or deployed database audit.
+**초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치의 일부 코드 파일. 이후 저장소 tree 전체 목록 및 SQL 8개 정적 검토로 확장됨. **운영 DB 적용 상태 및 실제 권한 테스트는 아직 미확인.**
 
 ## Verified
 | Area | File | Finding | Impact |
@@ -30,23 +29,23 @@ Source: GitHub default branch file reads. This is **not** a complete repository 
 1. **P0**: Client-only generation and fake chat success create misleading AI capability. Replace only after preserving legacy user flows.
 2. **P0**: No demonstrated durable server-side jobs, queue lease, retries, or execution authorization.
 3. **P0**: DB push script can mutate remote schema; audit is strictly read-only.
-4. **P0**: Need enumerate ALL SQL migrations and evaluate final RLS, triggers, permissions, indexes, rollback.
+4. **P0**: SQL 마이그레이션 8개 목록 및 원문 정적 검토 완료. 실제 적용된 최종 RLS·GRANT·트리거·롤백/재현 검증은 미완료.
 5. **P0**: Need inspect Vercel project settings, env variable names (never secret values), deploy protection, preview/prod separation.
-6. **P1**: Need capture reproducible `npm ci && npm run build && npm run lint` results in trusted local/CI environment; not run yet.
+6. **P1**: GitHub Actions에서 `npm ci` 및 build 성공, lint 13 errors/3 warnings 실패 확인. PR #8 부분 수정 후 재검증은 미완료.
 7. **P1**: Need create test harness, baseline regression and CI.
 8. **P1**: Document `generation_runs` semantics before new task/job tables.
 
-## Scope of this checkpoint
-- Read-only inspection of selected repository files.
-- No complete file enumeration, runtime execution, Supabase cloud inspection or deployed site testing yet.
-- No application source code or production settings modified.
+## 감사 범위 및 한계 (최신)
+- 저장소 tree 212개 항목 목록과 SQL 8개 원문 정적 검토 완료. 저장소 전체 **소스 파일 내용 전수 검토**와 실제 DB 권한 재현은 별개이며 미완료.
+- GitHub Actions 실행 로그 확인: 의존성 설치/빌드 통과, lint 실패. PR #8은 별도 브랜치에서 일부 코드 수정 중.
+- 운영 Supabase, Vercel 배포 설정·실고객 데이터·운영 서비스에는 변경 없음.
 
 ## Next audit sequence
-1. Enumerate all tracked files and exact current commit.
-2. Read every migration and evaluate effective RLS.
+1. 저장소 tree 목록 확인 완료; 후속 검증에는 대상 commit SHA와 기준 브랜치 기록.
+2. SQL 8개 정적 검토 완료; 실제 DB의 적용 마이그레이션·권한·재귀 재현은 미완료.
 3. Inspect existing API, stores, route compatibility and auth flows.
 4. Verify deployment, secrets separation and CI.
-5. Run build/lint and add tests on isolated branch.
+5. 기존 CI 실패(13 errors/3 warnings)를 PR #8에서 해결하고 build/lint 재검증 및 회귀 테스트 추가.
 6. Produce file-by-file KEEP / MODIFY / NEW matrix and migration ADR.
 
 ## Required decision gate
@@ -78,3 +77,18 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 - 운영 환경 마이그레이션 적용 현황은 읽기 전용으로 확인.
 - 정책 수정 SQL은 **별도 PR**로 작성하고 승인 전 운영 DB에는 적용하지 않음.
 - 문서/댓글/알림/프로젝트 기존 사용자 흐름 회귀 테스트.
+
+## 2026-10-15 계획 정합성 재검토
+- **Phase 0 차단 위험:** RLS 정책의 멤버 조회 재귀, 댓글·반응 소유권, 이력 수정 가능성은 실제 개발 DB에서 역할별 테스트가 필요. 정적 발견을 운영 취약점 확정으로 간주하지 않음.
+- **회귀 위험:** PR #8의 프로젝트 복원 사용자 필터 변경은 실제 스키마와 소유자/편집자/관리자 시나리오 검증 전 병합 금지.
+- **품질 게이트:** CI 워크플로 존재와 통과는 다름. build 통과, lint 실패, 테스트 스크립트 미확인을 구분.
+- **외부 AI 게이트:** FreeLLMAPI는 개인 실험용 단일 사용자 게이트웨이. 제공업체 약관·비식별 데이터·모델 capability 확인 전 PlanOS 고객 운영 트래픽 연결 금지.
+- **다음 순서:** PR #8 lint/build/복원 회귀 → Issue #7 안전한 DB 재현 → Issue #2/#3 운영 환경 읽기 전용 검증 → Issue #4 서버 실행/ModelGateway ADR.
+
+## 변경 이력
+| 날짜 | 버전 | 내용 |
+|---|---|---|
+| 2026-10-14 | v1.0 | 코드 기준선 감사 초안 |
+| 2026-10-14 | v1.1 | 저장소 목록 및 CI 로그 기록 |
+| 2026-10-14 | v1.2 | SQL 8개 정적 검토와 RLS 위험 가설 기록 |
+| 2026-10-15 | v1.3 | 구형 미검증 서술 수정, 회귀·보안·외부 AI 진입 게이트 추가 |
