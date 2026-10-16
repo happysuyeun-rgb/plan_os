@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.1  
+**문서 버전:** v3.2  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -24,6 +24,13 @@
 - **문서 자동저장 위험 보완 브랜치:** [Draft PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) (`fix/planos-document-autosave-safety-20261016`, 기반 PR #8): 2초 전역 저장 타이머를 문서별 스냅샷/순차 쓰기로 교체, 문서 전환 중 편집 버퍼 보존, 저장 오류 상태 및 단위 테스트 4개 추가.
 - **검증:** [GitHub Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645) **SUCCESS**; `npm ci`·TypeScript/build·lint·`npm run test:unit` 전부 통과. 로컬 Node 22 단위 테스트도 4/4 통과.
 - **계속 차단:** 브라우저에서 문서 전환/이전 버전 복원·재생성·프로젝트 전환 중 동시 저장 회귀 미실행, 개발 DB RLS 미실행. PR #9는 Draft이며 PR #8 기반으로, **main 병합이나 배포 금지**.
+
+## Phase 0 자동저장·복원 경합 검증 보완 (2026-10-16)
+- **별도 수정 Draft PR:** [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9)에서 문서 자동저장뿐 아니라 **명시적 버전 복원·단일 AI 재생성·연쇄 재생성**을 문서별 쓰기 대기열로 통합. 기존 편집을 보존하고, 복원/재생성 중 새 입력이 들어오면 이후 편집을 먼저 잃지 않도록 쓰기 순서를 예약함.
+- **CI 실측:** 코드 커밋 `abf15fcb9331b6d8675c9cd95edeb1a9644caa03`의 [Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357)에서 의존성 설치·TS/빌드·lint·**유닛테스트 11개 PASS**. 중간 실패 CI는 테스트 동기화/기대값 수정 후 재검증함.
+- **QA 명세:** [문서 저장 회귀 체크리스트 B-01~12](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-document-autosave-safety-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md)를 코드 PR 브랜치에 추가. 브라우저·격리 DB 실증은 **미실행**.
+- **새 P0 발견:** `src/lib/api/chat.ts`의 문서 직접 UPDATE가 큐를 우회함. [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10)으로 후속 격리. 버전 복원 중간 실패·동시 version_number 충돌·DocumentPage activeVersion 동기화도 테스트 대기.
+- **결론:** PR #9는 **Draft/미병합**, UI·실 DB 검증 전까지 배포/승인 금지. 기존 Plan OS Supabase DB는 INACTIVE, 개발 브랜치 없음.
 
 ## 제품 정의 현황
 - [데이터 모델 v0.2](engineering/DATA_MODEL.md): 실제 001~008 SQL 정적 확인 기반 CURRENT/ TARGET 구분, 신규 AI 엔터티와 기존 generation_runs 분리. DDL·운영 적용 없음.
@@ -70,6 +77,7 @@
 8. GitHub 작업에 대한 완료 보고 전에 이 현황표와 문서 인덱스를 같은 브랜치에서 갱신한다.
 
 ## 최신 점검 결과 (2026-10-16 — 단일 최신 스냅샷)
+- **코드 안전성 추가:** PR #9 문서 저장·버전 복원·재생성 직렬화 코드 및 11개 유닛테스트 CI 성공. 단, 브라우저/RLS 미실행이고 채팅 업데이트는 Issue #10으로 남음.
 - **제품/설계:** PRD, TF-01~30, IA, SCREEN_SPEC, PERMISSIONS_POLICY, ARCHITECTURE, DATA_MODEL, API_CONTRACTS **8개 v0.2 보완 초안 작성**. 모두 검토/승인 전·미구현. [12개 문서 감사](quality/DOCUMENT_REVIEW_2026-10-16.md)에서 P0~P2 누락/모순 기록.
 - **로드맵:** [개발 실행계획 v1.4](roadmap/IMPLEMENTATION_PLAN.md)에 실제 문서 상태·Phase 3 내부 최소 계약 선행·Phase 5 고객 UI 확장 관계 반영. Phase 0은 미완료이며 Phase 1은 선행 초안 작성 상태.
 - **CI 검증 완료 범위:** [PR #8 Actions #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570), 커밋 `152e33968a90eea9e23dc58c63e4ba1beedc6dc4`에서 npm ci/build/lint **SUCCESS(ESLint 0 errors, 1 warning)**. 이 검증은 **PR #8 브랜치만**의 증빙이며 main/PR #5가 통과하거나 브라우저 E2E가 통과했다는 뜻이 아님.
@@ -105,15 +113,16 @@
 | 2026-10-16 | v2.9 | PRD·TF·IA·SCREEN·PERMISSIONS·ARCH·DATA·API 문서 v0.2 정합성 보완 및 감사 해결/미해결 구분 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 | 2026-10-16 | v3.0 | 문서 감사 재검산: CI·아키텍처·TF 매핑의 최신 상태 표현 정리 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 | 2026-10-16 | v3.1 | Supabase Plan OS 비활성/개발 브랜치 없음·마이그레이션 조회 실패, PR #9 자동저장 코드 수정 및 CI/단위 테스트 성공 기록 | [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) / [Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645) |
+| 2026-10-16 | v3.2 | 버전 복원·AI 재생성 문서별 쓰기 직렬화, 11개 테스트 CI 성공, QA B-01~12/Issue #10 경합 위험 기록 | [Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357) / [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
 - 권한과 도구가 허용하고 운영 위험이 없는 후속 작업은 추가 지시를 기다리지 않고 이어서 수행한다. 실제 도구 호출 없이 백그라운드 진행을 주장하지 않는다.
 - 운영 DB/배포/결제/PR 병합 등 영향 큰 변경은 별도 승인 이후에만 진행한다.
-- 현재 다음 작업: [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) 자동저장 브라우저 회귀 검증 → Plan OS 개발 DB 준비 여부 판단 → [Issue #7 — RLS 재현](https://github.com/happysuyeun-rgb/plan_os/issues/7).
+- 현재 다음 작업: [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) 채팅 문서 직접 쓰기 경합 안전화 → PR #9 브라우저 B-01~12 QA → Plan OS 격리 개발 DB 확보 후 [Issue #7 RLS 재현](https://github.com/happysuyeun-rgb/plan_os/issues/7).
 
 ## 바로 다음 작업
-1. [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9): 문서별 자동저장 단위 테스트/CI 통과. 브라우저에서 탭 전환·저장 실패·버전 복원·재생성 동작 회귀 테스트 전까지 Draft 유지.
+1. [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9): 자동저장·복원·재생성 단위 테스트 11개/CI 통과. [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) 채팅 문서 직접 쓰기 경합 및 B-01~12 실제 브라우저 회귀 검증 전까지 Draft 유지.
 2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 현재 Plan OS DB 비활성·개발 브랜치 없음. 별도 격리 DB와 역할 계정 확보 후 RLS 재현 및 수정 PR.
 3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): SQL 정적 감사 이후 실제 적용 상태 및 권한 검증 마무리.
 4. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 재검증 및 회귀 기준선.
