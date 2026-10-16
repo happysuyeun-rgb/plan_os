@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.1  
-**진행 상태:** 운영 DB READ ONLY 진단 및 일회용 PostgreSQL 17에서 009 역할별 SQL CI 통과 / 별도 Supabase·브라우저 검증 및 운영 적용 대기  
+**문서 버전:** v1.2  
+**진행 상태:** 실제 운영 DB READ ONLY 진단, 격리 PostgreSQL 17 SQL 테스트·격리 로컬 Supabase Auth/JWT/REST 통합 테스트 PASS / 브라우저·운영 반영 미진행  
 **프로젝트:** Plan OS (`ggviusdmxalsflyybamm`)  
 **연결:** [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) · [RLS 수정 제안](../../supabase/migrations/009_fix_project_members_select_recursion.sql) · [기존 기술 감사](../engineering/BASELINE_AUDIT.md)
 
@@ -59,6 +59,15 @@ create policy "멤버 조회"
 - **실측 결론:** 해당 정책의 SQL 의미와 가장 중요한 접근 제약이 **실제 PostgreSQL 17에서 통과**. CI run `38849011220`의 `success` 확인.
 - **유효성 한계:** 이것은 Supabase Auth/JWT·실제 프로젝트 계정의 E2E가 아님. `auth.uid()`는 CI에서 만든 동등 역할 테스트용 함수이며 실제 Supabase 통합/회원 초대·프로젝트 삭제/복원 흐름은 미검증. 정책 전반의 안전성·상용 배포 승인으로 해석 금지.
 
+## 2.2. 일회용 실제 Supabase Auth/JWT/PostgREST API 통합 테스트 성공 (2026-10-16)
+- **최종 성공 증빙:** GitHub Actions [#38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) `success`, 검증한 코드 commit `5ee72bf460e8dd398ac769e1a523e6874ca0b7c3`.
+- **환경:** GitHub-hosted runner의 일회용 Docker 기반 `supabase/setup-cli@v3` + Supabase CLI `2.84.2`로 시작한 **로컬 Auth(GoTrue), Kong, PostgREST, PostgreSQL**. 프로젝트 링크, Supabase hosted access token, 운영 DB URL·비밀번호·데이터를 일절 사용하지 않음.
+- **검증 방식:** 로컬 DB에 이 저장소의 migrations **001~009**를 실제 적용. 로컬 Auth Admin API에 일회용 테스트 사용자를 생성하고 비밀번호 로그인으로 **실제 사용자 JWT**를 발급. `public.handle_new_user` 트리거로 생성된 사용자 정보와 연결된 테스트용 프로젝트·멤버·문서를 심은 뒤, 각 JWT를 사용해 실제 `/rest/v1/project_members` 및 `/rest/v1/documents`를 조회.
+- **PASS 검증:** owner/editor/viewer는 소속 프로젝트의 멤버 3명 및 문서 1개 조회 가능·다른 프로젝트 조회 0개; pending 사용자는 본인 초대 행 1개만 조회 가능·문서 및 다른 멤버 접근 불허; 타 프로젝트 owner/editor, outsider, `anon`은 무권한 프로젝트 멤버/문서 조회 불가. viewer의 문서 PATCH를 시도했으나 실 DB 내용이 수정되지 않음.
+- **실패·수정 이력:** 최초 [#38852770669](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852770669)는 **테스트 기대값 오류**(다른 프로젝트의 owner를 `project_members`의 멤버 행으로 잘못 계산, 실제 owner는 `projects.user_id`)로 실패. 기대값을 실제 스키마에 맞춰 수정한 후 위 최종 CI PASS.
+- **검증 아티팩트:** [local Auth 통합 테스트 JS](../../tests/rls/test_local_supabase_auth.mjs), [합성 데이터 SQL](../../tests/rls/seed_auth_rest.sql), [일회용 전체 스택 CI](../../.github/workflows/rls-auth-integration.yml).
+- **아직 미실행:** 실제 운영 Supabase 정책 009 적용/운영에서 JWT 재검증, 프로젝트 멤버 초대 메일 수신·수락, 소유자 멤버 역할 변경·삭제, 프로젝트 soft-delete/복원, 실제 웹 브라우저 UI, 기타 댓글·반응·알림·버전 정책 보안 테스트. **테스트 성공 = 운영 배포 승인 아님**.
+
 ## 3. 실제 시스템 정책 조회로 확인한 추가 보안 검토 항목
 
 | 위험 | 실제 정책 정의에서 확인된 조건 | 판정 | 대응 |
@@ -82,8 +91,8 @@ create policy "멤버 조회"
 
 **보안 경고의 의미:** EXECUTE grant 노출은 확인됐으나 함수들이 `auth.uid()`로 내부 권한을 확인하므로 grant 존재만으로 정보 유출을 단정하지 않는다. 트리거 함수 `handle_new_user()`도 일반 RPC 호출 성공을 입증한 것은 아니다. 필요한 함수·역할별 접근 방식, 트리거 영향과 revocation 회귀를 검토한 후 별도 PR로 개선한다.
 
-## 5. 다음 격리 Supabase 및 브라우저 검증 계획 (아직 미실행)
-1. GitHub Actions의 일회용 PostgreSQL 17 컨테이너에서 마이그레이션 001~009 및 기본 역할 격리를 테스트했음. 다음에는 **독립 Supabase Auth·PostgREST 환경**이나 로컬 Supabase를 준비해 사용자 JWT를 통한 요청을 검증. 운영 DB에서 `db push` 절대 금지.
+## 5. 다음 브라우저·초대·운영 정책 검증 계획 (일부 완료)
+1. [x] 일회용 PostgreSQL 17에서 SQL 역할 검증 PASS. [x] 추가로 일회용 **로컬 Supabase Auth·PostgREST**를 실행해 실제 JWT API 조회/PATCH 권한 검증 PASS. **운영 DB에서 `db push` 절대 금지**.
 2. 테스트 계정: 소유자 A, 활성 editor B, 활성 viewer C, pending 초대 D, 외부인 E, 다른 프로젝트 소유자 F. 테스트 프로젝트 2개와 각 2~3개의 fixture 멤버 행 생성.
 3. 각 사용자 JWT로 프로젝트 목록·`project_members` SELECT 및 권한 없는 타 프로젝트 읽기 시도. SELECT 재귀 없어야 하고 역할/초대 상태대로 행 분리.
 4. owner가 멤버 초대/취소/역할 변경, editor/viewer가 금지된 변경 시도, 프로젝트 soft-delete 및 복원 후 멤버 조회 검증.
@@ -99,7 +108,8 @@ create policy "멤버 조회"
 - [x] `project_members` 42P17 읽기 전용 실제 재현
 - [x] SQL 패치 009 GitHub 초안 작성
 - [x] 일회용 **PostgreSQL 17 CI** 준비, 합성 fixture와 역할별 테스트 및 009 적용 확인 ([실행 #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220))
-- [ ] **별도 Supabase Auth/PostgREST 또는 로컬 Supabase** 사용자 JWT·초대·프로젝트 복원 검증
+- [x] **격리 로컬 Supabase Auth/JWT/PostgREST** 사용자 JWT, owner/editor/viewer/pending/outsider/anon 조회 격리·viewer PATCH 검증 ([CI #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398))
+- [ ] 실제 초대 이메일/수락·역할변경·삭제/복원·웹 브라우저 사용자 흐름 검증
 - [ ] 브라우저 사용자 회귀
 - [ ] 운영 변경/데이터 백업·롤백 계획 승인 및 실행
 
@@ -108,3 +118,4 @@ create policy "멤버 조회"
 |---|---|---|---|
 | 2026-10-16 | v1.0 | 활성 DB read-only 실증·42P17 발견·Advisor 및 정책 점검·009 수정 제안/게이트 기록 | 개발 DB/운영 적용 전 |
 | 2026-10-16 | v1.1 | 009 초대 대기 자기 행 조회 보존, 일회용 PostgreSQL 17에서 001~008 재귀 재현/009 적용/권한별 SQL CI PASS 확인 | Supabase JWT·브라우저/운영 적용 전 |
+| 2026-10-16 | v1.2 | 실제 로컬 Supabase Auth password login/JWT/PostgREST 역할별 권한 테스트 성공, CI 실패 수정 이력·브라우저 잔여 범위 기록 | 브라우저/운영 적용 전 |
