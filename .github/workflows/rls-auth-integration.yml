@@ -1,0 +1,85 @@
+name: RLS Auth/JWT/PostgREST - disposable local Supabase
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/rls/**'
+      - '.github/workflows/rls-auth-integration.yml'
+  push:
+    branches: [fix/planos-rls-member-recursion-20261016, fix/planos-rls-content-hardening-20261016]
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/rls/**'
+      - '.github/workflows/rls-auth-integration.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  auth-postgrest-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-disposable-supabase
+    steps:
+      - name: Checkout repository (no production credentials)
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Supabase CLI for disposable LOCAL test stack
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.84.2
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -qq -y postgresql-client
+          fi
+      - name: Start isolated Supabase Auth + REST without hosted credentials
+        run: |
+          set -euo pipefail
+          for var in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_DB_URL; do
+            if [ -n "$(printenv "$var" || true)" ]; then
+              echo "::error::Hosted Supabase credential unexpectedly present"
+              exit 1
+            fi
+          done
+          mkdir -p "$PLANOS_LOCAL_SUPABASE_DIR"
+          cd "$PLANOS_LOCAL_SUPABASE_DIR"
+          supabase init
+          # Only GoTrue (Auth), PostgREST, Kong and PostgreSQL are required.
+          # Generated keys stay on this short-lived runner.
+          if ! supabase start --exclude realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta,mailpit > /tmp/planos-local-start.log 2>&1; then
+            echo "::error::Local Supabase stack failed to start"
+            grep -Ei 'error|failed|unhealthy|invalid|unknown|missing' /tmp/planos-local-start.log | head -35 || true
+            exit 1
+          fi
+          echo "Disposable local Supabase Auth and REST services started"
+      - name: Apply actual migrations 001..010 to LOCAL PostgreSQL ONLY
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/*.sql; do
+            echo "Local ONLY migration $(basename "$migration")"
+            psql -X -v ON_ERROR_STOP=1 -f "$migration" > /tmp/planos-migration.log
+          done
+          echo "Applied repository migrations 001..010 in isolated local DB"
+      - name: Test genuine Auth password login JWT, REST and RLS role isolation
+        run: node tests/rls/test_local_supabase_content.mjs
+      - name: Stop local stack and remove disposable containers
+        if: always()
+        run: |
+          if [ -d "$PLANOS_LOCAL_SUPABASE_DIR/supabase" ]; then
+            ( cd "$PLANOS_LOCAL_SUPABASE_DIR" && supabase stop --no-backup ) || true
+          fi
