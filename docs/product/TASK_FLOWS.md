@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v0.1  
+**문서 버전:** v0.2  
 **진행 상태:** 30개 업무 흐름 정의 초안 / UX·정책 검토 전  
 **상위 기준:** [통합 PRD v0.1](PRD.md)  
 **범위:** TARGET 요구사항. 현재 구현 완료/실행 검증을 의미하지 않음.
@@ -122,7 +122,7 @@
 | 문서 | 기존 버전 조회·복원 | 저장 경합으로 덮어쓰기, 타인 버전 조작 |
 | 알림·댓글 | 해당 멤버에게만 전달 | 외부 recipient 주입, 타인 상태 조작 |
 
-## 화면/데이터/API 후속 연결(미작성)
+## 화면/데이터/API 연결 — 문서 초안 존재, TF별 최종 매핑 미완료
 
 | 업무 묶음 | IA/화면 설계 필요 | 핵심 데이터·API 설계 필요 |
 |---|---|---|
@@ -133,6 +133,28 @@
 | TF-25~30 | 문서·댓글·비용·해지·설정 | 기존 documents/versions/comments + ledger/exports |
 
 위 테이블의 데이터명은 **개념 이름**이다. 실제 테이블/라우트/API가 구현됐다는 뜻이 아니다.
+
+### P0 핵심 TF별 추적성 보완 (DQ-11)
+
+| TF | 화면 후보 | API 계약 후보 | 데이터 후보 | 검증 상태 |
+|---|---|---|---|---|
+| 03~06 프로젝트/모드 | C06,N01,N02 | API-01, API-03(업무) + 기존 프로젝트 API | projects, project_tasks | 기존 프로젝트 회귀 미실행 |
+| 07~09 역할 탐색/기본 면담 | N16,N17,N18 | API-07~09 | agent_profiles, agent_capabilities | 프로필/모델 실증 없음 |
+| 10~12 계약/배치 | N19,N20,N07 | API-10~12 + 계약 GET/수정 미정 | agent_contracts, agent_assignments | 계약 수정·상태 상세 부족 |
+| 13~14 PM 계획/승인 | N08,N09,N12 | API-05~06 + 계획 조회/모델 job 미정 | project_plans, project_tasks, ai_approvals | 비동기·비용 승인 불명확 |
+| 15~18 업무/실행 | N03,N04,N10,N11 | API-02~04, API-14~16 | project_tasks, ai_runs, ai_run_events | 서버 워커 미구현 |
+| 19~20 도구 승인/실행 | N12,N13,N11 | API-19~20 + 승인 요청 생성 미정 | ai_approvals, ai_tool_calls | R2/R3 증빙/권한 미검증 |
+| 21~23 검증/브리핑/수락 | N11,N12 | API-21~22 + 수락상태 GET 미정 | ai_artifacts, ai_artifact_verifications, ai_acceptances | 수락 UI v0.2 보완, E2E 미실행 |
+| 24 실패/취소 | N11 | API-17~18 | ai_runs, ai_run_events, ai_budget_reservations | 부분 실행 중복 방지 미검증 |
+| 25~26 문서/댓글 | C09,C10,N15 | **기존 API 우선**, 신규 API 미정 | documents, document_versions, project_comments | 기존 자동저장/RLS 회귀 필요 |
+| 27~28 비용/해지 | N14,N21 | API-23, API-13 | ai_usage_ledger, ai_budget_reservations, agent_contracts | 정산/환불 정책 미확정 |
+| 29~30 휴지통/데이터 | C07,C08,N23 | **기존 API 우선**, 신규 보존/내보내기 미정 | projects 및 신규 테이블 | 기존 기능 회귀·보존정책 필요 |
+
+**표는 설계 후보의 1차 연결**이며 모든 TF의 필드/이벤트/테스트 1:1 매핑이 완료됐다는 뜻은 아니다. [API 공백](../engineering/API_CONTRACTS.md), [화면 명세](../ux/SCREEN_SPEC.md), [데이터 모델](../engineering/DATA_MODEL.md)에서 후속 확정한다.
+
+### MVP 면담 범위 정리
+- **TF-09의 MVP는 역할과 업무의 기본 적합성 질문/제약 안내**에 한정한다. PRD의 P1 `FR-14`는 점수 근거·추천·고도화된 면담이며, MVP 기본 질문과 구분한다.
+- **TF-20 진입:** TF-17에서 생성한 `queued` 작업을 서버 정책 재검사 후 `running`으로 전이하여 실제 도구 실행. 승인되지 않은 `queued` 작업을 직접 실행하지 않는다.
 
 ## 우선순위와 미결정 정책
 1. **P0:** 계약/승인/예산/도구 범위/검증/수락을 관통하는 하나의 실제 실행 여정.
@@ -153,3 +175,4 @@
 | 날짜 | 버전 | 변경 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v0.1 | 30개 업무 흐름, P0 핵심 여정, 실패·권한·비용 규칙, 후속 설계 연결 최초 작성 | 검토 전 |
+| 2026-10-16 | v0.2 | TF별 화면/API/데이터 1차 추적성 보완 및 면담 MVP 범위 정리 | 검토 전 |
