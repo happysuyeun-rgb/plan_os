@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v0.1  
+**문서 버전:** v0.2  
 **진행 상태:** TARGET 정책 초안 / 보안 검토·DB 재현 전  
 **상위 기준:** [PRD](PRD.md) · [업무 흐름](TASK_FLOWS.md) · [화면 명세](../ux/SCREEN_SPEC.md)  
 **범위:** 사람 계정, AI 서비스 계약, PM/전문 AI 도구 실행의 서버 권한. 현재 RLS가 이를 충족한다는 의미는 아님.
@@ -92,7 +92,17 @@
 
 **현 상태:** 이 표는 목표 정책과 테스트 계획. 기존 SQL의 실제 취약점은 개발 DB 재현 전까지 확정하지 않는다.
 
-## 6. 제품 정책 미결정
+## 6. TARGET 정책과 CURRENT SQL 차이 (DQ-07)
+- **viewer 댓글:** TARGET MVP 기본값은 읽기만. 현재 `006_member_project_access_rls.sql`의 `project_comments_insert`는 `can_access_project`+본인 user_id만 검사하므로 **viewer 쓰기가 허용될 수 있다**. 사용자의 MVP 댓글 정책 결정 후 격리 DB에서 확인하고 SQL 수정안을 작성한다.
+- **타인 댓글 수정:** TARGET 기본값은 작성자 직접 수정만. 현재 `project_comments_update`는 프로젝트 접근만 검사하므로 다른 멤버 수정 가능성에 대해 테스트가 필요하다.
+- **반응/참여 상태:** TARGET은 본인 상태만 수정. 현재 `FOR ALL USING`의 소유자 범위, 알림 actor/recipient 정합성, activity 스푸핑 검증이 필요하다.
+- **기존 문서 버전:** TARGET은 이력 불변. 현재 `document_versions_update` 정책이 editor UPDATE를 허용할 가능성은 실제 DB에서 검증해야 한다.
+- **AI 서버 서비스 주체:** service_role로 DB 접근 시 RLS 우회가 가능하므로 **서버가 user/project/contract/run/tool/approval/budget를 검증**하는 코드·감사 로그·테스트가 필수. 외부 입력에서 service_role 수행 권한을 유추하면 안 된다.
+- **운영 관리자:** 고객 데이터 접근/지원용 긴급권한의 범위·승인·접속 로그·보존기간을 정하기 전에는 관리 UI나 직접 조회 권한을 설계 완료로 간주하지 않는다.
+
+**현 단계 판정:** 설계상의 기대값을 기록했을 뿐, 실 DB 재현 전에는 보안 차단 해결로 표시하지 않는다. [기술 감사](../engineering/BASELINE_AUDIT.md) 및 [문서 품질 감사](../quality/DOCUMENT_REVIEW_2026-10-16.md) 참조.
+
+## 7. 제품 정책 미결정
 - POL-01 editor에게 실행 계획/산출물 승인 위임 허용 여부 및 상한.
 - POL-02 viewer 댓글·반응 기본 허용 여부.
 - POL-03 R2 내부 변경의 자동 승인 예외 범위.
@@ -106,3 +116,4 @@
 | 날짜 | 버전 | 내용 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v0.1 | 사용자/AI 역할 권한, 위험 등급, 서버 평가, 격리 DB 테스트 매트릭스 정의 | 검토 전 |
+| 2026-10-16 | v0.2 | TARGET/CURRENT SQL 권한 차이와 service_role 재검증·운영자 권한 미결정 명시 | 검토 전 |
