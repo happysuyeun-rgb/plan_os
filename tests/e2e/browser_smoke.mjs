@@ -104,12 +104,25 @@ try{
   console.log('PASS B-01 rapid PRD to IA tab switch keeps both independent saved drafts')
 
   // B-02: Multiple edits inside debounce window keep only final text.
+  // A content-only edit must not issue new comment-thread GETs. A comment
+  // fetch should depend on document ID or filter changes, not every keystroke.
+  await page.waitForTimeout(250)
+  let repeatedCommentGets=0
+  const countCommentGets=request=>{
+    if(request.method()==='GET' && request.url().includes('/rest/v1/project_comments')){
+      repeatedCommentGets+=1
+    }
+  }
+  page.on('request',countCommentGets)
   let last=prdContent
   for(let i=1;i<=5;i++){
     last=prdContent+'\\nLAST-REVISION-B02-'+i
     await mainEditor.fill(last)
   }
   await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  page.off('request',countCommentGets)
+  assert.equal(repeatedCommentGets,0,'B-02 content edits triggered unnecessary comment thread refetches')
+  console.log('PASS B-02 content edits do not refetch comment threads')
   await page.reload({waitUntil:'domcontentloaded'})
   await mainEditor.waitFor({state:'visible',timeout:20000})
   assert.equal(await mainEditor.inputValue(),last,'B-02 a stale intermediate revision reached UI after reload')
