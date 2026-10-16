@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.9  
+**문서 버전:** v2.0  
 **진행 상태:** 관리 중 (문서 브랜치 초안, main 미병합)
 
 ## 어디서 무엇을 확인하나요?
@@ -17,13 +17,16 @@
 
 ## 신규 제품 정의
 - [통합 서비스 기획서(PRD v0.1)](product/PRD.md) — PlanOS 3.0 × AI 인력사무소 TARGET 제품 정의. 검토 전 초안.
-- [사용자 업무 흐름 TF-01~30 v0.1](product/TASK_FLOWS.md) — 시작·계약·실행·검증·운영 30개 흐름, 검토 전 초안.
-- [IA 및 화면 목록 v0.1](ux/IA.md) — CURRENT 11개 라우트, TARGET 23개 화면 ID, 기존 문서 URL 호환 전략.
-- [화면별 기능명세서 v0.1](ux/SCREEN_SPEC.md) — MVP 핵심 9개 화면 상세·나머지 14개 통합/후속 처리.
-- [권한·승인 정책 v0.1](product/PERMISSIONS_POLICY.md) — 사람/AI 역할·위험 등급·승인·RLS 테스트 기준.
-- [AI 실행 아키텍처 v0.1](engineering/ARCHITECTURE.md) — 서버 워커·ModelGateway·예산·검증·복구 ADR 초안.
-- [데이터 모델 v0.1](engineering/DATA_MODEL.md) — 기존 Supabase 테이블 보존·신규 AI 엔터티·무결성.
-- [API 계약 v0.1](engineering/API_CONTRACTS.md) — TARGET 23개 엔드포인트·권한·오류·멱등성.
+- [사용자 업무 흐름 TF-01~30 v0.2](product/TASK_FLOWS.md) — 시작·계약·실행·검증·운영 30개 흐름, 검토 전 초안.
+- [IA 및 화면 목록 v0.2](ux/IA.md) — CURRENT 11개 라우트, TARGET 23개 화면 ID, 기존 문서 URL 호환 전략.
+- [화면별 기능명세서 v0.2](ux/SCREEN_SPEC.md) — MVP 핵심 9개 화면 상세·나머지 14개 통합/후속 처리.
+- [권한·승인 정책 v0.2](product/PERMISSIONS_POLICY.md) — 사람/AI 역할·위험 등급·승인·RLS 테스트 기준.
+- [AI 실행 아키텍처 v0.2](engineering/ARCHITECTURE.md) — 서버 워커·ModelGateway·예산·검증·복구 ADR 초안.
+- [데이터 모델 v0.2](engineering/DATA_MODEL.md) — 기존 Supabase 테이블 보존·신규 AI 엔터티·무결성.
+- [API 계약 v0.2](engineering/API_CONTRACTS.md) — TARGET 23개 엔드포인트·권한·오류·멱등성.
+
+## 교차 문서 품질 점검
+- [2026-10-16 통합 문서 감사](quality/DOCUMENT_REVIEW_2026-10-16.md) — 12개 문서별 누락·충돌, P0~P2 결함, 완료·미완료·다음 수정 우선순위. **기획/보안/개발 검증 통과가 아니라 문서 품질 점검 결과**.
 
 ## 읽는 순서 및 주의
 1. 현재 완료·미완료·다음 실행은 [전체 진행 현황](PROGRESS_STATUS.md)에서 확인.
@@ -65,3 +68,5 @@
 - 2026-10-16 / v1.8: 권한·승인 정책 및 AI 실행 아키텍처 초안 연결.
 
 - 2026-10-16 / v1.9: 데이터 모델 및 API 계약 명세 v0.1 연결.
+
+- 2026-10-16 / v2.0: 문서 12개 교차 감사 연결, 제품·기술 문서 v0.2 정합성 보완 링크 갱신.
