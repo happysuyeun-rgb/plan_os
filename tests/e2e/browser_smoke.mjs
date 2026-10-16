@@ -81,8 +81,72 @@ try{
     .waitFor({state:'visible',timeout:30000})
   console.log('PASS project document visible after full browser reload')
 
+  // B-01: Edit PRD, switch immediately to IA and edit IA. The two debounced
+  // writes must be scoped to their original document IDs, not the active tab.
+  const mainEditor=page.locator('main textarea')
+  const prdContent='# Phase0 E2E Document\\n\\nPRD-PENDING-B01-'+created.id
+  const iaContent='# Phase0 IA Fixture\\n\\nIA-PENDING-B01-'+created.id
+  await mainEditor.fill(prdContent)
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/기능명세서/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
+  await mainEditor.fill(iaContent)
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.reload({waitUntil:'domcontentloaded'})
+  await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),iaContent,'B-01 IA autosave was lost')
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/PRD/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),prdContent,'B-01 PRD draft overwritten after switching to IA')
+  console.log('PASS B-01 rapid PRD to IA tab switch keeps both independent saved drafts')
+
+  // B-02: Multiple edits inside debounce window keep only final text.
+  let last=prdContent
+  for(let i=1;i<=5;i++){
+    last=prdContent+'\\nLAST-REVISION-B02-'+i
+    await mainEditor.fill(last)
+  }
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),last,'B-02 a stale intermediate revision reached UI after reload')
+  console.log('PASS B-02 five successive edits persist final revision after reload')
+
+  // C-01: Chat send while PRD has an unsaved draft must append to that draft,
+  // not to a stale server fetch. Chat is currently a placeholder append.
+  const unsaved=last+'\\nUNSAVED-HUMAN-DRAFT-C01'
+  await mainEditor.fill(unsaved)
+  const chatInput=page.locator('aside textarea[placeholder*="@"]')
+  await chatInput.fill('CHAT-REQUEST-C01')
+  await chatInput.press('Enter')
+  await page.getByText('요청하신 내용을 문서에 반영했습니다.',{exact:true})
+    .waitFor({state:'visible',timeout:25000})
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  const merged=await mainEditor.inputValue()
+  assert(merged.includes('UNSAVED-HUMAN-DRAFT-C01'),'C-01 lost unsaved human text')
+  assert(merged.includes('CHAT-REQUEST-C01'),'C-01 missing chat placeholder edit')
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  const reloaded=await mainEditor.inputValue()
+  assert.equal(reloaded,merged,'C-01 merged draft/chat content was not persisted')
+  console.log('PASS C-01 pending human edit plus chat request merged and persisted after reload')
+
+  // Ensure these are real persisted server values, not only client drafts.
+  const serverResponse=await fetch(api+'/rest/v1/documents?select=type,content&project_id=eq.'+projectId,{
+    headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+    signal:AbortSignal.timeout(12000),
+  })
+  assert(serverResponse.ok,'Could not inspect synthetic local documents in disposable DB')
+  const serverRows=await serverResponse.json()
+  assert.equal(serverRows.find(row=>row.type==='prd')?.content,merged)
+  assert.equal(serverRows.find(row=>row.type==='ia')?.content,iaContent)
+  console.log('PASS persisted local PostgREST PRD/IA contents match final browser edits')
+
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
-  console.log('SUCCESS local browser login/dashboard/document smoke on integrated PR #15')
+  console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
   console.error('Browser smoke failed:',error?.message ?? String(error))
   if(page){
