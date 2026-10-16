@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useMemo } from 'react'
+import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import type { DocumentType, DocumentVersion, SidebarVersionInfo } from '../types'
@@ -193,6 +193,8 @@ export default function DocumentPage() {
   const [showSaveVersionModal, setShowSaveVersionModal] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showRestoreModal, setShowRestoreModal] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+  const restoringRef = useRef(false)
   const [showMemberPanel, setShowMemberPanel] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showHistoryPanel, setShowHistoryPanel] = useState(false)
@@ -775,24 +777,40 @@ export default function DocumentPage() {
       <ConfirmModal
         isOpen={showRestoreModal}
         title="버전 복원"
-        message="현재 버전은 보존되고, 선택한 버전 내용으로 새 버전이 생성됩니다."
+        message="선택한 과거 내용으로 복원합니다. 현재 원고가 저장된 마지막 버전과 다르면 복원 전 자동 보관한 뒤 새 복원 버전을 생성합니다."
+        confirming={isRestoring}
         onConfirm={async () => {
-          if (activeDoc && projectId) {
-            await restoreVersion(activeDoc.id, content)
-            await fetchDocuments(projectId)
-            setContent(content)
+          if (!activeDoc || !projectId || !activeVersionId || restoringRef.current) return
+          restoringRef.current = true
+          setIsRestoring(true)
+          const documentId = activeDoc.id
+          const restoreProjectId = projectId
+          try {
+            // The server chooses content from the immutable version ID; this
+            // operation is atomic and safe to retry with its stable UUID.
+            await restoreVersion(documentId, activeVersionId)
+            await fetchDocuments(restoreProjectId)
             setReadOnly(false)
             selectVersion(null)
-            await logActivity({
-              project_id: projectId,
-              document_id: activeDoc.id,
-              action: 'version_restore',
-            })
+            setShowRestoreModal(false)
             showToast('success', '버전이 복원되었습니다')
+            // Activity logging is secondary; don't misreport a committed
+            // restore as failed when an audit notification write fails.
+            void logActivity({
+              project_id: restoreProjectId,
+              document_id: documentId,
+              action: 'version_restore',
+            }).catch(() => undefined)
+          } catch {
+            // A network error after commit can be ambiguous; the same restore
+            // operation UUID is retained so retrying cannot duplicate history.
+            showToast('error', '복원 결과를 확인하지 못했습니다. 다시 시도하거나 새로고침해 주세요.')
+          } finally {
+            restoringRef.current = false
+            setIsRestoring(false)
           }
-          setShowRestoreModal(false)
         }}
-        onCancel={() => setShowRestoreModal(false)}
+        onCancel={() => { if (!restoringRef.current) setShowRestoreModal(false) }}
       />
 
       <MemberPanel
