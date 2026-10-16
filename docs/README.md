@@ -16,7 +16,7 @@
 **기준 문서:** 개발 상태는 `PROGRESS_STATUS.md`, 계획은 `IMPLEMENTATION_PLAN.md`에서만 관리한다. 이 인덱스에 중복 상태표를 작성하지 않는다.
 
 ## 신규 제품 정의
-- [통합 서비스 기획서(PRD v0.1)](product/PRD.md) — PlanOS 3.0 × AI 인력사무소 TARGET 제품 정의. 검토 전 초안.
+- [통합 서비스 기획서(PRD v0.2)](product/PRD.md) — PlanOS 3.0 × AI 인력사무소 TARGET 제품 정의. 검토 전 초안.
 - [사용자 업무 흐름 TF-01~30 v0.2](product/TASK_FLOWS.md) — 시작·계약·실행·검증·운영 30개 흐름, 검토 전 초안.
 - [IA 및 화면 목록 v0.2](ux/IA.md) — CURRENT 11개 라우트, TARGET 23개 화면 ID, 기존 문서 URL 호환 전략.
 - [화면별 기능명세서 v0.2](ux/SCREEN_SPEC.md) — MVP 핵심 9개 화면 상세·나머지 14개 통합/후속 처리.
