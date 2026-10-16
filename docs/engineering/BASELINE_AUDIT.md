@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.8  
+**문서 버전:** v1.9  
 **진행 상태:** 진행 중  
 
 
@@ -26,6 +26,13 @@
 - **CI 성공:** [Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357), 코드 SHA `abf15fcb9331b6d8675c9cd95edeb1a9644caa03` — npm ci, TypeScript/build, lint, **11개 unit tests 통과**. 이전 단계의 테스트 실패는 수정됨.
 - **계속 위험:** `sendChatMessage`는 문서를 직접 UPDATE하므로 이 대기열을 우회([Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10)); 직접 브라우저/프로젝트 DB 동작, 버전 복원 저장 트랜잭션, 서버 RLS 검증 미실행. [브라우저 QA 체크리스트](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-document-autosave-safety-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md) 참고.
 - **판정:** 단위 테스트 수준 개선이며 브라우저/DB 회귀 완료가 아님. PR #9 Draft 유지, `main` 병합·배포·DB 변경 없음.
+
+## 2026-10-16 추가 코드 대응: 채팅 문서 직접 쓰기 (Issue #10)
+- **이전 문제:** `src/lib/api/chat.ts`의 `sendChatMessage`가 직접 `documents.content`를 조회/수정했고 ChatPanel이 다시 활성 탭에 `updateContent`를 호출해 저장 충돌/중복 가능성이 있었음.
+- **수정 Draft [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11):** 기존 직접 DB UPDATE 제거, 현재 편집 버퍼에 메모를 합쳐 `documentStore.applyChatEdit`을 통한 문서 ID별 큐에 예약/저장. 화면 활성 탭 중복 쓰기 제거, 프로젝트/문서 불일치 및 과거버전 보기 거부, 채팅 UI/버전 목록은 문서 ID 변화에만 로딩.
+- **테스트:** 채팅 병합 6개 + 기존 저장/복원/재생성 11개, 총 17개. [CI #38847021222](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38847021222) 최종 실행 결과 확인 필요(여기에는 실행 링크와 예상 범위 기록; 실제 결론은 실측 후 수정).
+- **남은 위험:** 사용자 메시지가 먼저 INSERT되고 문서 저장에 실패하면 메시지·문서 상태가 불일치할 수 있음. 서버 트랜잭션·멱등성 설계가 필요. 채팅 메모/AI 작업 결과의 버전 복원 충돌, 다른 기기 동시 편집, RLS/브라우저 실제 테스트는 여전히 미검증.
+- **테스트 체크리스트:** [PR #11 브랜치 C-01~10](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md). 운영 Supabase 비활성, DB 변경/배포/병합 금지.
 
 ## Verified
 | Area | File | Finding | Impact |
@@ -134,3 +141,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v1.6 | CI 최신 성공을 문서 상단에서 단일 상태로 표시·과거 실패 이력 구분·교차 감사 연결 |
 | 2026-10-16 | v1.7 | Plan OS DB 비활성·별도 브랜치 없음/조회 타임아웃 실측, PR #9 자동저장 코드 및 4개 테스트 CI 통과·실제 회귀 미완료 기록 |
 | 2026-10-16 | v1.8 | 복원·재생성 직렬화/신규 입력 경합 11개 유닛 테스트 CI 성공 및 채팅 직접 문서 UPDATE 잔여 위험 기록 |
+| 2026-10-16 | v1.9 | PR #11의 채팅 직접 DB 쓰기 제거·6개 테스트 추가, 프로젝트/문서 격리 및 메시지 원자성 QA 리스크 기록 |
