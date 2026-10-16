@@ -14,6 +14,8 @@ import { useDocumentStore } from './documentStore'
 interface ChatState {
   messages: ChatMessage[]
   input: string
+  // Keep unsent chat drafts scoped to their project/document identity.
+  inputByContext: Record<string, string>
   pendingAttachments: PendingChatAttachment[]
   isStreaming: boolean
   activeContext: string | null
@@ -38,13 +40,16 @@ let sendSequence = 0
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   input: '',
+  inputByContext: {},
   pendingAttachments: [],
   isStreaming: false,
   activeContext: null,
 
   fetchMessages: async (projectId, documentId) => {
     const context = `${projectId}:${documentId ?? ''}`
-    set({ activeContext: context, messages: [] })
+    // Switching documents must not carry a pending/sent PRD prompt into IA.
+    // Keep any unsent draft so returning to the original document can recover it.
+    set((s) => ({ activeContext: context, messages: [], input: s.inputByContext[context] ?? '' }))
     const messages = await apiFetchChatMessages(projectId, documentId)
     if (get().activeContext === context) set({ messages })
   },
@@ -74,6 +79,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       useAuthStore.getState().incrementAiGeneration()
       clearAllAttachmentPreviews(pendingAttachments)
       set((s) => ({
+        // A successful send clears only its own saved draft, even if the user
+        // has since opened another document with another unsent message.
+        inputByContext: { ...s.inputByContext, [`${projectId}:${documentId}`]: '' },
         // A slow chat response must not enter a different document's conversation.
         messages:
           s.activeContext === `${projectId}:${documentId}`
@@ -90,8 +98,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  setInput: (input) => set({ input }),
-  clearInput: () => set({ input: '' }),
+  setInput: (input) => set((s) => ({
+    input,
+    inputByContext: s.activeContext
+      ? { ...s.inputByContext, [s.activeContext]: input }
+      : s.inputByContext,
+  })),
+  clearInput: () => set((s) => ({
+    input: '',
+    inputByContext: s.activeContext
+      ? { ...s.inputByContext, [s.activeContext]: '' }
+      : s.inputByContext,
+  })),
 
   addAttachment: (file) => {
     const error = validateChatAttachment(file)
@@ -117,6 +135,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   reset: () => {
     sendSequence += 1
     clearAllAttachmentPreviews(get().pendingAttachments)
-    set({ messages: [], input: '', pendingAttachments: [], isStreaming: false, activeContext: null })
+    set({ messages: [], input: '', inputByContext: {}, pendingAttachments: [], isStreaming: false, activeContext: null })
   },
 }))
