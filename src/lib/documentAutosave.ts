@@ -91,20 +91,33 @@ export function createDocumentAutosave<T>({
    * write lane as autosave. First persist pending edits; never overwrite a failed
    * draft silently. Edits made after this operation starts remain authoritative.
    */
-  async function replace(
+  function replace(
     documentId: string,
     overwrite: () => Promise<string>,
   ): Promise<string> {
     const task = getTask(documentId)
-    await flush(documentId)
-    if (task.failedRevision === task.revision) {
-      throw new Error('Unsaved document changes must be retried before overwrite')
-    }
+    if (task.timer) clearTimeout(task.timer)
+    task.timer = null
 
+    // Reserve the overwrite position synchronously. Edits scheduled after this
+    // point receive a newer revision and MUST be saved after the overwrite.
+    // An await-before-reservation would silently discard edits made while
+    // waiting for the preceding in-flight network save.
+    const pendingRevision = task.revision
+    const pendingContent = task.content
     const revision = ++task.revision
     task.failedRevision = null
+
     const operation = task.tail.then(async () => {
       try {
+        // Flush the snapshot that existed when the user requested restore/
+        // regenerate. If a previous in-flight save already wrote it, skip.
+        // A failed draft must never be discarded by a replacement operation.
+        if (pendingRevision > task.savedRevision) {
+          await persist(documentId, pendingContent)
+          task.savedRevision = pendingRevision
+        }
+
         const content = await overwrite()
         task.savedRevision = revision
         if (task.revision === revision) {
@@ -121,7 +134,7 @@ export function createDocumentAutosave<T>({
       }
     })
 
-    // A failed overwrite must not permanently poison future saves.
+    // Keep later edits and replacements runnable after a failed operation.
     task.tail = operation.then(() => undefined, () => undefined)
     return operation
   }
