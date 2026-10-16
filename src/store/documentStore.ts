@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from './authStore'
 import { updateProject as apiUpdateProject } from '../lib/api/projects'
 import { createDocumentAutosave } from '../lib/documentAutosave'
+import { applyChatDocumentEdit } from '../lib/chatDocumentEdit'
 
 interface DocumentState {
   documents: Partial<Record<DocumentType, Document>>
@@ -26,6 +27,7 @@ interface DocumentState {
   setContent: (content: string) => void
   autoSave: () => Promise<void>
   replaceDocumentContent: (documentId: string, write: () => Promise<Document>) => Promise<void>
+  applyChatEdit: (projectId: string, documentId: string, message: string) => Promise<string>
   regenerate: (projectId: string, type: DocumentType, title: string, targetUser: string) => Promise<void>
   regenerateCascade: (projectId: string, fromType: DocumentType, title: string, targetUser: string) => Promise<void>
   setReadOnly: (readOnly: boolean) => void
@@ -152,6 +154,55 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         throw new Error('Document ID changed during replacement')
       }
       return updated.content
+    })
+  },
+
+  applyChatEdit: async (projectId, documentId, message) => {
+    const current = Object.entries(get().documents).find(
+      ([, doc]) => doc?.id === documentId && doc.project_id === projectId,
+    )
+    if (!current) {
+      throw new Error('Chat document is no longer available in the current project')
+    }
+
+    const type = current[0] as DocumentType
+    return applyChatDocumentEdit(message, {
+      readDraft: () => {
+        const state = get()
+        const doc = state.documents[type]
+        if (!doc || doc.id !== documentId || doc.project_id !== projectId) {
+          throw new Error('Chat document changed while the message was being sent')
+        }
+        if (state.activeDocType === type && state.isReadOnly) {
+          throw new Error('Cannot edit a historical version through chat')
+        }
+        return doc.content
+      },
+      queueDraft: (next) => {
+        // Keep this update and scheduling synchronous: they represent one
+        // document-specific revision. A later human edit uses the new buffer.
+        set((state) => {
+          const doc = state.documents[type]
+          if (!doc || doc.id !== documentId || doc.project_id !== projectId) {
+            throw new Error('Chat document changed while scheduling the update')
+          }
+          return {
+            documents: {
+              ...state.documents,
+              [type]: { ...doc, content: next },
+            },
+            content:
+              state.activeDocType === type && !state.isReadOnly
+                ? next
+                : state.content,
+            saveStatus:
+              state.activeDocType === type ? 'saving' : state.saveStatus,
+          }
+        })
+        autosave.schedule(documentId, next)
+      },
+      flushDraft: () => autosave.flush(documentId),
+      getSaveStatus: () => autosave.getStatus(documentId),
     })
   },
 

@@ -200,6 +200,7 @@ export default function DocumentPage() {
 
   const availableTypes = useMemo(() => getAvailableDocTypes(documents), [documents])
   const activeDoc = documents[activeDocType]
+  const activeDocumentId = activeDoc?.id
 
   const sidebarVersionInfo = useMemo(() => {
     const result: Partial<Record<DocumentType, SidebarVersionInfo>> = {}
@@ -251,10 +252,13 @@ export default function DocumentPage() {
     fetchCounts(projectId)
   }, [projectId, canComment, fetchCounts])
 
+  // Comment queries belong to a document identity, not its mutable content.
+  // A keystroke replaces the cached Document object but must not re-fetch
+  // comments or overwrite an in-progress reply UI.
   useEffect(() => {
-    if (!projectId || !activeDoc || !canComment) return
-    fetchThreads(projectId, activeDoc.id)
-  }, [projectId, activeDoc, canComment, commentFilter, commentSearch, fetchThreads])
+    if (!projectId || !activeDocumentId || !canComment) return
+    void fetchThreads(projectId, activeDocumentId)
+  }, [projectId, activeDocumentId, canComment, commentFilter, commentSearch, fetchThreads])
 
   useEffect(() => {
     if (!projectId || isLoading) return
@@ -279,19 +283,24 @@ export default function DocumentPage() {
     saveLastDocType(projectId, resolved)
   }, [projectId, docTypePath, isLoading, availableTypes, navigate, setActiveDocType])
 
+  // Only document identities affect version summary lookup; editing text
+  // must not re-fetch version summaries on each keystroke.
+  const documentIdsKey = availableTypes
+    .map((type) => documents[type]?.id)
+    .filter((id): id is string => !!id)
+    .join(',')
   useEffect(() => {
-    const docIds = availableTypes
-      .map((t) => documents[t]?.id)
-      .filter((id): id is string => !!id)
-    if (docIds.length > 0) fetchSummaries(docIds)
-  }, [availableTypes, documents, fetchSummaries])
+    if (documentIdsKey) void fetchSummaries(documentIdsKey.split(','))
+  }, [documentIdsKey, fetchSummaries])
 
+  // Chat/version history belongs to a document ID. Draft content changing on
+  // every keystroke must not clear and refetch the entire chat conversation.
   useEffect(() => {
-    if (activeDoc) {
-      fetchVersions(activeDoc.id)
-      fetchMessages(projectId!, activeDoc.id)
+    if (projectId && activeDocumentId) {
+      void fetchVersions(activeDocumentId)
+      void fetchMessages(projectId, activeDocumentId)
     }
-  }, [activeDoc, projectId, fetchVersions, fetchMessages])
+  }, [activeDocumentId, projectId, fetchVersions, fetchMessages])
 
   useEffect(() => {
     if (activeVersionId) {
@@ -384,12 +393,6 @@ export default function DocumentPage() {
       meta: { from: activeDocType },
     })
     showToast('success', '연관 산출물이 모두 재생성되었습니다')
-  }
-
-  const handleChatUpdate = (updated: string) => {
-    updateContent(updated)
-    setReadOnly(false)
-    selectVersion(null)
   }
 
   const handleOpenHistory = async () => {
@@ -616,7 +619,6 @@ export default function DocumentPage() {
                   chatTitle={currentProject ? resolveChatTitle(currentProject) : 'AI 채팅'}
                   canEditTitle={can('chat.send')}
                   onChatTitleSave={handleChatTitleSave}
-                  onDocumentUpdate={handleChatUpdate}
                   onMessageSent={() =>
                     logActivity({
                       project_id: projectId,

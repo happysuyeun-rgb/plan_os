@@ -2,7 +2,7 @@ name: Baseline checks
 
 on:
   pull_request:
-    branches: [main, fix/ci-lint-baseline-20261014]
+    branches: [main, fix/ci-lint-baseline-20261014, fix/planos-document-autosave-safety-20261016]
   push:
     branches: [main]
   workflow_dispatch:

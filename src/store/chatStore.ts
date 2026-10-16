@@ -9,12 +9,14 @@ import {
 } from '../lib/chatAttachments'
 import { fetchChatMessages as apiFetchChatMessages, sendChatMessage as apiSendChatMessage } from '../lib/api/chat'
 import { useAuthStore } from './authStore'
+import { useDocumentStore } from './documentStore'
 
 interface ChatState {
   messages: ChatMessage[]
   input: string
   pendingAttachments: PendingChatAttachment[]
   isStreaming: boolean
+  activeContext: string | null
 
   fetchMessages: (projectId: string, documentId?: string) => Promise<void>
   sendMessage: (projectId: string, documentId: string) => Promise<string | null>
@@ -30,18 +32,26 @@ function clearAllAttachmentPreviews(attachments: PendingChatAttachment[]) {
   for (const a of attachments) revokeAttachmentPreview(a)
 }
 
+// Prevent an old request's finally block from resetting a newer chat's spinner.
+let sendSequence = 0
+
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   input: '',
   pendingAttachments: [],
   isStreaming: false,
+  activeContext: null,
 
   fetchMessages: async (projectId, documentId) => {
+    const context = `${projectId}:${documentId ?? ''}`
+    set({ activeContext: context, messages: [] })
     const messages = await apiFetchChatMessages(projectId, documentId)
-    set({ messages })
+    if (get().activeContext === context) set({ messages })
   },
 
   sendMessage: async (projectId, documentId) => {
+    if (get().isStreaming) return null
+    const requestSequence = ++sendSequence
     const { input, pendingAttachments } = get()
     const trimmed = input.trim()
     if (!trimmed && pendingAttachments.length === 0) return null
@@ -54,17 +64,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
         content = content ? `${content}\n\n${attachmentBlock}` : attachmentBlock
       }
 
-      const result = await apiSendChatMessage(projectId, documentId, content)
+      const result = await apiSendChatMessage(
+        projectId,
+        documentId,
+        content,
+        (targetProjectId, targetDocumentId, message) =>
+          useDocumentStore.getState().applyChatEdit(targetProjectId, targetDocumentId, message),
+      )
       useAuthStore.getState().incrementAiGeneration()
       clearAllAttachmentPreviews(pendingAttachments)
       set((s) => ({
-        messages: [...s.messages, result.userMessage, result.assistantMessage],
-        input: '',
-        pendingAttachments: [],
+        // A slow chat response must not enter a different document's conversation.
+        messages:
+          s.activeContext === `${projectId}:${documentId}`
+            ? [...s.messages, result.userMessage, result.assistantMessage]
+            : s.messages,
+        input:
+          s.activeContext === `${projectId}:${documentId}` ? '' : s.input,
+        pendingAttachments:
+          s.activeContext === `${projectId}:${documentId}` ? [] : s.pendingAttachments,
       }))
       return result.updatedContent
     } finally {
-      set({ isStreaming: false })
+      if (requestSequence === sendSequence) set({ isStreaming: false })
     }
   },
 
@@ -93,7 +115,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   reset: () => {
+    sendSequence += 1
     clearAllAttachmentPreviews(get().pendingAttachments)
-    set({ messages: [], input: '', pendingAttachments: [], isStreaming: false })
+    set({ messages: [], input: '', pendingAttachments: [], isStreaming: false, activeContext: null })
   },
 }))
