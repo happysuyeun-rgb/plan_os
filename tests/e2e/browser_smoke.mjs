@@ -222,60 +222,129 @@ try{
   console.log('PASS B-05 historical preview is read-only; restore creates v3; v1/v2 remain intact')
   console.log('PASS B-05 latest restored document survives reload and matches local DB')
 
-  // FAULT-01: Deliberately fail the second client-side REST write in a
-  // restore. This reproducer MUST show how old code can leave a phantom
-  // version when the version INSERT succeeded but document PATCH failed.
-  // This is disposable local-browser synthetic data ONLY.
+  // FAULT-01: Failure INSIDE the server RPC, after version INSERT and before
+  // document UPDATE, must roll back all writes (not leave phantom history).
+  execFileSync('psql',[
+    '-X','-v','ON_ERROR_STOP=1',
+    '-f',process.cwd()+'/tests/e2e/inject_restore_update_failure.sql',
+  ],{
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
+    stdio:['ignore','pipe','pipe'],timeout:30000,
+  })
   await page.getByRole('button',{name:/^v2 \(B05-current\)$/}).first().click()
   await page.waitForFunction(expected=>
     document.querySelector('main textarea')?.value===expected,beforeRestore,{timeout:12000})
-  let injectedFailures=0
-  const simulateDocumentOutage=async route=>{
-    if(route.request().method()==='PATCH' && injectedFailures++===0){
-      await route.fulfill({
-        status:503,contentType:'application/json',
-        body:JSON.stringify({code:'LOCAL_SYNTHETIC_DB_OUTAGE',message:'Synthetic second-write failure'}),
-      })
-    }else{
-      await route.continue()
-    }
-  }
-  await page.route('**/rest/v1/documents?*',simulateDocumentOutage)
-  const outageResponse=page.waitForResponse(response=>
-    response.request().method()==='PATCH' &&
-    response.url().includes('/rest/v1/documents') &&
-    response.status()===503,{timeout:20000})
-  const expectedErrorStart=errors.length
+  const errorResult=page.waitForResponse(response=>
+    response.request().method()==='POST' &&
+    response.url().includes('/rest/v1/rpc/restore_document_version') &&
+    !response.ok(),{timeout:22000})
   await page.getByRole('button',{name:'이 버전으로 복원'}).click()
   await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
-  await outageResponse
-  await page.unroute('**/rest/v1/documents?*',simulateDocumentOutage)
-  await page.waitForTimeout(600)
-  assert.equal(injectedFailures,1,'Synthetic document failure was not injected exactly once')
+  await errorResult
+  await page.getByText('복원 결과를 확인하지 못했습니다.',{exact:false})
+    .waitFor({state:'visible',timeout:15000})
 
-  const brokenRowsResponse=await fetch(
-    api+'/rest/v1/document_versions?select=version_number,content&document_id=eq.'+
-    serverRows.find(row=>row.type==='prd')?.id+'&order=version_number.asc',{
-      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+  async function readLocalRows(table,select,query){
+    const response=await fetch(api+'/rest/v1/'+table+'?select='+select+'&'+query,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,
+        Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
       signal:AbortSignal.timeout(12000),
     })
-  assert(brokenRowsResponse.ok)
-  const brokenRows=await brokenRowsResponse.json()
-  const inconsistentResponse=await fetch(
-    api+'/rest/v1/documents?select=content&type=eq.prd&project_id=eq.'+projectId,{
-      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
-      signal:AbortSignal.timeout(12000),
-    })
-  assert(inconsistentResponse.ok)
-  const oldContent=(await inconsistentResponse.json())[0].content
-  assert.equal(brokenRows.length,4,'Expected the uncommitted phantom restore snapshot in legacy flow')
-  assert.equal(brokenRows[3].content,beforeRestore,'Legacy INSERT created wrong phantom target')
-  assert.equal(oldContent,merged,'The rejected document UPDATE must not change current document')
-  console.log('REPRODUCED FAULT-01: phantom restored version inserted even though document UPDATE failed')
-  // The client currently throws on the deliberately injected 503. Remove
-  // only the synthetic error from the runtime-error report for this negative test.
-  const injectedErrors=errors.splice(expectedErrorStart)
-  console.log('FAULT-01 expected client exception count:',injectedErrors.length)
+    assert(response.ok,'Cannot query isolated local '+table+' response')
+    return response.json()
+  }
+  const documentId=serverRows.find(row=>row.type==='prd')?.id
+  const queryVersions='document_id=eq.'+documentId+'&order=version_number.asc'
+  const afterErrorVersions=await readLocalRows(
+    'document_versions','id,version_number,version_name,content',queryVersions)
+  assert.deepEqual(afterErrorVersions.map(v=>v.version_number),[1,2,3],
+    'FAULT-01 created phantom version despite atomic RPC failure')
+  const afterErrorDoc=await readLocalRows('documents','content',
+    'project_id=eq.'+projectId+'&type=eq.prd')
+  assert.equal(afterErrorDoc[0].content,merged,
+    'FAULT-01 changed current document despite injected RPC error')
+  const noOperations=await readLocalRows('document_restore_operations','id',
+    'document_id=eq.'+documentId)
+  assert.equal(noOperations.length,1,
+    'FAULT-01 must roll back failed operation entry, retaining only prior v3 restore')
+  console.log('PASS FAULT-01: injected server UPDATE failure rolls back snapshot, document and operation')
+
+  // Drop the ONLY-LOCAL fault trigger, then retry the same modal confirmation.
+  // The store must retain the operation UUID after the ambiguous error.
+  execFileSync('psql',[
+    '-X','-v','ON_ERROR_STOP=1',
+    '-c','drop trigger qa_reject_document_restore on public.documents',
+  ],{
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
+    stdio:['ignore','pipe','pipe'],timeout:30000,
+  })
+  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await page.getByRole('button',{name:/^v4 \(복원\)$/}).first()
+    .waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),beforeRestore,
+    'FAULT-01 retry did not restore correct target version')
+  const retriedHistory=await readLocalRows(
+    'document_versions','id,version_number,version_name,content',queryVersions)
+  assert.deepEqual(retriedHistory.map(v=>v.version_number),[1,2,3,4],
+    'Retry created extra or missing history snapshots')
+  assert.equal(retriedHistory[3].content,beforeRestore)
+  const appliedOps=await readLocalRows('document_restore_operations',
+    'id,source_version_id,document_id','document_id=eq.'+documentId+
+    '&order=created_at.asc')
+  assert.equal(appliedOps.length,2,'Prior successful restore plus retry must create only two operations')
+  console.log('PASS FAULT-01 retry: same historical snapshot applied once after removing injected error')
+
+  // Replay the successful retry operation ID with an actual Auth JWT.
+  // This must not create another historical version or overwrite later edits.
+  const tokenResponse=await fetch(api+'/auth/v1/token?grant_type=password',{
+    method:'POST',
+    headers:{apikey:variables.ANON_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:loginEmail,password:loginPassword}),
+    signal:AbortSignal.timeout(12000),
+  })
+  assert(tokenResponse.ok)
+  const userToken=(await tokenResponse.json()).access_token
+  const idempotentResponse=await fetch(api+'/rest/v1/rpc/restore_document_version',{
+    method:'POST',
+    headers:{apikey:variables.ANON_KEY,Authorization:'Bearer '+userToken,
+      'Content-Type':'application/json'},
+    body:JSON.stringify({p_document_id:documentId,
+      p_version_id:retriedHistory[1].id,
+      p_operation_id:appliedOps[1].id}),
+    signal:AbortSignal.timeout(12000),
+  })
+  assert(idempotentResponse.ok,'Idempotent replay unexpectedly denied')
+  assert.equal((await readLocalRows('document_versions','id',queryVersions)).length,4,
+    'Repeated operation ID created duplicate version')
+  console.log('PASS IDEMPOTENCY-01: retry UUID replay leaves historical version count unchanged')
+
+  // B-05 DRAFT: Current edited text that the user has NOT manually saved as
+  // a version MUST be checkpointed before restoring an older snapshot.
+  const unsnapshotted=beforeRestore+'\\nB05-UNSNAPSHOTTED-PRE-RESTORE'
+  await mainEditor.fill(unsnapshotted)
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByRole('button',{name:/^v1 \(B05-old\)$/}).first().click()
+  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await page.getByRole('button',{name:/^v6 \(복원\)$/}).first()
+    .waitFor({state:'visible',timeout:20000})
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),merged,
+    'Unsnapshotted-current restore did not produce original historical target')
+
+  const preserved=await readLocalRows('document_versions',
+    'version_number,version_name,content',queryVersions)
+  assert.deepEqual(preserved.map(v=>v.version_number),[1,2,3,4,5,6])
+  assert.equal(preserved[4].version_name,'복원 전 자동 보관')
+  assert.equal(preserved[4].content,unsnapshotted,
+    'Unsnapshotted current text not checkpointed prior to restoration')
+  assert.equal(preserved[5].content,merged)
+  assert.equal((await readLocalRows('documents','content',
+    'project_id=eq.'+projectId+'&type=eq.prd'))[0].content,merged)
+  console.log('PASS B-05 DRAFT: unsnapshotted current revision saved automatically as v5 before v6 restoration')
 
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
