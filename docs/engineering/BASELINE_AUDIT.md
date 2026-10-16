@@ -2,11 +2,17 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.4  
+**문서 버전:** v2.5  
 **진행 상태:** 진행 중  
 
 
 **초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 통합 기준선 및 브라우저 스모크
+- **통합 [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15)**: 앱 코드 PR #11을 첫 부모, RLS PR #14를 두 번째 부모로 하는 통합 commit `992bb60c8f458f4f813a52747d40463f83674d22`. GitHub compare에서 RLS 변경 13개는 **기존 파일 수정 없는 신규 파일 추가**였으며 앱 TS/Supabase 소스 충돌 없음.
+- **실측 검증:** [Baseline #38855752421](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752421) (build/lint/17 단위), [RLS PostgreSQL #38855752463](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752463) (42P17→009), [Auth/JWT/REST #38855748722](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722) (001~010 댓글/알림/버전), [실제 Chromium #38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235) (로그인·대시보드·PRD·리로드) 각각 **SUCCESS**. CI별 SHA 차이는 QA 워크플로 편집 때문이며, 앱과 RLS SQL 소스는 통합 후 변경되지 않음.
+- **경계:** 실제 브라우저 E2E는 로그인·대시보드·문서 확인의 스모크만 수행. 기존 저장/복원/채팅 B-01~12/C-01~10, 팀 초대·권한 변경·댓글·알림·문서 버전·휴지통 회귀 및 알림 스푸핑/활동 감사/저장 원자성은 아직 미검증.
+- **운영:** Supabase hosted DB에 009/010 미적용, `main`·Vercel 운영 배포/유료 인프라/결제 미변경. [통합 QA 보고서](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md).
 
 ## 2026-10-16 추가 권한 하드닝 — 댓글·반응·알림·문서 버전
 - **변경은 별도 [Draft PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14)**, base PR #13. migration `010_harden_comments_notifications_versions.sql`에서 댓글 댓글 작성자/스레드 귀속 필드 UPDATE 트리거, 타인의 반응/참여 상태 UPDATE·DELETE 금지, 알림 수신자 프로젝트 active/owner 확인 및 읽음 필드 외 수정 금지, 이력 UPDATE 차단, soft-delete 댓글 빈 본문 허용. `009`를 선행 적용해야 한다.
@@ -178,3 +184,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v2.2 | 일회용 PostgreSQL 17 001~008 재귀 재현→009 수정·권한 테스트 CI 성공 및 pending 초대 정보 보존 확인 |
 | 2026-10-16 | v2.3 | 실제 로컬 Supabase Auth 로그인/JWT·PostgREST 역할별 조회/뷰어 쓰기 차단 CI 성공 및 운영/브라우저 미검증 경계 기록 |
 | 2026-10-16 | v2.4 | PR #14 migration 010 댓글/반응/참여/알림/버전 실제 로컬 Supabase JWT/REST 12개 권한 시나리오 CI PASS 및 잔여 보안 정리 |
+| 2026-10-16 | v2.5 | 통합 2-parent PR #15과 앱 TS/build/lint/17개 유닛·RLS 009/010 SQL/REST·Chromium 로그인/문서 스모크 CI 통과 증빙 기록 |
