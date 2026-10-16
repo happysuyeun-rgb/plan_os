@@ -200,6 +200,7 @@ export default function DocumentPage() {
 
   const availableTypes = useMemo(() => getAvailableDocTypes(documents), [documents])
   const activeDoc = documents[activeDocType]
+  const activeDocumentId = activeDoc?.id
 
   const sidebarVersionInfo = useMemo(() => {
     const result: Partial<Record<DocumentType, SidebarVersionInfo>> = {}
@@ -251,10 +252,13 @@ export default function DocumentPage() {
     fetchCounts(projectId)
   }, [projectId, canComment, fetchCounts])
 
+  // Comment queries belong to a document identity, not its mutable content.
+  // A keystroke replaces the cached Document object but must not re-fetch
+  // comments or overwrite an in-progress reply UI.
   useEffect(() => {
-    if (!projectId || !activeDoc || !canComment) return
-    fetchThreads(projectId, activeDoc.id)
-  }, [projectId, activeDoc, canComment, commentFilter, commentSearch, fetchThreads])
+    if (!projectId || !activeDocumentId || !canComment) return
+    void fetchThreads(projectId, activeDocumentId)
+  }, [projectId, activeDocumentId, canComment, commentFilter, commentSearch, fetchThreads])
 
   useEffect(() => {
     if (!projectId || isLoading) return
@@ -291,7 +295,6 @@ export default function DocumentPage() {
 
   // Chat/version history belongs to a document ID. Draft content changing on
   // every keystroke must not clear and refetch the entire chat conversation.
-  const activeDocumentId = activeDoc?.id
   useEffect(() => {
     if (projectId && activeDocumentId) {
       void fetchVersions(activeDocumentId)
