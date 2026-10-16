@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.7  
+**문서 버전:** v1.8  
 **진행 상태:** 진행 중  
 
 
@@ -20,6 +20,12 @@
 - **실측 CI:** [Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645)에서 npm ci·build/TypeScript·lint·자동저장 유닛테스트 4개 **PASS**. 로컬 Node 22에서도 4개 통과.
 - **미검증 회귀:** 브라우저에서 문서 탭 전환, 이전 버전 보기/복원, regenerate/regenerateCascade, 저장 실패 후 복구, 다른 프로젝트로 이동 중 pending/in-flight save, 비동기 문서 목록 응답, URL/댓글 딥링크. 특히 재생성과 복원이 큐의 미완료 저장과 충돌할 가능성은 추가 차단/회귀 필요.
 - **RLS 계속 보류:** 격리 개발 DB가 없어 실제 SQL 실험을 하지 않았다. 운영 DB 부활·마이그레이션·새 유료 브랜치 생성도 하지 않았다.
+
+## 2026-10-16 PR #9 보강: 명시적 문서 덮어쓰기까지 직렬화
+- [Draft PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9): `createDocumentAutosave.replace`를 문서별 **동기적 쓰기 슬롯 예약 + 미저장 초안 저장 + 명시적 덮어쓰기 + 이후 신규 편집 저장** 순으로 구성. `versionStore.restoreVersion`, `documentStore.regenerate`, `regenerateCascade`가 사용함.
+- **CI 성공:** [Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357), 코드 SHA `abf15fcb9331b6d8675c9cd95edeb1a9644caa03` — npm ci, TypeScript/build, lint, **11개 unit tests 통과**. 이전 단계의 테스트 실패는 수정됨.
+- **계속 위험:** `sendChatMessage`는 문서를 직접 UPDATE하므로 이 대기열을 우회([Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10)); 직접 브라우저/프로젝트 DB 동작, 버전 복원 저장 트랜잭션, 서버 RLS 검증 미실행. [브라우저 QA 체크리스트](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-document-autosave-safety-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md) 참고.
+- **판정:** 단위 테스트 수준 개선이며 브라우저/DB 회귀 완료가 아님. PR #9 Draft 유지, `main` 병합·배포·DB 변경 없음.
 
 ## Verified
 | Area | File | Finding | Impact |
@@ -127,3 +133,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v1.5 | RLS 역할별 재현 매트릭스·기대 결과·운영 DB 변경 금지 조건 추가 |
 | 2026-10-16 | v1.6 | CI 최신 성공을 문서 상단에서 단일 상태로 표시·과거 실패 이력 구분·교차 감사 연결 |
 | 2026-10-16 | v1.7 | Plan OS DB 비활성·별도 브랜치 없음/조회 타임아웃 실측, PR #9 자동저장 코드 및 4개 테스트 CI 통과·실제 회귀 미완료 기록 |
+| 2026-10-16 | v1.8 | 복원·재생성 직렬화/신규 입력 경합 11개 유닛 테스트 CI 성공 및 채팅 직접 문서 UPDATE 잔여 위험 기록 |
