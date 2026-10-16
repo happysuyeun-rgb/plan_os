@@ -188,6 +188,7 @@
 | 2026-10-16 | v3.8 | 댓글·반응·참여상태·알림·버전 010 별도 Draft PR #14, 일회용 Auth/JWT/REST CSEC-01~12 CI PASS·남은 UI/보안 차단 기록 | [Actions #38854258418](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854258418) / [PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14) |
 | 2026-10-16 | v3.9 | PR #15 통합 2-parent merge·앱/SQL/Auth CI 3종 PASS, 실제 Chromium 로그인·대시보드·PRD 스모크 PASS 및 전체 UI 회귀 미완료 기록 | [PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) / [Browser #38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235) |
 | 2026-10-16 | v4.0 | B-01/B-02/C-01 브라우저·격리 DB PASS, 댓글 중복 GET 제거와 늦은 응답 보호, 19개 잔여 브라우저/원자성 이슈 누락 점검 | [Browser #38867796404](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796404) / [QA v1.2](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md) |
+| 2026-10-16 | v4.1 | B-05 저장된 현재 버전→과거 미리보기→복원 v3 실제 Chromium/DB PASS, 원자성·미저장 초안 Issue #16 분리, B/C 4/22 정상 경로 확인 | [Actions #38869950232](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232) / [Issue #16](https://github.com/happysuyeun-rgb/plan_os/issues/16) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
@@ -201,5 +202,3 @@
 3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): SQL 정적 감사 이후 실제 적용 상태 및 권한 검증 마무리.
 4. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 재검증 및 회귀 기준선.
 5. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
-| 2026-10-16 | v4.1 | B-05 저장된 현재 버전→과거 미리보기→복원 v3 실제 Chromium/DB PASS, 원자성·미저장 초안 Issue #16 분리, B/C 4/22 정상 경로 확인 | [Actions #38869950232](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232) / [Issue #16](https://github.com/happysuyeun-rgb/plan_os/issues/16) |
-
