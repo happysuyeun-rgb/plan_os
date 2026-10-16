@@ -141,3 +141,38 @@ test('restore on one document never blocks or changes another document', async (
   await replacing
   assert.deepEqual(writes, [['doc-B', 'edit B'], ['doc-A', 'restored A']])
 })
+
+test('an edit made while overwrite waits for an in-flight save is never dropped', async () => {
+  const inFlight = deferred()
+  const started = deferred()
+  const { save, writes, events } = setup(async (_, content) => {
+    if (content === 'initial') {
+      started.resolve()
+      await inFlight.promise
+    }
+  })
+
+  save.schedule('doc-A', 'initial')
+  const initial = save.flush('doc-A')
+  await started.promise
+
+  const replacing = save.replace('doc-A', async () => {
+    writes.push(['doc-A', 'generated content'])
+    return 'generated content'
+  })
+
+  // A new human edit happens while the first network request is still running.
+  // It must remain newer than the replacement, not disappear in preflight.
+  save.schedule('doc-A', 'typed while waiting')
+  const final = save.flush('doc-A')
+  inFlight.resolve()
+  await Promise.all([initial, replacing, final])
+
+  assert.deepEqual(writes, [
+    ['doc-A', 'initial'],
+    ['doc-A', 'generated content'],
+    ['doc-A', 'typed while waiting'],
+  ])
+  assert.equal(events.some(([kind]) => kind === 'replaced'), false)
+  assert.equal(save.getStatus('doc-A'), 'saved')
+})
