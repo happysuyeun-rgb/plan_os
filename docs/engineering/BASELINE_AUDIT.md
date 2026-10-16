@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.4  
+**문서 버전:** v1.5  
 **진행 상태:** 진행 중  
 
 
@@ -78,6 +78,17 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 - 정책 수정 SQL은 **별도 PR**로 작성하고 승인 전 운영 DB에는 적용하지 않음.
 - 문서/댓글/알림/프로젝트 기존 사용자 흐름 회귀 테스트.
 
+
+## 2026-10-16 RLS 개발 DB 검증 매트릭스 (계획 작성 완료, 실행 미완료)
+- **환경:** 운영 DB가 아닌 격리 개발 DB. 마이그레이션 적용 순서 확인 후 owner(A), editor(B), viewer(C), 외부인(D), 타 프로젝트 owner(E) 테스트 계정을 각각 준비. service_role로 일반 사용자 동작을 대체하지 않음.
+- **RLS 재귀:** 각 계정으로 `project_members` SELECT 실행. 정책 재귀 오류/성능, 동일 프로젝트와 다른 프로젝트 멤버 노출 범위 확인.
+- **댓글 수정:** B/C가 타인의 `project_comments` 본문/상태 UPDATE 시도. 본인 댓글과 타인 댓글 권한을 구분하여 허용/차단 기대값을 제품 정책에 따라 명시.
+- **반응·참여상태:** B/C가 타인 `comment_reactions` / `comment_participant_status` UPDATE/DELETE 시도; 자기 레코드만 변경 가능한지 확인.
+- **알림:** A가 동일 프로젝트/외부 프로젝트/존재하지 않는 recipient에게 알림 INSERT 시도. recipient membership과 actor_id 검증.
+- **활동·버전·생성:** viewer의 `project_activities` 이벤트 위조, editor의 `document_versions` 기존 버전 UPDATE, editor의 `generation_runs` 임의 상태 변경 시도.
+- **판정:** 각 시나리오에 테스트 SQL, 계정 역할, 기대값, 실제 결과, 오류 메시지, 적용 migration hash 기록. 허용되지 않아야 할 조작이 가능하면 별도 수정 migration PR 작성. 실제 권한 확인 전까지 '취약점 확정'으로 표기하지 않음.
+- **승인 경계:** 운영 DB에 직접 테스트/마이그레이션 적용하지 않음. 개발 DB 접속정보 미확보로 실제 SQL 실행은 미완료.
+
 ## 2026-10-16 CI 검증 및 회귀 시나리오
 - **실측:** [GitHub Actions run #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570) on `fix/ci-lint-baseline-20261014` at commit `152e33968a90eea9e23dc58c63e4ba1beedc6dc4`: `npm ci` PASS, `npm run build` PASS, `npm run lint` PASS with **0 errors, 1 warning**.
 - **남은 경고:** `DocumentPage.tsx:307` effect dependency (`activeDoc`, `setContent`, `setReadOnly`, `versions`). 무작정 의존성을 추가하면 문서/버전 목록 갱신 때 저장 중인 내용을 덮어쓸 수 있으므로 실제 회귀 테스트와 함께 처리.
@@ -100,3 +111,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-14 | v1.2 | SQL 8개 정적 검토와 RLS 위험 가설 기록 |
 | 2026-10-15 | v1.3 | 구형 미검증 서술 수정, 회귀·보안·외부 AI 진입 게이트 추가 |
 | 2026-10-16 | v1.4 | CI 성공 근거와 잔여 lint 경고, 회귀 시나리오·정적 저장 경합 위험 기록 |
+| 2026-10-16 | v1.5 | RLS 역할별 재현 매트릭스·기대 결과·운영 DB 변경 금지 조건 추가 |
