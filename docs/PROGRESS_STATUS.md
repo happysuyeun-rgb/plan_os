@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.2  
+**문서 버전:** v3.3  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -31,6 +31,13 @@
 - **QA 명세:** [문서 저장 회귀 체크리스트 B-01~12](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-document-autosave-safety-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md)를 코드 PR 브랜치에 추가. 브라우저·격리 DB 실증은 **미실행**.
 - **새 P0 발견:** `src/lib/api/chat.ts`의 문서 직접 UPDATE가 큐를 우회함. [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10)으로 후속 격리. 버전 복원 중간 실패·동시 version_number 충돌·DocumentPage activeVersion 동기화도 테스트 대기.
 - **결론:** PR #9는 **Draft/미병합**, UI·실 DB 검증 전까지 배포/승인 금지. 기존 Plan OS Supabase DB는 INACTIVE, 개발 브랜치 없음.
+
+## Phase 0 채팅 편집 직접 쓰기 제거 (2026-10-16)
+- **P0 Issue #10 코드 대응:** [Draft PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11) (`fix/planos-chat-document-write-20261016`, 기반 Draft PR #9)에서 `src/lib/api/chat.ts`의 `documents.content` 직접 SELECT/UPDATE를 제거하고 `documentStore.applyChatEdit` → 문서별 autosave queue로 연결.
+- **화면·대화 격리:** ChatPanel의 중복 `onDocumentUpdate` 저장 제거, 다른 문서·프로젝트 및 과거 버전 상태 보호, 느린 채팅 응답의 다른 문서 메시지 목록 오염 방지, 전송 오류 토스트, 같은 요청의 중복 전송/낡은 로딩 상태 방지. 채팅·버전 목록 재조회는 문서 ID가 바뀔 때만 하도록 수정.
+- **단위 테스트:** 새 `tests/chatDocumentEdit.test.mjs` 6개 + 기존 11개 = 총 **17개**. [CI 실행](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38847021222) 최신 코드 커밋 기준 빌드·lint·테스트 확인 대상. 최종 CI 결론은 별도로 확인 후 기록.
+- **QA:** [PR #11 브랜치의 회귀 시나리오 C-01~10](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md) 작성, 브라우저/격리 DB 미실행. **채팅은 여전히 placeholder**, 실제 LLM 호출 아님.
+- **남은 차단:** 채팅 메시지 INSERT 성공 후 문서 쓰기 실패 시 멱등성/원자성, 이중 편집 브라우저 검증, 서버 RLS 실증. PR #11 Draft/미병합, Issue #10은 실제 QA 통과 전 열어 둠.
 
 ## 제품 정의 현황
 - [데이터 모델 v0.2](engineering/DATA_MODEL.md): 실제 001~008 SQL 정적 확인 기반 CURRENT/ TARGET 구분, 신규 AI 엔터티와 기존 generation_runs 분리. DDL·운영 적용 없음.
@@ -77,7 +84,7 @@
 8. GitHub 작업에 대한 완료 보고 전에 이 현황표와 문서 인덱스를 같은 브랜치에서 갱신한다.
 
 ## 최신 점검 결과 (2026-10-16 — 단일 최신 스냅샷)
-- **코드 안전성 추가:** PR #9 문서 저장·버전 복원·재생성 직렬화 코드 및 11개 유닛테스트 CI 성공. 단, 브라우저/RLS 미실행이고 채팅 업데이트는 Issue #10으로 남음.
+- **코드 안전성 추가:** PR #9 자동저장·복원·재생성 직렬화 11개 단위 테스트 CI 통과. PR #11에서 채팅 직접 DB 쓰기를 별도 autosave 경로로 통합하고 테스트 6개를 추가. **둘 다 Draft/미병합**; 브라우저/RLS·메시지 원자성 미검증.
 - **제품/설계:** PRD, TF-01~30, IA, SCREEN_SPEC, PERMISSIONS_POLICY, ARCHITECTURE, DATA_MODEL, API_CONTRACTS **8개 v0.2 보완 초안 작성**. 모두 검토/승인 전·미구현. [12개 문서 감사](quality/DOCUMENT_REVIEW_2026-10-16.md)에서 P0~P2 누락/모순 기록.
 - **로드맵:** [개발 실행계획 v1.4](roadmap/IMPLEMENTATION_PLAN.md)에 실제 문서 상태·Phase 3 내부 최소 계약 선행·Phase 5 고객 UI 확장 관계 반영. Phase 0은 미완료이며 Phase 1은 선행 초안 작성 상태.
 - **CI 검증 완료 범위:** [PR #8 Actions #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570), 커밋 `152e33968a90eea9e23dc58c63e4ba1beedc6dc4`에서 npm ci/build/lint **SUCCESS(ESLint 0 errors, 1 warning)**. 이 검증은 **PR #8 브랜치만**의 증빙이며 main/PR #5가 통과하거나 브라우저 E2E가 통과했다는 뜻이 아님.
@@ -114,6 +121,7 @@
 | 2026-10-16 | v3.0 | 문서 감사 재검산: CI·아키텍처·TF 매핑의 최신 상태 표현 정리 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 | 2026-10-16 | v3.1 | Supabase Plan OS 비활성/개발 브랜치 없음·마이그레이션 조회 실패, PR #9 자동저장 코드 수정 및 CI/단위 테스트 성공 기록 | [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) / [Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645) |
 | 2026-10-16 | v3.2 | 버전 복원·AI 재생성 문서별 쓰기 직렬화, 11개 테스트 CI 성공, QA B-01~12/Issue #10 경합 위험 기록 | [Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357) / [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) |
+| 2026-10-16 | v3.3 | PR #11 채팅 직접 DB 쓰기 제거, 문서별 저장 큐 연동 및 6개 신규 테스트, 브라우저 QA/C-01~10·원자성 미완료 기록 | [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11) / [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
