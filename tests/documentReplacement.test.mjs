@@ -65,13 +65,15 @@ test('regeneration waits for an already in-flight save to finish', async () => {
 
 test('new edits made during generation win over late AI completion', async () => {
   const generation = deferred()
+  const started = deferred()
   const { save, writes, events } = setup()
   const replacing = save.replace('doc-A', async () => {
+    started.resolve()
     await generation.promise
     writes.push(['doc-A', 'AI output'])
     return 'AI output'
   })
-  await Promise.resolve()
+  await started.promise
   save.schedule('doc-A', 'new human edit')
   const after = save.flush('doc-A')
   generation.resolve()
@@ -123,13 +125,15 @@ test('failed generation does not deadlock future saves', async () => {
 
 test('restore on one document never blocks or changes another document', async () => {
   const barrier = deferred()
+  const started = deferred()
   const { save, writes } = setup()
   const replacing = save.replace('doc-A', async () => {
+    started.resolve()
     await barrier.promise
     writes.push(['doc-A', 'restored A'])
     return 'restored A'
   })
-  await Promise.resolve()
+  await started.promise
   save.schedule('doc-B', 'edit B')
   await save.flush('doc-B')
   assert.deepEqual(writes, [['doc-B', 'edit B']])
