@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.0  
-**진행 상태:** 1차 교차검토 완료 / 필수 정책 결정·구현 검증 미완료  
+**문서 버전:** v1.1  
+**진행 상태:** 1차 교차검토 및 안전한 문서 정합성 보완 완료 / 필수 정책 결정·구현 검증 미완료  
 **점검 범위:** 신규 제품 정의 8개 문서(PRD, TF, IA, SCREEN_SPEC, PERMISSIONS_POLICY, ARCHITECTURE, DATA_MODEL, API_CONTRACTS) + 관리 문서 4개(README, PROGRESS_STATUS, IMPLEMENTATION_PLAN, BASELINE_AUDIT).  
 **증거 기준:** GitHub 문서 브랜치 `docs/planos-v3-readiness-20261014`, 기본 브랜치 `main`의 `src/App.tsx`, `src/store/documentStore.ts`, `src/lib/api/generation.ts`, `src/lib/api/chat.ts`, Supabase 001~008 SQL; PR #8 CI 실행 #38680673570. **운영 DB/브라우저/서버 실행 미검증**.
 
@@ -54,16 +54,22 @@
 | DQ-14 | P1 | 기존 PlanOS 자동저장·버전·댓글·복원 회귀가 CI에 포함되지 않음 | 테스트 도구/fixture/격리 DB 셋업, 문서 전환·저장 경합 테스트 | 테스트 로그 |
 | DQ-15 | P2 | 추가 전문 AI·추천·평판 등 초기 MVP 범위가 넓어질 여지 | 첫 PM+전문 1명·도구 1종 수직 슬라이스, 후순위 기능 동결 | MVP 게이트 |
 
-## 4. 안전하게 바로 반영 가능한 보완 범위
-- [ ] `IMPLEMENTATION_PLAN.md` 현재 문서 상태/Phase 3 최소 계약 선행 의존성/우선순위 최신화.
-- [ ] `PROGRESS_STATUS.md` 현황의 최신 스냅샷과 역사적 로그 분리.
-- [ ] `BASELINE_AUDIT.md` 상단 최신 CI/검증 부족 상태 명시.
-- [ ] `DATA_MODEL.md` 유니크 키 컬럼 불일치 수정.
-- [ ] `README.md` 문서 감사 보고서 연결.
-- [ ] `TASK_FLOWS.md` 이미 작성된 IA/API/DB 초안 링크와 매핑 미완료를 구분.
-- [ ] `SCREEN_SPEC.md` 결과 수락 UI P0 누락 명시(상세 정책은 임의 확정하지 않음).
-- [ ] `API_CONTRACTS.md` API 누락 항목/비동기 계획 생성·승인요청 표준화가 필요함을 명시.
-- [ ] `ARCHITECTURE.md` Phase 3 계약 의존성 반영.
+## 4. 2026-10-16 실제 보완 반영 결과 (증빙: PR #1)
+
+| 항목 | 보완 대상 | 상태 | 남은 사항 |
+|---|---|---|---|
+| DQ-01 | [실행계획 v1.4](../roadmap/IMPLEMENTATION_PLAN.md), [진행 현황 v2.8](../PROGRESS_STATUS.md) | **문서 불일치 수정 완료** | 실제 DB/회귀 검증은 별개 |
+| DQ-02 | 실행계획·[AI 아키텍처 v0.2](../engineering/ARCHITECTURE.md) | **계약 개발 순서 정합화 완료(문서)** | 내부 계약 실제 구현 전 |
+| DQ-03 | [API 계약 v0.2](../engineering/API_CONTRACTS.md), 아키텍처 | **차단 조건 명시/부분 보완** | PM 모델 계획 job/비용 계약 확정 필요 |
+| DQ-05 | [화면명세 v0.2](../ux/SCREEN_SPEC.md), [IA v0.2](../ux/IA.md) | **수락 UX 후보·예외 보완** | 와이어플로·실제 사용자 테스트 전 |
+| DQ-06 | [DATA_MODEL v0.2](../engineering/DATA_MODEL.md) | **미정의 action_scope 유니크 키 불일치 수정(문서)** | 실제 DDL·제약 테스트 전 |
+| DQ-07 | [권한 정책 v0.2](../product/PERMISSIONS_POLICY.md), [기술 감사 v1.6](../engineering/BASELINE_AUDIT.md) | **CURRENT/TARGET 권한 차이 명시** | 개발 DB RLS 실증 미완료 |
+| DQ-08 | API 계약 v0.2 | **조회/승인/계약 API 빈 구간 명시** | OpenAPI 및 API 구현 전 |
+| DQ-11 | [TF 명세 v0.2](../product/TASK_FLOWS.md) | **TF-화면-API-데이터 1차 추적성 추가** | 테스트 ID 매핑 미완료 |
+| DQ-13/15 | [PRD v0.2](../product/PRD.md) | **첫 전문 업무 후보·수직슬라이스/출시 게이트 추가** | 작업/가격/지표 정책 승인 전 |
+| 문서 관리 | [README v2.0](../README.md), PROGRESS, ROADMAP, BASELINE | **링크·최신 CI 스냅샷 정리** | 후속 변경 시 동기화 필요 |
+
+**미해결 핵심 P0:** DQ-04 승인 요청 생성·수명/철회/서버 계약, DQ-07 실제 DB 권한 검증, DQ-08 API/OpenAPI 완결, DQ-09 동시 예산/정산·환불, DQ-10 위협 모델·QA/운영 런북 및 회귀. **정책 미승인·미실행 항목을 '완료'로 표기하지 않는다.**
 
 ## 5. 보완 우선순위와 다음 개발 게이트
 1. **문서 정합성 먼저:** DQ-01, DQ-02, DQ-06 수정. DQ-03~05/08~10은 임의 확정하지 않고 설계 결정을 요구.
@@ -76,3 +82,4 @@
 | 날짜 | 버전 | 내용 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v1.0 | 12개 문서 교차검토·수량/링크 검사·P0~P2 개선 백로그 최초 작성 | P0 보완 진행 예정 |
+| 2026-10-16 | v1.1 | 8개 핵심 문서·4개 관리 문서의 안전한 정합성 보완 결과/미해결 P0 상태 기록 | 정책·DB/QA 검증 대기 |
