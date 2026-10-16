@@ -114,8 +114,15 @@ export function createDocumentAutosave<T>({
         // regenerate. If a previous in-flight save already wrote it, skip.
         // A failed draft must never be discarded by a replacement operation.
         if (pendingRevision > task.savedRevision) {
-          await persist(documentId, pendingContent)
-          task.savedRevision = pendingRevision
+          try {
+            await persist(documentId, pendingContent)
+            task.savedRevision = pendingRevision
+          } catch (error) {
+            throw new Error(
+              'Unsaved document changes must be retried before overwrite',
+              { cause: error },
+            )
+          }
         }
 
         const content = await overwrite()
