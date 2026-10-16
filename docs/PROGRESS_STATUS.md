@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.9  
+**문서 버전:** v3.0  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -10,7 +10,7 @@
 ## 전체 로드맵
 | 단계 | 진행 상태 | 완료한 것 | 미완료·다음 확인 |
 |---|---|---|---|
-| 0. 기술 기준선 | **진행 중** | 저장소 212개 항목 목록 확인, SQL 8개 정적 감사, CI 실행·실패 원인 확인, 린트 부분 수정 PR #8 | CI build/lint 성공 확인(경고 1건 남음), 운영 DB 적용 상태, RLS 재현/개선, 배포 환경·회귀 검증 |
+| 0. 기술 기준선 | **진행 중** | 저장소 212개 항목 목록 확인, SQL 8개 정적 감사, CI 실행·실패 원인 확인, 린트 부분 수정 PR #8 | CI 성공 증빙 확보, 남은 lint 경고 1건·운영 DB 적용 상태, RLS 재현/개선, 배포 환경·회귀 검증 |
 | 1. 기획·아키텍처 | **부분 착수(초안)** | 통합 PRD·TF-01~30·IA·화면 기능명세·권한 정책·AI 아키텍처·데이터 모델·API 계약 초안 8개 작성 | 8개 초안 검토·승인, 정책 결정, 실제 워커/큐 선정, 상세 SQL/OpenAPI/보안/QA 설계 및 검증 |
 | 2. 프로젝트·업무 기반 | **미착수** | 없음 | 업무 상태/CRUD/워크스페이스/호환성 |
 | 3. 통제된 AI 실행 | **미착수** | 없음 | 서버 모델, 큐/워커, 승인, 예산, 복구 |
@@ -27,7 +27,7 @@
 - [AI 실행 아키텍처 v0.2](engineering/ARCHITECTURE.md): 영속 워커·ModelGateway·승인·예산·증빙·복구 설계. **구현/공급자 선정 전**.
 - [화면별 기능명세 v0.2](ux/SCREEN_SPEC.md): MVP 9개 핵심 화면의 입력/행동/검증/예외/수용 조건, 나머지 14개 화면 통합 전략 작성. 검토 전·미구현.
 - [IA 및 화면 목록 v0.2](ux/IA.md): CURRENT 11개 라우트, TARGET 23개 화면 후보, TF 연결·기존 DocumentPage 딥링크 보존 전략. 실제 구현/화면 QA는 미완료.
-- [사용자 업무 흐름 TF-01~30 v0.2](product/TASK_FLOWS.md) 작성(브랜치), 검토 전. 진입/행동/산출/실패/권한 정의 완료, 화면/API 매핑은 미완료.
+- [사용자 업무 흐름 TF-01~30 v0.2](product/TASK_FLOWS.md) 작성(브랜치), 검토 전. 진입/행동/산출/실패/권한 정의 및 화면/API/DB 1차 매핑 작성, 1:1 테스트 매핑 미완료.
 - [통합 서비스 기획서(PRD v0.2)](product/PRD.md) 작성 완료(브랜치), 검토/승인 전. 목표 제품 범위 정의이지 구현 완료가 아님.
 - 기존 `docs/TECH_SPEC.md`는 V1 구현 참조로 보존.
 
@@ -40,7 +40,7 @@
 | CI | build/lint 워크플로 | **PR #5 미병합; CI 성공 근거는 PR #8 최신 브랜치** | [PR #5](https://github.com/happysuyeun-rgb/plan_os/pull/5) / [성공 실행](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570) |
 | 감사 | DB/RLS 정적 감사 | **SQL 8개 검토 완료 / 실제 권한 검증 미완료** | [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2) |
 | 품질 | 빌드/테스트/배포 환경 검증 | **미완료** | [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3) |
-| 설계 | 서버 AI 실행/승인/비용 ADR | **아키텍처 v0.1 초안 작성 / 선정·승인 미완료** | [설계 초안](engineering/ARCHITECTURE.md) / [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4) |
+| 설계 | 서버 AI 실행/승인/비용 ADR | **아키텍처 v0.2 초안 작성 / 선정·승인 미완료** | [설계 초안](engineering/ARCHITECTURE.md) / [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4) |
 | 코드 | 린트 수정 PR #8 | **CI 성공 / 회귀 미검증** | [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8) |
 | 보안 | RLS 위험 재현·수정 | **정적 위험 발견 / DB 재현 미완료** | [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7) |
 | 모델 | FreeLLMAPI 검토 | **외부 문서 검토 완료 / 설치·성능 시험 미착수** | [실행계획](roadmap/IMPLEMENTATION_PLAN.md) |
@@ -97,6 +97,7 @@
 | 2026-10-16 | v2.7 | CURRENT SQL 대조 데이터 모델·TARGET API 23개 계약 초안 작성 | PR #1 |
 | 2026-10-16 | v2.8 | 12개 문서 교차감사, CI 최신 스냅샷 통일, Phase 3 계약 선행과 P0 결정/검증 누락 반영 | [문서 품질 감사](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 | 2026-10-16 | v2.9 | PRD·TF·IA·SCREEN·PERMISSIONS·ARCH·DATA·API 문서 v0.2 정합성 보완 및 감사 해결/미해결 구분 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
+| 2026-10-16 | v3.0 | 문서 감사 재검산: CI·아키텍처·TF 매핑의 최신 상태 표현 정리 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
