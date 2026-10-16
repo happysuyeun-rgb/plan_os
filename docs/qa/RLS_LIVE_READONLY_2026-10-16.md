@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.0  
-**진행 상태:** 운영 DB 읽기 전용 기준선 확인 / RLS 재귀 오류 실증 / 수정 미적용·개발 DB 검증 대기  
+**문서 버전:** v1.1  
+**진행 상태:** 운영 DB READ ONLY 진단 및 일회용 PostgreSQL 17에서 009 역할별 SQL CI 통과 / 별도 Supabase·브라우저 검증 및 운영 적용 대기  
 **프로젝트:** Plan OS (`ggviusdmxalsflyybamm`)  
 **연결:** [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) · [RLS 수정 제안](../../supabase/migrations/009_fix_project_members_select_recursion.sql) · [기존 기술 감사](../engineering/BASELINE_AUDIT.md)
 
@@ -42,10 +42,22 @@ drop policy if exists "멤버 조회" on public.project_members;
 create policy "멤버 조회"
   on public.project_members
   for select
-  using (public.can_access_project(project_id));
+  using (
+    auth.uid() = user_id
+    or public.can_access_project(project_id)
+  );
 ```
 
-**범위:** 해당 SELECT 정책만 교체. 댓글/알림/함수 EXECUTE/grants는 별도 보안 PR로 분리한다. 실제 배포 전 아래 역할·초대 검증을 통과해야 한다.
+**범위:** 해당 SELECT 정책만 교체하며, 기존 정책에 있던 **초대 대기자의 자기 행 조회(auth.uid() = user_id)**를 보존한다. 댓글/알림/함수 EXECUTE/grants는 별도 보안 PR로 분리한다. 실제 배포 전 아래 역할·초대 검증을 통과해야 한다.
+
+## 2.1. 일회용 PostgreSQL 17 실증 — 자동 CI 검증 완료 (2026-10-16)
+- **환경:** GitHub Actions [#38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220). GitHub 호스팅 러너의 **일회용 PostgreSQL 17 서비스 컨테이너**; Plan OS Supabase와 연결되지 않음. 실제 고객 데이터/자격증명 없음.
+- **기반:** [bootstrap](../../tests/rls/bootstrap_postgres.sql)의 `auth.uid()` 및 DB 역할을 최소 에뮬레이션 → **실제 GitHub 마이그레이션 001~008 적용** → [합성 계정/프로젝트](../../tests/rls/seed_members.sql) 생성.
+- **Before:** 인증된 역할로 `project_members` SELECT 시 migration 006의 **동일한 무한 재귀 오류** 발생. CI가 원인 문자열을 확인함.
+- **After:** [009 정책](../../supabase/migrations/009_fix_project_members_select_recursion.sql) 적용 → SELECT 재귀 오류 제거. [역할별 SQL 테스트](../../tests/rls/test_member_select_009.sql) 통과.
+- **검증된 역할:** 프로젝트 owner/editor/viewer는 해당 프로젝트의 구성원 목록 조회; 서로 다른 프로젝트는 격리; `pending`은 자신의 초대 행 **한 개만** 조회, 프로젝트 문서 접근은 불허; 타 프로젝트 소유자·회원·완전 외부인·`anon`은 권한 없는 프로젝트의 멤버 목록 조회 불가.
+- **실측 결론:** 해당 정책의 SQL 의미와 가장 중요한 접근 제약이 **실제 PostgreSQL 17에서 통과**. CI run `38849011220`의 `success` 확인.
+- **유효성 한계:** 이것은 Supabase Auth/JWT·실제 프로젝트 계정의 E2E가 아님. `auth.uid()`는 CI에서 만든 동등 역할 테스트용 함수이며 실제 Supabase 통합/회원 초대·프로젝트 삭제/복원 흐름은 미검증. 정책 전반의 안전성·상용 배포 승인으로 해석 금지.
 
 ## 3. 실제 시스템 정책 조회로 확인한 추가 보안 검토 항목
 
@@ -70,8 +82,8 @@ create policy "멤버 조회"
 
 **보안 경고의 의미:** EXECUTE grant 노출은 확인됐으나 함수들이 `auth.uid()`로 내부 권한을 확인하므로 grant 존재만으로 정보 유출을 단정하지 않는다. 트리거 함수 `handle_new_user()`도 일반 RPC 호출 성공을 입증한 것은 아니다. 필요한 함수·역할별 접근 방식, 트리거 영향과 revocation 회귀를 검토한 후 별도 PR로 개선한다.
 
-## 5. 격리 개발 DB 검증 계획 (미실행)
-1. 개발 DB/로컬 Supabase를 별도로 준비하고 migrations `001`~`009` 적용. 운영 DB에서 `db push` 절대 금지.
+## 5. 다음 격리 Supabase 및 브라우저 검증 계획 (아직 미실행)
+1. GitHub Actions의 일회용 PostgreSQL 17 컨테이너에서 마이그레이션 001~009 및 기본 역할 격리를 테스트했음. 다음에는 **독립 Supabase Auth·PostgREST 환경**이나 로컬 Supabase를 준비해 사용자 JWT를 통한 요청을 검증. 운영 DB에서 `db push` 절대 금지.
 2. 테스트 계정: 소유자 A, 활성 editor B, 활성 viewer C, pending 초대 D, 외부인 E, 다른 프로젝트 소유자 F. 테스트 프로젝트 2개와 각 2~3개의 fixture 멤버 행 생성.
 3. 각 사용자 JWT로 프로젝트 목록·`project_members` SELECT 및 권한 없는 타 프로젝트 읽기 시도. SELECT 재귀 없어야 하고 역할/초대 상태대로 행 분리.
 4. owner가 멤버 초대/취소/역할 변경, editor/viewer가 금지된 변경 시도, 프로젝트 soft-delete 및 복원 후 멤버 조회 검증.
@@ -86,8 +98,8 @@ create policy "멤버 조회"
 - [x] 테이블 RLS·정책·SECURITY DEFINER·Advisor 읽기 전용 확인
 - [x] `project_members` 42P17 읽기 전용 실제 재현
 - [x] SQL 패치 009 GitHub 초안 작성
-- [ ] 별도 개발 DB 준비/fixture·계정 역할 테스트
-- [ ] 수정 009 적용 후 재귀 제거·역할별 권한 검증
+- [x] 일회용 **PostgreSQL 17 CI** 준비, 합성 fixture와 역할별 테스트 및 009 적용 확인 ([실행 #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220))
+- [ ] **별도 Supabase Auth/PostgREST 또는 로컬 Supabase** 사용자 JWT·초대·프로젝트 복원 검증
 - [ ] 브라우저 사용자 회귀
 - [ ] 운영 변경/데이터 백업·롤백 계획 승인 및 실행
 
@@ -95,3 +107,4 @@ create policy "멤버 조회"
 | 날짜 | 버전 | 변경 내용 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v1.0 | 활성 DB read-only 실증·42P17 발견·Advisor 및 정책 점검·009 수정 제안/게이트 기록 | 개발 DB/운영 적용 전 |
+| 2026-10-16 | v1.1 | 009 초대 대기 자기 행 조회 보존, 일회용 PostgreSQL 17에서 001~008 재귀 재현/009 적용/권한별 SQL CI PASS 확인 | Supabase JWT·브라우저/운영 적용 전 |
