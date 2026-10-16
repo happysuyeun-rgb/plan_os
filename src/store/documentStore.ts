@@ -9,6 +9,7 @@ import {
   regenerateDocument as apiRegenerateDocument,
 } from '../lib/api/generation'
 import { useAuthStore } from './authStore'
+import { createDocumentAutosave } from '../lib/documentAutosave'
 
 interface DocumentState {
   documents: Partial<Record<DocumentType, Document>>
@@ -28,7 +29,32 @@ interface DocumentState {
   setReadOnly: (readOnly: boolean) => void
 }
 
-let saveTimer: ReturnType<typeof setTimeout> | null = null
+// The callbacks are invoked only after the store is initialized and edits occur.
+const autosave = createDocumentAutosave<Document>({
+  persist: apiSaveDocumentContent,
+  onSaved: (documentId, _content, updated) => {
+    useDocumentStore.setState((state) => {
+      const entry = Object.entries(state.documents).find(([, doc]) => doc?.id === documentId)
+      if (!entry) return state // e.g. user has switched projects
+      const [type, local] = entry as [DocumentType, Document]
+      return {
+        documents: {
+          ...state.documents,
+          [type]: { ...updated, content: local.content },
+        },
+        saveStatus: state.activeDocType === type ? 'saved' : state.saveStatus,
+      }
+    })
+  },
+  onError: (documentId) => {
+    useDocumentStore.setState((state) => {
+      const active = state.documents[state.activeDocType]
+      return active?.id === documentId ? { saveStatus: 'error' } : state
+    })
+  },
+})
+
+let fetchSequence = 0
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   documents: {},
@@ -39,18 +65,31 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   isLoading: false,
 
   fetchDocuments: async (projectId) => {
+    const sequence = ++fetchSequence
     set({ isLoading: true })
-    const docs = await apiFetchDocuments(projectId)
-    const map: Partial<Record<DocumentType, Document>> = {}
-    for (const doc of docs) map[doc.type] = doc
-    const { activeDocType } = get()
-    const active = map[activeDocType]
-    set({
-      documents: map,
-      content: active?.content ?? '',
-      isLoading: false,
-      saveStatus: 'saved',
-    })
+    try {
+      const docs = await apiFetchDocuments(projectId)
+      if (sequence !== fetchSequence) return // ignore an older project's response
+      const map: Partial<Record<DocumentType, Document>> = {}
+      for (const doc of docs) {
+        const cached = get().documents[doc.type]
+        map[doc.type] =
+          cached?.id === doc.id && autosave.getStatus(doc.id) !== 'saved'
+            ? { ...doc, content: cached.content } // do not wipe unsaved edits
+            : doc
+      }
+      const { activeDocType } = get()
+      const active = map[activeDocType]
+      set({
+        documents: map,
+        content: active?.content ?? '',
+        isLoading: false,
+        saveStatus: autosave.getStatus(active?.id),
+      })
+    } catch (error) {
+      if (sequence === fetchSequence) set({ isLoading: false })
+      throw error
+    }
   },
 
   setActiveDocType: (type) => {
@@ -59,32 +98,34 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       activeDocType: type,
       content: doc?.content ?? '',
       isReadOnly: false,
-      saveStatus: 'saved',
+      saveStatus: autosave.getStatus(doc?.id),
     })
   },
 
   setContent: (content) => set({ content }),
 
   updateContent: (content) => {
-    set({ content, saveStatus: 'saving' })
-    if (saveTimer) clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => get().autoSave(), 2000)
+    const { activeDocType, documents, isReadOnly } = get()
+    if (isReadOnly) return
+    const doc = documents[activeDocType]
+    if (!doc) return
+    // Keep the user's text with its original document while navigating tabs.
+    set((state) => ({
+      content,
+      saveStatus: 'saving',
+      documents: {
+        ...state.documents,
+        [activeDocType]: { ...doc, content },
+      },
+    }))
+    autosave.schedule(doc.id, content)
   },
 
   autoSave: async () => {
-    const { documents, activeDocType, content, isReadOnly } = get()
+    const { documents, activeDocType, isReadOnly } = get()
     const doc = documents[activeDocType]
     if (!doc || isReadOnly) return
-
-    try {
-      const updated = await apiSaveDocumentContent(doc.id, content)
-      set((s) => ({
-        documents: { ...s.documents, [activeDocType]: updated },
-        saveStatus: 'saved',
-      }))
-    } catch {
-      set({ saveStatus: 'error' })
-    }
+    await autosave.flush(doc.id)
   },
 
   regenerate: async (projectId, type, title, targetUser) => {
