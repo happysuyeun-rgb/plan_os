@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.5  
-**진행 상태:** 잔여 단계별 기간 재산정 / Phase 0 격리 PostgreSQL 17 RLS 테스트 통과, Supabase/Auth·브라우저 QA 대기  
+**문서 버전:** v1.6  
+**진행 상태:** 잔여 기간 재산정 유지 / Phase 0 로컬 Supabase Auth/JWT/REST 009·010 권한 CI 통과, 브라우저·기타 데이터 정합성/운영 승인 대기  
 
 ## 원칙
 - 기존 로그인·프로젝트·문서·버전·협업 기능을 보호한다.
@@ -26,6 +26,13 @@
 | 7. 제한 파일럿 | 5–10일 | 관측성, 지원·장애 대응, 사용자 검증, 수정 | 파일럿 수용 기준 + 원가 검증 | Phase 6 | 예정 |
 
 **기존 추정:** 42–75 작업일(초기 전체 기간). **2026-10-16 재산정 잔여 추정:** **43–79 작업일**(전담 개발 1명+AI 보조, 주 5일 기준 약 9~16주; 신규 결함/외부 승인 대기 별도). Phase 0 5~10일, Phase 1 기획 초안 승인 3~6일, Phase 2 5~8일, Phase 3 8~15일, Phase 4 6~10일, Phase 5 6~10일, Phase 6 5~10일, Phase 7 5~10일. 이 추정은 개발 일정 가정이지 제품 완성도 %, 납기 약속이 아니다.
+
+## 2026-10-16 Phase 0 업데이트 — 격리 Supabase SQL·Auth·REST 권한 보완 진척
+- **009:** [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13)의 `project_members` 재귀 제거·pending 본인 초대 행 유지, 일회용 PostgreSQL 17 [#38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) + 로컬 Supabase Auth/JWT/REST [#38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) 테스트 PASS.
+- **010:** 별도 [Draft PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14)에서 댓글 소유권/soft-delete, 반응·참여 본인 행, 알림 actor·recipient/읽음, 문서 버전 과거 수정 차단. 실제 Auth/JWT/REST [#38854258418](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854258418) CSEC-01~12 성공.
+- **남은 P0:** 실제 웹 UI 초대·팀·삭제/복원·댓글/알림/버전 회귀, 저장/채팅 PR #9/#11 브라우저 B-01~12/C-01~10, 메시지/문서 저장 원자성, activity 알림 payload/프로젝트 참조 무결성 정책, 백업/롤백·보안 승인.
+- **기간:** Phase 0 잔여 5~10 작업일, 전체 43~79 작업일(전담 개발자+AI 보조 기준) **잠정 유지**. 009/010 격리 테스트는 완료했지만 실제 UI/운영 이행 및 신규 결함 가능성이 있어 무리하게 기간을 단축하지 않음.
+- **운영 변경:** 운영 Plan OS DB는 migrations 001~008 상태로 조회됐으며 009·010은 **미적용**. `main` 병합·배포도 미실행.
 
 ## 2026-10-16 남은 Phase 0 세부 일정 (잠정)
 | 업무 | 남은 작업일 | 검증/차단 기준 |
@@ -118,6 +125,7 @@
 | 2026-10-15 | v1.3: Phase 진입 게이트·RLS/CI 우선순위·선택적 모델 도입·일정 재산정 조건 명확화 | Issues #2, #3, #6, #7 |
 | 2026-10-16 | v1.4: 신규 기획/설계 8개 초안 상태, CI 성공, Phase3 계약 선행 의존성, 감사 링크 정합화 | 문서 점검·Actions #38680673570 |
 | 2026-10-16 | v1.5: Phase 0 세부 업무·전체 잔여 43~79 작업일로 재산정, 격리 PostgreSQL 17 RLS SQL 검증 성공 반영 | Actions #38849011220 / PR #13 |
+| 2026-10-16 | v1.6: PR #13(009) 및 PR #14(010) 실제 일회용 Supabase Auth/JWT/REST 권한 CI 통과, 브라우저/기타 보안 차단·잔여 기간 유지 기록 | Actions #38852999398 / #38854258418 |
 
 ## 관련 자료
 - [진행 현황 인덱스](../README.md)
