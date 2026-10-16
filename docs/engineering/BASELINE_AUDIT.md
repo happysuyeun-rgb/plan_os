@@ -2,11 +2,18 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.3  
+**문서 버전:** v2.4  
 **진행 상태:** 진행 중  
 
 
 **초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 추가 권한 하드닝 — 댓글·반응·알림·문서 버전
+- **변경은 별도 [Draft PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14)**, base PR #13. migration `010_harden_comments_notifications_versions.sql`에서 댓글 댓글 작성자/스레드 귀속 필드 UPDATE 트리거, 타인의 반응/참여 상태 UPDATE·DELETE 금지, 알림 수신자 프로젝트 active/owner 확인 및 읽음 필드 외 수정 금지, 이력 UPDATE 차단, soft-delete 댓글 빈 본문 허용. `009`를 선행 적용해야 한다.
+- **CI 실증 완료:** [Actions #38854258418](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854258418) `success`, code/test SHA `f2dc298484fbf8c7fda9373a9b0ef46e2c5b5c7f`. 일회용 로컬 Supabase의 실제 Auth/JWT/REST 및 DB migrations 001~010에서 댓글 소유권·정상 수정/삭제·반응/참여 자기 행·알림 actor/recipient/readonly·문서 버전 append-only 부정/허용 테스트 모두 PASS.
+- **초기 실패 해결:** CI #38854082810은 발신자가 수신자의 알림 SELECT 권한이 없는데 `return=representation`을 기대한 **테스트 요청 오류**였다. 실제 클라이언트대로 `return=minimal`로 보내고 수신자 JWT로 확인한 뒤 최종 CI 성공.
+- **잔여 정합성 위험:** 클라이언트 알림 payload/actor_name/타입 위조, project_activities user_id 위조, 댓글 document_id/parent_id의 프로젝트 FK 간 무결성, 프로젝트 soft-delete된 active member의 RLS, 버전 번호 동시성은 추가 설계/부정 테스트 필요. **권한 검증 전체 완료로 표기하면 안 됨**.
+- **QA 체크리스트:** [RLS 내용 권한 검증 v1.1](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-content-hardening-20261016/docs/qa/RLS_CONTENT_HARDENING_2026-10-16.md). 실제 웹 브라우저 회귀/운영 DB 적용 검증은 미완료. hosted Supabase 009/010 미적용, `main` 미병합, 배포 없음.
 
 ## 2026-10-16 실제 로컬 Supabase Auth/JWT/PostgREST API 통합 검증
 - **격리 환경:** [GitHub Actions #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) **SUCCESS**. 공식 CLI 기반 일회용 GoTrue(Auth)/PostgREST/Kong/Postgres 컨테이너, migration 001~009 적용. 생성 계정은 전부 임시이며 운영 접속 정보/실사용자 데이터 없음.
@@ -170,3 +177,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v2.1 | 재활성 Plan OS DB 001~008·RLS 실측, project_members 42P17 직접 재현, Supabase Advisor 경고 및 Draft PR #13 기록 |
 | 2026-10-16 | v2.2 | 일회용 PostgreSQL 17 001~008 재귀 재현→009 수정·권한 테스트 CI 성공 및 pending 초대 정보 보존 확인 |
 | 2026-10-16 | v2.3 | 실제 로컬 Supabase Auth 로그인/JWT·PostgREST 역할별 조회/뷰어 쓰기 차단 CI 성공 및 운영/브라우저 미검증 경계 기록 |
+| 2026-10-16 | v2.4 | PR #14 migration 010 댓글/반응/참여/알림/버전 실제 로컬 Supabase JWT/REST 12개 권한 시나리오 CI PASS 및 잔여 보안 정리 |
