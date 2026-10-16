@@ -2,11 +2,20 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.0  
+**문서 버전:** v2.1  
 **진행 상태:** 진행 중  
 
 
-**초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치의 일부 코드 파일. 이후 저장소 tree 전체 목록 및 SQL 8개 정적 검토로 확장됨. **운영 DB 적용 상태 및 실제 권한 테스트는 아직 미확인.**
+**초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 Supabase 재활성화: 실제 READ ONLY 감사 (최신)
+- **DB 상태:** Plan OS `ACTIVE_HEALTHY`; 마이그레이션 `001`~`008` 실제 적용 이력 조회, 공개 스키마 12개 테이블 RLS 활성. 개발 DB 브랜치 **0개**. 이전 `INACTIVE`·timeout 문구는 아래 기록의 **과거 시점 상태**.
+- **실제 오류 검증:** `BEGIN READ ONLY; SET LOCAL ROLE authenticated; SELECT count(*) FROM public.project_members; ROLLBACK;` → PostgreSQL **42P17 infinite recursion detected in policy for relation "project_members"**. 재귀 SQL은 migration `006`의 `"멤버 조회"` 정책.
+- **함수 소유권/격리 확인:** `get_project_role`, `can_access_project`, `can_edit_project_content`은 SECURITY DEFINER, postgres 소유, BYPASSRLS 확인. 존재하지 않는 프로젝트 접근 함수 결과는 false/null. 역할별 fixture는 미설치.
+- **다른 RLS 조회:** 댓글 UPDATE는 프로젝트 멤버면 허용, 반응·참여 상태 UPDATE/DELETE 기존 행의 user_id 소유권 검사 부족, 활동 이벤트 작성자/알림 수신자 검증 부족, document_versions UPDATE 가능 등 **정책 코드 사실**을 실제 pg_policies로 확인. 사용자 간 조작 성공은 재현하지 않음.
+- **Security Advisor 경고:** `set_updated_at()` search_path 1개, SECURITY DEFINER 4개 anon EXECUTE + 같은 4개 authenticated EXECUTE, leaked-password protection 비활성화 1개. [함수 search_path](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable), [익명 함수 실행](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [인증 함수 실행](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable), [Auth 보호](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). 경고 = 악용 증명은 아님.
+- **미적용 개선:** [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12), [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13)로 `009` SELECT 정책 비재귀 변경 및 [QA 실측 보고서](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-member-recursion-20261016/docs/qa/RLS_LIVE_READONLY_2026-10-16.md) 작성. 실제 DB DDL/DML/fixture/백업 변경/배포/병합하지 않음.
+- **다음:** 격리 DB/로컬 Supabase에서 `009` 적용→A~F 역할별 접근·초대·삭제/복원 테스트→고객 UI 회귀→롤백 확인→운영 DB 적용은 별도 승인.
 
 ## 최신 기준선 요약 (2026-10-16)
 - **현재 CI 근거:** PR #8 [Actions #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570)에서 build/lint **성공(ESLint 오류 0개·경고 1개)**. 아래 2026-10-14 lint 실패 기록은 **과거 이력**이지 최신 판정이 아니다.
@@ -143,3 +152,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v1.8 | 복원·재생성 직렬화/신규 입력 경합 11개 유닛 테스트 CI 성공 및 채팅 직접 문서 UPDATE 잔여 위험 기록 |
 | 2026-10-16 | v1.9 | PR #11의 채팅 직접 DB 쓰기 제거·6개 테스트 추가, 프로젝트/문서 격리 및 메시지 원자성 QA 리스크 기록 |
 | 2026-10-16 | v2.0 | PR #11 GitHub CI 성공 실측(빌드·린트·17개 테스트 통과) 기록, 브라우저/RLS·메시지 원자성 차단 유지 |
+| 2026-10-16 | v2.1 | 재활성 Plan OS DB 001~008·RLS 실측, project_members 42P17 직접 재현, Supabase Advisor 경고 및 Draft PR #13 기록 |
