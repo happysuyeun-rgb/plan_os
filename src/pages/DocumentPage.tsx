@@ -286,12 +286,15 @@ export default function DocumentPage() {
     if (docIds.length > 0) fetchSummaries(docIds)
   }, [availableTypes, documents, fetchSummaries])
 
+  // Chat/version history belongs to a document ID. Draft content changing on
+  // every keystroke must not clear and refetch the entire chat conversation.
+  const activeDocumentId = activeDoc?.id
   useEffect(() => {
-    if (activeDoc) {
-      fetchVersions(activeDoc.id)
-      fetchMessages(projectId!, activeDoc.id)
+    if (projectId && activeDocumentId) {
+      void fetchVersions(activeDocumentId)
+      void fetchMessages(projectId, activeDocumentId)
     }
-  }, [activeDoc, projectId, fetchVersions, fetchMessages])
+  }, [activeDocumentId, projectId, fetchVersions, fetchMessages])
 
   useEffect(() => {
     if (activeVersionId) {
