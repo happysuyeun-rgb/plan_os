@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.6  
+**문서 버전:** v3.7  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -18,6 +18,14 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## 2026-10-16 Phase 0 — 실제 로컬 Supabase Auth/JWT/REST 통합 검증 PASS
+- **최종 CI:** [Actions #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) `success`, 코드 SHA `5ee72bf460e8dd398ac769e1a523e6874ca0b7c3`. 공식 `supabase/setup-cli@v3`+Supabase CLI `2.84.2`의 **일회용 로컬 GoTrue/Auth·Kong·PostgREST·PostgreSQL** 환경에서 migrations 001~009 적용, 실제 비밀번호 로그인/JWT 발급 및 REST 정책 검사 수행. 운영 Supabase를 변경하지 않음.
+- **검증된 역할:** owner/editor/viewer는 소속 프로젝트만 조회, pending은 자기 초대 행만 조회하고 문서 거부, 타 프로젝트 owner/editor·outsider·anon은 무권한 데이터 불가. viewer 문서 PATCH 차단 및 원본 내용 유지 확인.
+- **수정 이력:** 최초 [#38852770669](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852770669) 실패는 테스트가 `projects.user_id`의 owner를 `project_members` 행 수에 중복 포함한 기대값 오류. 정정 후 최종 통과.
+- **최신 근거:** [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13)와 [QA 보고서 v1.2](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-member-recursion-20261016/docs/qa/RLS_LIVE_READONLY_2026-10-16.md).
+- **여전히 미완료:** 실제 웹 브라우저 초대/역할 변경/삭제·복원, 기타 RLS(댓글·반응·알림·버전), PR #9/#11 브라우저 회귀·메시지/문서 원자성, 명시적 운영 배포 승인. `009` 실제 운영 DB에 **미적용**.
+- **일정:** Phase 0 잔여 **5~10 작업일**, 전체 **43~79 작업일** 추정 유지(미확인 회귀·기술 의존성). 
 
 ## 2026-10-16 Phase 0 후속 실행: RLS 009 임시 PostgreSQL 17 실증 및 잔여 일정
 - **[GitHub Actions #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) SUCCESS:** GitHub 격리 PostgreSQL 17 서비스 컨테이너에 **실제 migrations 001~008** 적용, `project_members` 조회 재귀 실패 재현, proposed `009` 적용, owner/editor/viewer/pending/타 프로젝트 owner·member/외부인/anon 행 조회 격리 검사 통과. 데이터는 CI 임시 합성 데이터만 사용.
@@ -142,16 +150,17 @@
 | 2026-10-16 | v3.4 | PR #11 CI #38847021222 실측 build/lint·17개 단위 테스트 성공 기록 | [Actions #38847021222](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38847021222) |
 | 2026-10-16 | v3.5 | Supabase ACTIVE/001~008 적용·12개 RLS 확인, 멤버 SELECT 무한 재귀 42P17 실증, Draft PR #13 및 Advisor 경고 기록 | [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) / [PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13) |
 | 2026-10-16 | v3.6 | RLS 009 격리 PostgreSQL17 CI PASS·초대 권한 회귀 보완, 남은 기간 43~79 작업일 재산정 | [Actions #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) / [실행계획 v1.5](roadmap/IMPLEMENTATION_PLAN.md) |
+| 2026-10-16 | v3.7 | 일회용 실제 Supabase Auth/JWT/PostgREST 통합 RLS 테스트 성공, 과거 DB 비활성·Issue #10 미수정 서술 최신화 | [Actions #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
 - 권한과 도구가 허용하고 운영 위험이 없는 후속 작업은 추가 지시를 기다리지 않고 이어서 수행한다. 실제 도구 호출 없이 백그라운드 진행을 주장하지 않는다.
 - 운영 DB/배포/결제/PR 병합 등 영향 큰 변경은 별도 승인 이후에만 진행한다.
-- 현재 다음 작업: [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) 채팅 문서 직접 쓰기 경합 안전화 → PR #9 브라우저 B-01~12 QA → Plan OS 격리 개발 DB 확보 후 [Issue #7 RLS 재현](https://github.com/happysuyeun-rgb/plan_os/issues/7).
+- **현재 다음 작업(최신):** PR #13 로컬 Supabase Auth/JWT/API 권한 테스트까지 PASS. 다음은 **댓글·반응·알림·문서 버전의 RLS 수정안/부정 테스트 → 초대·역할변경·휴지통·복원 브라우저 QA → PR #9/#11 브라우저 및 메시지/문서 원자성 검증**. 운영 변경 별도 승인.
 
 ## 바로 다음 작업
-1. [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9): 자동저장·복원·재생성 단위 테스트 11개/CI 통과. [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) 채팅 문서 직접 쓰기 경합 및 B-01~12 실제 브라우저 회귀 검증 전까지 Draft 유지.
-2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 현재 Plan OS DB 비활성·개발 브랜치 없음. 별도 격리 DB와 역할 계정 확보 후 RLS 재현 및 수정 PR.
+1. [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) / [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11): 각각 자동저장·복원·채팅 직접 DB 쓰기 코드 수정, **17개 유닛 테스트 CI 통과**. B-01~12/C-01~10 실제 브라우저 및 원자성 검증 전까지 둘 다 Draft 유지.
+2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7) / [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12): Plan OS **ACTIVE_HEALTHY**, 적용 001~008 확인. PR #13 로컬 PostgreSQL·Supabase Auth/REST에서 009 PASS, **운영 DB 미적용**. 다른 권한 정책과 실제 브라우저 회귀 필요.
 3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): SQL 정적 감사 이후 실제 적용 상태 및 권한 검증 마무리.
 4. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 재검증 및 회귀 기준선.
 5. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
