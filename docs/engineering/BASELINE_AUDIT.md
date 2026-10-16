@@ -2,11 +2,17 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.6  
+**문서 버전:** v2.7  
 **진행 상태:** 진행 중  
 
 
 **초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 B-05 버전 복원 정상 경로와 P0 원자성 잔여 위험
+- **브라우저 실증:** [Chromium/로컬 Supabase Actions #38869950232](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232) `SUCCESS`, code SHA `9f5ff4965490f0ac43b902b9a1a1234e59391ad0`. 명시적 v1/v2 버전 저장→이전 v1 읽기전용 선택→v3 복원→문서 새로고침, DB `document_versions` 1/2/3 내용 old/new/old 불변성·현재 `documents.content` 검증. 같은 SHA [Baseline #38869950358](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950358) PASS.
+- **위험은 아직 해소되지 않음:** `src/store/versionStore.ts`에서 `apiCreateVersion` INSERT 후 `saveDocumentContent` UPDATE를 별도 요청으로 처리. 두 번째 실패 때 유령 복원 이력/문서 불일치, 재시도 중복, SELECT MAX+1 버전 번호 경합 가능성. 사용자 안내 `현재 버전은 보존`이 *명시적 스냅샷이 없는 편집 내용*을 보존한다는 증거 없음. 이 항목은 **코드 감사상 잠재 결함**이지 장애 직접 재현이라고 주장하면 안 됨.
+- **[P0 Issue #16](https://github.com/happysuyeun-rgb/plan_os/issues/16)**에 실제 실패 주입·unsnapshotted draft·버전 잠금/트랜잭션·멱등성·UX 처리 게이트를 분리. B/C 4개 정상 경로 PASS, 18개 미실행. 실제 브라우저 전체 QA와 배포 전 사전 검증이 필요.
+- **운영 경계:** PR #15 테스트 브랜치에서만 Playwright/일회용 Supabase 사용. 운영 hosted Supabase 009/010 미적용·`main` 미병합.
 
 ## 2026-10-16 앱 실제 브라우저 회귀 보완 및 누락 감사
 - **실제 Chromium 저장 검증:** [Actions #38867219334](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867219334)에서 **B-01 PRD/기능명세서 빠른 전환 각각 저장, B-02 문서 연속 5회 편집 마지막 값, C-01 미저장 초안+채팅 병합** 모두 PASS. 새로고침/일회용 PostgREST DB `content`까지 대조; 운영 DB 검증 아님.
@@ -193,3 +199,5 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v2.4 | PR #14 migration 010 댓글/반응/참여/알림/버전 실제 로컬 Supabase JWT/REST 12개 권한 시나리오 CI PASS 및 잔여 보안 정리 |
 | 2026-10-16 | v2.5 | 통합 2-parent PR #15과 앱 TS/build/lint/17개 유닛·RLS 009/010 SQL/REST·Chromium 로그인/문서 스모크 CI 통과 증빙 기록 |
 | 2026-10-16 | v2.6 | B-01/B-02/C-01 일회용 Chromium+DB 실증, 댓글 객체 의존 중복 GET/낡은 응답 방지 후 재검증·19개 UI 누락 판정 |
+| 2026-10-16 | v2.7 | B-05 과거 버전 정상 복원 Chromium+DB old/new/old 검증 성공, 2-step INSERT/UPDATE 비원자성·미저장 현재 버전 보존 미검증 P0 Issue #16 기록 |
+
