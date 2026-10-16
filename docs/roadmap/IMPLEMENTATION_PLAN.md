@@ -1,8 +1,8 @@
 # PlanOS 3.0 — 단계별 개발 실행계획
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-15  
-**문서 버전:** v1.3  
+**최종 수정일:** 2026-10-16  
+**문서 버전:** v1.4  
 **진행 상태:** 실행계획 갱신 중 (Phase 0 진행 중, 일정 재산정 대기)  
 
 ## 원칙
@@ -17,15 +17,22 @@
 | 단계 | 예상 작업일 | 주요 작업 | 완료 조건 | 선행 조건 | 상태 |
 |---|---:|---|---|---|---|
 | 0. 기술 기준선 | 3–5일(기존 추정, 재산정 필요) | 저장소/SQL 8개 정적 감사, RLS 권한 재현·수정 계획, 배포·환경, CI 린트, 회귀 기준 | CI 통과 + 권한 재현/대응 판정 + KEEP/MODIFY/NEW + 증빙 | 없음 | 진행 중 |
-| 1. 기획·아키텍처 확정 | 4–7일 | PRD, 30 TF, IA, API/DB, 보안, 워커/모델/비용 ADR, ModelGateway 인터페이스 | E2E 시나리오·권한 경계·모델 교체·승인 정책 검토 | Phase 0 | 예정 |
+| 1. 기획·아키텍처 확정 | 4–7일(재산정 필요) | PRD·30 TF·IA·화면명세·권한/아키텍처·API/DB **초안 작성**; 정책 확정·보안/QA·워커 선택은 남음 | E2E·권한·모델·비용·승인 정책 및 테스트 계약 승인 | Phase 0 통과(문서 초안은 선행 가능) | **초안 부분 착수 / 확정 미완료** |
 | 2. 프로젝트·업무 기반 | 5–8일 | 프로젝트 워크스페이스, task 상태·종속성, 기존 URL 유지 | 기존 문서 회귀 + task CRUD 테스트 | Phase 1 | 예정 |
-| 3. 통제된 실제 AI 실행 | 8–15일 | 서버 모델 호출, 큐/워커, 비용·권한·승인, 실패 복구, 모델별 기능 검증 | 실제 산출물 + 중단/재시도·테넌트 격리·비용상한 테스트 | Phase 2 및 권한 차단 해소 | 예정 |
+| 3. 통제된 실제 AI 실행 | 8–15일 | **내부 최소 AI 역할·계약·capability·예산/승인 선행** 후 서버 모델 호출, 큐/워커, 실패 복구, 모델별 기능 검증 | 실제 산출물 + 중단/재시도·테넌트 격리·비용상한 테스트 | Phase 2 및 권한 차단 해소 | 예정 |
 | 4. AI PM 수직 통합 | 6–10일 | 계획→위임→실행→검증→승인→브리핑 | PM + 전문 에이전트 1명 E2E 통과 | Phase 3 | 예정 |
-| 5. AI 인력사무소 MVP | 6–10일 | 프로필·추천·면담·계약·킥오프 | 채용→업무 착수 연결 테스트 | Phase 4 | 예정 |
+| 5. AI 인력사무소 MVP | 6–10일 | **Phase 3 내부 최소 계약을 고객용 UX로 확장**: 역할 프로필·추천·면담·조건 검토·계약·킥오프 | 채용→업무 착수 연결 테스트 | Phase 4 | 예정 |
 | 6. 협업·운영 안정화 | 5–10일 | 공동 편집, 승인함, 활동 로그, 알림, 취소/복구 | 회귀·보안·비용 테스트 | Phase 5 | 예정 |
 | 7. 제한 파일럿 | 5–10일 | 관측성, 지원·장애 대응, 사용자 검증, 수정 | 파일럿 수용 기준 + 원가 검증 | Phase 6 | 예정 |
 
 **총 기존 추정:** 42–75 작업일. 이번에 확인된 CI/RLS 위험과 FreeLLMAPI 검증은 추가 일정 영향이 있을 수 있으며 **아직 재산정되지 않음**. 환경·요구사항·외부 API 제약에 따라 변동 가능. 병렬 개발이나 추가 인력 투입을 가정하지 않음.
+
+## 현재 진행 정합성 (2026-10-16)
+- PR #8 [CI #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570)에서 build/lint **통과(0 errors, 1 warning)** 확인. 이전 lint 실패는 이력이며 회귀·RLS 테스트는 미완료.
+- Phase 1 제품·설계 **8개 문서 초안 선행 작성**. Phase 0 미통과이므로 Phase 1 확정/Phase 2 구현 착수로 간주하지 않음.
+- **의존성 정리:** Phase 3에는 내부 최소 AI 역할·계약·승인·예산 정보가 필요함. Phase 5는 그 기반을 고객용 인력사무소 탐색/면담/계약 UX로 확장함. 계약 전체를 Phase 5까지 미루지 않음.
+- 미확정 주요 정책: 첫 전문 AI 실제 작업 1종, 승인 위임, R2 도구, 과금·환불/보존, 워커/큐·모델 공급자 선정.
+- 자세한 P0 차단 이슈는 [문서 정합성 감사](../quality/DOCUMENT_REVIEW_2026-10-16.md)에 기록.
 
 ## 구현 전 필수 결정 및 누락 사항 (기존 준비도 문서 통합)
 | ID | 결정할 사항 | 통과 기준 |
@@ -41,7 +48,7 @@
 
 추가 공통 요구사항: 구조화 로그/trace ID, 멱등성·동시성, 모델 공급자 장애 대응, 승인 만료·철회, 데이터 삭제·내보내기·동의, 접근성, 성능 제한, 지표, feature flag, 긴급 중단 스위치.
 
-필요 문서(작성 전): `docs/product/PRD.md`, `docs/product/TASK_FLOWS.md`, `docs/ux/IA.md`, `docs/ux/UX_FLOWS.md`, `docs/engineering/ARCHITECTURE.md`, `docs/engineering/DATA_MODEL.md`, `docs/engineering/API_CONTRACTS.md`, `docs/security/THREAT_MODEL.md`, `docs/qa/TEST_PLAN.md`, `docs/operations/RELEASE_RUNBOOK.md`, `docs/adr/`.
+**작성된 초안(2026-10-16, 모두 미승인):** [PRD](../product/PRD.md), [TF-01~30](../product/TASK_FLOWS.md), [IA](../ux/IA.md), [화면명세](../ux/SCREEN_SPEC.md), [권한 정책](../product/PERMISSIONS_POLICY.md), [AI 아키텍처](../engineering/ARCHITECTURE.md), [데이터 모델](../engineering/DATA_MODEL.md), [API 계약](../engineering/API_CONTRACTS.md). **미작성·미확정:** `docs/ux/UX_FLOWS.md`, `docs/security/THREAT_MODEL.md`, `docs/qa/TEST_PLAN.md`, `docs/operations/RELEASE_RUNBOOK.md`, ModelGateway 구현/기술선택 ADR 및 OpenAPI/SQL 상세. [문서 정합성 감사](../quality/DOCUMENT_REVIEW_2026-10-16.md) 참조.
 
 
 ## FreeLLMAPI 활용 검증 계획 (2026-10-15, 계획 상태: 미착수)
@@ -69,8 +76,8 @@
 - **Phase 3 종료 전:** 서버 측 실실행/결과 검증·비용 기록, 공급자 장애 대체 시 capability 검증, 테스트 계정 간 데이터 격리.
 - **FreeLLMAPI:** 실험용 후보이며 제품 핵심 기능 개발의 필수 의존성 아님. 테스트 계정·키·격리 환경 없으면 도입을 보류하고 공식 모델 API 어댑터로 진행. 운영 사용은 별도 승인.
 
-## 우선순위 실행 백로그 (2026-10-15 기준)
-1. [Issue #6](https://github.com/happysuyeun-rgb/plan_os/issues/6) / [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8): 남은 린트 오류 해결 → build/lint CI 통과 → 프로젝트 복원·문서 편집 회귀 검증.
+## 우선순위 실행 백로그 (2026-10-16 기준)
+1. [Issue #6](https://github.com/happysuyeun-rgb/plan_os/issues/6) / [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8): CI build/lint 통과 확인. 남은 1개 경고와 프로젝트 복원·문서 편집 회귀 검증, 테스트 자동화.
 2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 별도 개발 DB에서 RLS 재귀/댓글·반응 권한 재현 → 수정 마이그레이션 초안(운영 적용 금지).
 3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2) / [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): 실제 적용 마이그레이션·배포/환경 및 CI 증빙 정리, KEEP/MODIFY/NEW 확정.
 4. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): ModelGateway·서버 워커·승인·비용·권한 ADR 설계.
@@ -95,6 +102,7 @@
 | 2026-10-14 | v1.1: 준비도 문서의 핵심 결정·요구사항을 실행계획으로 통합 | PR #1 |
 | 2026-10-15 | v1.2: FreeLLMAPI 내부 검증·도입 게이트를 기존 계획에 통합 | 외부 저장소 정적 검토 |
 | 2026-10-15 | v1.3: Phase 진입 게이트·RLS/CI 우선순위·선택적 모델 도입·일정 재산정 조건 명확화 | Issues #2, #3, #6, #7 |
+| 2026-10-16 | v1.4: 신규 기획/설계 8개 초안 상태, CI 성공, Phase3 계약 선행 의존성, 감사 링크 정합화 | 문서 점검·Actions #38680673570 |
 
 ## 관련 자료
 - [진행 현황 인덱스](../README.md)
