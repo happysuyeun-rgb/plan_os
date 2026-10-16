@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.5  
+**문서 버전:** v3.6  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -18,6 +18,13 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## 2026-10-16 Phase 0 후속 실행: RLS 009 임시 PostgreSQL 17 실증 및 잔여 일정
+- **[GitHub Actions #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) SUCCESS:** GitHub 격리 PostgreSQL 17 서비스 컨테이너에 **실제 migrations 001~008** 적용, `project_members` 조회 재귀 실패 재현, proposed `009` 적용, owner/editor/viewer/pending/타 프로젝트 owner·member/외부인/anon 행 조회 격리 검사 통과. 데이터는 CI 임시 합성 데이터만 사용.
+- **중요 보완:** [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13)의 `009`가 `auth.uid() = user_id OR can_access_project(project_id)`로 **초대 대기자의 자기 초대 행 조회**를 보존함. [QA 보고서 v1.1](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-member-recursion-20261016/docs/qa/RLS_LIVE_READONLY_2026-10-16.md).
+- **잔여 기간 재산정:** [실행계획 v1.5](roadmap/IMPLEMENTATION_PLAN.md)에 Phase 0 **5~10 작업일**(겹치는 세부 합계 약 5.5~12일), Phase 1 **3~6**, Phase 2~5 **25~43**, Phase 6~7 **10~20** → 전체 잔여 **43~79 작업일**, 1인 전담+AI 보조 가정. 주말/외부 승인/미확인 결함에 따라 연장 가능, 확정 일정 아님.
+- **여전히 미완료:** 실제 Supabase Auth/JWT·PostgREST 사용자 역할 검증, soft-delete/초대/권한 변경·팀 UI 회귀, PR #9/#11 브라우저/채팅 원자성, 댓글·반응·알림·버전 RLS 보완, 테스트 결과에 따른 승인·병합. 운영 DB 009 미적용, `main` 미병합.
+- **실제 환경 구분:** GitHub Actions의 임시 PostgreSQL CI는 **유료 Supabase 개발 브랜치가 아님**. 운영 데이터·접속 자격증명 사용하지 않음.
 
 ## Phase 0 Supabase 재활성화 이후 실제 DB 실측 — 최신 상태 (2026-10-16)
 - **Plan OS 활성화 확인:** Supabase 프로젝트 `ggviusdmxalsflyybamm` **ACTIVE_HEALTHY**. 적용 이력 `001`~`008` 실제 조회 성공, public 기존 테이블 12개 모두 RLS enabled. 이전 `INACTIVE`/migration 조회 timeout은 **재활성화 이전 과거 기록**.
@@ -134,6 +141,7 @@
 | 2026-10-16 | v3.3 | PR #11 채팅 직접 DB 쓰기 제거, 문서별 저장 큐 연동 및 6개 신규 테스트, 브라우저 QA/C-01~10·원자성 미완료 기록 | [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11) / [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) |
 | 2026-10-16 | v3.4 | PR #11 CI #38847021222 실측 build/lint·17개 단위 테스트 성공 기록 | [Actions #38847021222](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38847021222) |
 | 2026-10-16 | v3.5 | Supabase ACTIVE/001~008 적용·12개 RLS 확인, 멤버 SELECT 무한 재귀 42P17 실증, Draft PR #13 및 Advisor 경고 기록 | [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) / [PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13) |
+| 2026-10-16 | v3.6 | RLS 009 격리 PostgreSQL17 CI PASS·초대 권한 회귀 보완, 남은 기간 43~79 작업일 재산정 | [Actions #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) / [실행계획 v1.5](roadmap/IMPLEMENTATION_PLAN.md) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
