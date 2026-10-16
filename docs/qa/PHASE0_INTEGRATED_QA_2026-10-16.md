@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.4  
-**진행 상태:** 앱 빌드·17개 단위·RLS SQL/REST·격리 Chromium B-01/B-02/C-01 및 B-05 정상 복원 PASS / 복원 실패·미저장 초안·18개 B/C 브라우저 미검증  
+**문서 버전:** v1.5  
+**진행 상태:** 기존 복원 중간 실패로 DB 불일치·UI 예외 실제 재현; 별도 Draft PR #17 원자성·롤백/재시도/권한/동시성 격리 CI PASS; 최신 stacked-branch 통합 검증 전  
 **대상:** [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) · `test/planos-phase0-integrated-20261016`
 
 ## 1. 통합 구조 (기존 main·운영 DB 변경 없음)
@@ -49,6 +49,12 @@
 - 실제 로컬 PostgREST의 `document_versions` 기록은 버전번호 **1,2,3**, 이름 `B05-old`, `B05-current`, `복원`, 각 기록의 본문 `old,new,old`임을 검증. `documents.content`도 복원된 v1 본문과 일치. 기존 v1/v2 기록 불변성 확인. **단, v2를 복원 이전에 사용자가 명시적으로 스냅샷 저장한 경로만 검증했다.**
 - **P0 이슈 [#16](https://github.com/happysuyeun-rgb/plan_os/issues/16)**: 현재 복원은 버전 INSERT→문서 UPDATE 별도 DB 작업이며, 두 번째 작업 실패·중복 클릭·버전 번호 동시 할당이나 별도 스냅샷 없는 최신 입력 보존이 검증되지 않음. 문구 `현재 버전은 보존`이 *스냅샷 저장되지 않은 최신 원고*에도 보장되는지 정책 명확화 필요. **정상 B-05 PASS를 트랜잭션 안전/전체 B-10 승인으로 간주 금지**.
 - 다음 P0: B-05 실패 주입·B-10 새로 저장하지 않은 최신 수정 중 복원/동시성, C-03 채팅/문서 전환, B-03 네트워크 저장 실패. 운영 스키마/코드 main 변경은 별도 승인.
+
+## 3.3 P0 Issue #16 — 복원 실패 실제 재현·원자적 수정안 검증
+- **기존 구현 결함 직접 재현:** [통합 Chromium #38908704414](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38908704414) code commit `6c7b96856083fd87b100492a2f96c9fa26f3deac`의 일회용 Supabase 실제 Auth/JWT/REST에서 복원 v4 이력 INSERT가 성공한 뒤 문서 PATCH 요청만 강제 503. DB상 복원 이력 v4와 현재 `documents.content`가 서로 다른 상태로 남았고 브라우저에 처리되지 않은 `Object` 예외까지 관측됨. CI는 **FAILED**(의도한 장애 재현 및 예외 감지). 운영 데이터 변경 없음.
+- **기존 독립 Draft 수정 PR 발견:** [#17](https://github.com/happysuyeun-rgb/plan_os/pull/17), migration `011_atomic_document_version_restore.sql`의 권한 확인·복원 전 스냅샷·대상 버전·문서 UPDATE·요청 UUID 기록을 서버 측 **한 SQL 트랜잭션**에 결합. 실제 브라우저/UI API가 `restore_document_version` RPC를 호출하도록 작성된 상태.
+- **수정안 실제 CI:** [Chromium #38874515664](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38874515664) `SUCCESS`, SHA `8d34f5a5e584db92318f73d4bc95e44e897a7d72`. 로그 확인: 서버 UPDATE 실패 시 전체 롤백(FAULT-01), 실패 해제 후 재시도, 동일 UUID 재전송 중복 없음(IDEMPOTENCY-01), 저장되지 않은 현재 내용 자동 스냅샷(B-05 DRAFT), viewer/anon/타 문서 권한 거부(AUTHZ-01), 동시 복원 2건 번호 직렬화(CONC-01) 모두 PASS. [동일 SHA Baseline #38874508941](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38874508941)도 성공.
+- **정합성/배포 차단:** PR #17의 마지막 녹색 커밋이 부모 PR #15의 이번 장애 재현 커밋보다 먼저 작성되었음. **최신 두 브랜치를 같은 SHA에서 재검증하지 않았으므로 완전 통합 완료로 표기 금지**. PR #15의 일부러 빨간 실패 재현 CI를 PR #17 수정안의 성공 CI와 섞지 말 것. 실제 hosted DB에는 `011` 미적용. [P0 Issue #16](https://github.com/happysuyeun-rgb/plan_os/issues/16) 미종료.
 
 ## 3.1 누락 점검과 실제 보완 결과 — 2026-10-16
 | 등급 | 점검 항목 | 판정 | 이번 실제 조치 / 남은 차단 |
@@ -99,3 +105,4 @@
 | 2026-10-16 | v1.2 | B-01/B-02/C-01 브라우저·격리 DB 저장 확인, 댓글 반복 GET 및 늦은 응답 보완, 누락/미검증 B/C 19건·보안/원자성 게이트 정리 | 일부 B/C PASS / 전체 UI QA·릴리스 전 |
 | 2026-10-16 | v1.3 | 초기 통합 뒤 실제 앱 소스 2개 수정·PR #11/통합 재검증을 SHA별로 명시, SQL 변경 없음의 범위 구분 | 검증 근거 정합화 |
 | 2026-10-16 | v1.4 | B-05 실제 Chromium 정상 버전 복원(v1/v2 불변·v3 복원)과 DB 검증 PASS, 실패/원자성/미저장 본문 Issue #16 별도 차단·잔여 B/C 18개 재산정 | 정상 B-05 PASS / 전체 안정성 미완료 |
+| 2026-10-16 | v1.5 | 기존 복원 INSERT→PATCH 503 중간 실패의 DB 불일치/브라우저 예외 직접 재현; 독립 Draft PR #17 원자성·자동 보관·재시도·권한·동시 복원 녹색 CI 확인, 두 최신 브랜치 통합 재검증 대기 | 결함 재현 CONFIRMED / 후보 격리 CI PASS / 출시 보류 |
