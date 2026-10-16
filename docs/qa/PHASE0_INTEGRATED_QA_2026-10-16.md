@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.2  
+**문서 버전:** v1.3  
 **진행 상태:** 앱 빌드·17개 단위·RLS SQL/REST·격리 Chromium B-01/B-02/C-01 PASS, 댓글 불필요 재조회/늦은 응답 수정·실증 / 나머지 19개 B/C 브라우저 및 운영 미완료  
 **대상:** [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) · `test/planos-phase0-integrated-20261016`
 
@@ -31,7 +31,7 @@
 | I-06 | 댓글 목록 반복 GET 방지 및 상이한 문서 응답 보호 | [PR #11 CI #38867723560](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867723560), [통합 Baseline #38867796471](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796471), [Chromium #38867796404](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796404) (SHA `c1ae3a73a56dffe7865e6024377a37a05e221ec5`) | **build/17 unit/댓글 미재조회/B-01/B-02/C-01 PASS** |
 | I-07 | 전체 화면 B-03~12 / C-02~10, CSEC-01~12 | 개별 [문서 저장 QA](DOCUMENT_SAVE_REGRESSION.md), [RLS QA](RLS_CONTENT_HARDENING_2026-10-16.md) | **B/C 19개 브라우저 미실행, CSEC는 JWT/REST 수준 PASS(브라우저 아님)** |
 
-**이력 주의:** CI 실행 중 신규 커밋이 추가되므로 **각 CI 성공 SHA를 반드시 기록**한다. 단일 CI 성공을 서로 다른 커밋에도 자동 적용된 것으로 처리하지 않는다. 앱·보안 소스는 통합 커밋 이후 변경되지 않았고, 추가 작업은 QA 스크립트·워크플로·문서였다.
+**이력 주의:** CI 실행 중 신규 커밋이 추가되므로 **각 CI 성공 SHA를 반드시 기록**한다. 단일 CI 성공을 서로 다른 커밋에도 자동 적용된 것으로 처리하지 않는다. 초기 통합 이후 **PR #11의 `DocumentPage`·`commentStore` 소스 수정이 통합 브랜치에 별도 반영**되었고, 앱 빌드·Chromium B-01/B-02/C-01 및 댓글 GET 0회 검증을 해당 수정 뒤의 SHA에서 다시 통과했다. migration 009/010 SQL은 그 이후 바뀌지 않았으므로 RLS SQL·Auth/REST CI의 이전 성공 결과를 그대로 인용하되 테스트 SHA를 구분한다.
 
 ## 3. 실제 브라우저 QA 환경 구성
 
@@ -89,3 +89,4 @@
 | 2026-10-16 | v1.0 | 통합 2-parent 커밋·세 CI 결과와 Playwright 격리 브라우저 준비, 화면별 QA/남은 차단 기준 | 브라우저 스모크 실행 중 |
 | 2026-10-16 | v1.1 | Playwright Chromium 실제 로그인→대시보드→PRD→새로고침 통과 증빙 및 전체 E2E 미완료 구분 | 4가지 자동 검증 범위 PASS / 전체 UI QA 진행 필요 |
 | 2026-10-16 | v1.2 | B-01/B-02/C-01 브라우저·격리 DB 저장 확인, 댓글 반복 GET 및 늦은 응답 보완, 누락/미검증 B/C 19건·보안/원자성 게이트 정리 | 일부 B/C PASS / 전체 UI QA·릴리스 전 |
+| 2026-10-16 | v1.3 | 초기 통합 뒤 실제 앱 소스 2개 수정·PR #11/통합 재검증을 SHA별로 명시, SQL 변경 없음의 범위 구분 | 검증 근거 정합화 |
