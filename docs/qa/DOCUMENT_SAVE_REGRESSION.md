@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.3  
-**진행 상태:** 17개 단위 테스트·격리 Chromium B-01/B-02/C-01 회귀 PASS / 나머지 브라우저·운영 DB QA 미완료  
+**문서 버전:** v1.4  
+**진행 상태:** 17개 단위 테스트·격리 Chromium B-01/B-02/C-01 및 B-05 정상 복원 PASS / 실패·원자성 등 전체 브라우저 QA 미완료  
 **대상 브랜치:** `fix/planos-document-autosave-safety-20261016` (PR #9), `fix/planos-chat-document-write-20261016` (PR #11, PR #9 기반)  
 **원칙:** 합성 계정과 일회용 로컬 Supabase만 사용. 운영 Plan OS Supabase는 2026-10-16 `ACTIVE_HEALTHY`, 실제 적용은 migrations 001~008이며 009·010은 미적용, 호스팅 개발 브랜치는 0개. 운영 데이터/배포 변경 금지.
 
@@ -17,7 +17,12 @@
 - 추가로 문서 입력마다 댓글 스레드를 다시 요청하는 [DocumentPage](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/src/pages/DocumentPage.tsx) dependency 문제를 발견하고 ID 기반 effect로 보완했으며, [commentStore](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/src/store/commentStore.ts)에 낡은 응답 격리를 적용함. [PR #11 CI #38867723560](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867723560) npm ci/TS/build/lint/17 unit 테스트 **SUCCESS**.
 - 위 댓글 중복조회 회귀를 직접 검사하는 B-02 강화 테스트는 PR #15에서 추가해 **CI 결과 확인 중**. 원래 통과한 B-01/B-02/C-01과 실행 SHA를 구분한다.
 
-## 브라우저 실증 시나리오 (B-01/B-02 PASS, 그 외 미실행)
+## 2026-10-16 B-05 과거 버전 정상 복원 추가 검증
+- 실제 [Chromium Actions #38869950232](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232), code SHA `9f5ff4965490f0ac43b902b9a1a1234e59391ad0`: 실제 로컬 Supabase와 Vite UI에서 v1('B05-old') 버전 저장 → 편집/명시적 v2('B05-current') 저장 → v1 읽기전용 미리보기 → v3('복원')으로 복원. 새로고침 후 현재 문서, DB의 v1/v2/v3 본문(old/new/old) 및 `documents.content`까지 확인. **정상 흐름 PASS.**
+- **단서:** 기존 B-05 원래 시나리오에 있는 *미저장 원고/저장 대기 중 빠른 복원*은 이번 실행에 포함되지 않았음. 복원 INSERT와 문서 UPDATE의 분리, 중간 실패 시 부분 반영, 유저가 명시적으로 스냅샷 저장하지 않은 최신 내용 보존, 중복 재시도/동시 버전 번호는 [P0 Issue #16](https://github.com/happysuyeun-rgb/plan_os/issues/16)로 차단하고 미검증 유지.
+- 전체 B/C 22개 중 **4개 정상 경로**(B-01/B-02/B-05 normal/C-01) 실증, 18개 미실행. 정상 복원 통과로 Phase 0 완료나 운영 배포를 승인하지 않음.
+
+## 브라우저 실증 시나리오 (B-01/B-02·B-05 정상 경로 PASS, 그 외 미실행)
 
 | ID | 상황/조작 | 기대 결과 | 상태 |
 |---|---|---|---|
@@ -25,7 +30,7 @@
 | B-02 | 동일 문서 빠르게 5회 편집, 2초 경과 | 마지막 값 저장, 새로고침 후 유지 | **격리 Chromium PASS** |
 | B-03 | 저장 요청이 느릴 때 다른 문서/프로젝트 이동 | 이전 응답이 현재 화면/다른 프로젝트 내용을 덮어쓰지 않음 | 미실행 |
 | B-04 | 저장 실패/오프라인 → 다른 탭 → 복귀 → 다시 저장 | 미저장 본문 유지, 오류 표시와 수동/재입력 복구 가능 | 미실행 |
-| B-05 | 수정 후 곧바로 과거 버전 선택·복원 | 기존 미저장 문서 저장 처리 후 복원, 최종 서버 본문 = 복원본 | 미실행 |
+| B-05 | 수정 후 곧바로 과거 버전 선택·복원 | 기존 미저장 문서 저장 처리 후 복원, 최종 서버 본문 = 복원본 | **명시적으로 저장된 v1/v2 정상 복원·DB PASS; 미저장/경합/실패 미검증** |
 | B-06 | 자동저장 전 AI 단일 재생성 | 옛 저장 요청이 새 결과를 덮어쓰지 않음 | 미실행 |
 | B-07 | 자동저장 전 AI 연쇄 재생성 | 대상 문서가 각각 순서 있게 갱신되고 사람의 신규 편집이 유실되지 않음 | 미실행 |
 | B-08 | 재생성 호출 중 사용자 재입력 | 재생성 완료 후 후속 편집이 최신 값으로 저장됨. 덮어쓰기 위험 없음 | 미실행 |
@@ -59,9 +64,9 @@
 
 ## PR #9 병합 차단 조건
 1. [x] PR #11 코드 HEAD의 npm ci/build/lint/17개 unit CI 통과 ([Actions #38867723560](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867723560)).
-2. [ ] B-01/B-02의 브라우저·격리 DB 실증은 확보; **B-03~12 미완료**.
+2. [ ] B-01/B-02 및 B-05 정상 버전 복원의 브라우저·격리 DB 실증 확보; **B-05 미저장/장애 복구·다른 18개 B/C 시나리오 미완료**.
 3. [x] 채팅 직접 UPDATE 제거·문서별 큐 연결 및 C-01 실증([PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11)). [ ] C-02~10 브라우저·DB 검증, 메시지/문서 원자성·멱등성 해결.
-4. [x] 일회용 로컬 Supabase Auth/JWT/PostgREST에서 migration 009/010 권한 검증 [PASS](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722). [ ] 브라우저 버전 복원·권한 변경·운영 반영 검증.
+4. [x] 일회용 로컬 Supabase Auth/JWT/PostgREST에서 migration 009/010 권한 검증 [PASS](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722) 및 B-05 저장된 버전 정상 복원 [PASS](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232). [ ] 복원 실패/원자성, 브라우저 역할 변경·운영 반영 검증.
 5. [ ] 버전 복원/재생성 실패 때 사용자에게 안전한 에러 안내·재시도 제공.
 6. [ ] 문서 변경/프로젝트 전환/휴지통 복원 등 기존 주요 사용자 흐름 회귀 없음.
 7. [ ] PR #8 기반 및 main 의존성 확인, 검토 후 병합; 운영 DB/배포는 별도 승인.
@@ -78,3 +83,4 @@
 | 2026-10-16 | v1.1 | 최종 코드 커밋 CI 11개 유닛테스트 PASS 증빙과 Issue #10 채팅 문서 쓰기 누락 연결 | 브라우저/DB 검증 미실행 |
 | 2026-10-16 | v1.2 | PR #11 채팅 큐 통합, 6개 신규 단위 테스트·전체 17개 CI PASS, C-01~10 회귀 및 원자성 차단 명세 | 브라우저/DB 검증 미실행 |
 | 2026-10-16 | v1.3 | 활성 Supabase 상태 정정, 통합 Playwright B-01/B-02/C-01 및 PostgREST 최종 내용 PASS, 댓글 fetch 중복/오래된 응답 수정·CI 기록 | 나머지 브라우저 QA/메시지 원자성 미완료 |
+| 2026-10-16 | v1.4 | B-05 실제 Chromium v1/v2 저장→v3 복원 후 DB 불변성 PASS, 미저장/중간 실패/동시성 Issue #16 별도 미완료 기록 | 정상 복원 검증·원자성/전체 QA 보류 |
