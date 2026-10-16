@@ -280,9 +280,26 @@ try{
       PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
     stdio:['ignore','pipe','pipe'],timeout:30000,
   })
+  const retryRpcResponse=page.waitForResponse(response=>
+    response.request().method()==='POST' &&
+    response.url().includes('/rest/v1/rpc/restore_document_version'),{
+      timeout:20000,
+    })
   await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  const retryReply=await retryRpcResponse
+  const retryRows=await readLocalRows(
+    'document_versions','id,version_number,version_name,content',queryVersions)
+  const retryDoc=await readLocalRows('documents','content',
+    'project_id=eq.'+projectId+'&type=eq.prd')
+  console.log('RETRY DIAGNOSTIC',JSON.stringify({
+    status:retryReply.status(),
+    versions:retryRows.map(v=>({number:v.version_number,name:v.version_name})),
+    documentIsRestored:retryDoc[0].content===beforeRestore,
+    runtimeErrors:errors.length,
+  }))
+  assert(retryReply.ok(),'Atomic restore retry failed with HTTP '+retryReply.status())
   await page.getByRole('button',{name:/^v4 \(복원\)$/}).first()
-    .waitFor({state:'visible',timeout:20000})
+    .waitFor({state:'visible',timeout:16000})
   assert.equal(await mainEditor.inputValue(),beforeRestore,
     'FAULT-01 retry did not restore correct target version')
   const retriedHistory=await readLocalRows(
