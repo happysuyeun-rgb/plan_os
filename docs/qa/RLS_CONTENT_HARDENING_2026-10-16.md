@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.0  
-**진행 상태:** migration 010 제안 작성 / 격리 Supabase Auth+JWT+REST CI 실행 중 / 운영 미적용  
+**문서 버전:** v1.1  
+**진행 상태:** migration 010 실제 일회용 Supabase Auth+JWT+PostgREST 부정/허용 테스트 통과 / 실제 UI·운영 DB 적용 전  
 **변경 브랜치:** `fix/planos-rls-content-hardening-20261016` · [Draft PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14) (Draft PR #13 선행)
 
 ## 1. 실제 소스 대조 및 문제
@@ -25,7 +25,7 @@
 
 | ID | 테스트 | 기대 결과 | 상태 |
 |---|---|---|---|
-| CSEC-01 | editor가 owner의 댓글 본문/작성자명 변경 | 거부·원본 유지 | CI 대기 |
+| CSEC-01 | editor가 owner의 댓글 본문/작성자명 변경 | 거부·원본 유지 | **격리 Auth/JWT/REST CI PASS** |
 | CSEC-02 | owner는 자기 댓글 본문 수정, viewer는 루트 스레드 해결, editor는 재개 | 허용 | CI 대기 |
 | CSEC-03 | 댓글 author 및 owner가 각각 소프트 삭제(`body:''`) | 정상 삭제, 삭제된 글 수정 거부 | CI 대기 |
 | CSEC-04 | editor가 owner 반응 수정/삭제 및 owner user_id로 reaction 등록 | 거부 | CI 대기 |
@@ -37,6 +37,14 @@
 | CSEC-10 | 활성 구성원/owner에게 정상 알림 INSERT | 허용 | CI 대기 |
 | CSEC-11 | 수신자가 알림 읽음만 변경 / 제목·본문 변경·읽음 해제 | 읽음만 허용 | CI 대기 |
 | CSEC-12 | editor 버전 추가, editor/owner 과거 버전 UPDATE, viewer 버전 추가 | 새 버전만 허용, 과거 수정 거부 | CI 대기 |
+
+## 2.1 2026-10-16 실제 CI 검증 결과
+
+- **최종 증빙:** [GitHub Actions #38854258418](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854258418) `completed/success` (SQL/테스트 코드 commit `f2dc298484fbf8c7fda9373a9b0ef46e2c5b5c7f`).
+- **환경:** 일회용 로컬 Supabase CLI `2.84.2`, 실제 GoTrue/Auth password login, 사용자 JWT, Kong/REST(PostgREST), PostgreSQL. 이 저장소의 실제 migrations `001~010`을 로컬 DB에만 적용. 실사용자 정보·운영 Supabase 연결 없음.
+- **실행 확인:** 기존 PR #13의 owner/editor/viewer/pending/outsider/anon 프로젝트 격리 테스트 PASS, 이어서 **CSEC-01~12의 정상 허용 및 무단 변조 거부 테스트 모두 PASS**. CLI 출력에서 댓글 소유권, soft delete, 반응/참여 상태, 알림 recipient/actor/읽음, 문서 이력 append-only 검사가 각각 PASS로 표시됨.
+- **실패/수정 이력:** 최초 [Actions #38854082810](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854082810)은 **테스트 방식 문제**로 실패. 발신자는 타인의 비공개 알림 행을 SELECT할 권한이 없으므로 `Prefer: return=representation`으로 정상 알림 INSERT를 요청하면 403이 발생. 실제 클라이언트 `notify.ts`처럼 `return=minimal`을 사용하고 수신자 JWT로 조회하여 INSERT 성공을 검증하도록 수정 후 최종 PASS.
+- **범위:** 010은 앱의 모든 서버 기능에 대한 보안 검증이 아니다. 실제 UI, 운영 DB의 추가 정책·기존 사용자 데이터, 알림 payload 진위/활동 로그, 외부 서비스 연동은 아직 미검증.
 
 ## 3. 미포함·후속 검토가 필요한 안전성 문제
 
@@ -60,3 +68,4 @@
 | 날짜 | 버전 | 내용 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v1.0 | migration 010 변경안·현재 앱 호출·권한 거부/허용 12개 테스트 및 후속 위험 최초 작성 | 통합 CI 대기 |
+| 2026-10-16 | v1.1 | CSEC-01~12 실제 일회용 Supabase JWT/PostgREST CI 성공 검증, 초기 알림 반환 정책 테스트 오류 수정 이력·브라우저/운영 차단 기록 | 격리 통합 테스트 PASS / 실제 UI·운영 미적용 |
