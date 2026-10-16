@@ -158,6 +158,70 @@ try{
   assert.equal(serverRows.find(row=>row.type==='ia')?.content,iaContent)
   console.log('PASS persisted local PostgREST PRD/IA contents match final browser edits')
 
+  // B-05: A historical snapshot can be previewed in read-only mode,
+  // restored as a new snapshot, and the prior current snapshot remains
+  // readable/unchanged. Verify BOTH browser and durable local DB rows.
+  await page.getByRole('button',{name:'버전 저장',exact:true}).click()
+  const versionDialog=page.getByRole('dialog')
+  await versionDialog.locator('input').fill('B05-old')
+  await versionDialog.getByRole('button',{name:'저장',exact:true}).click()
+  await page.getByRole('button',{name:/^v1 \(B05-old\)$/}).first()
+    .waitFor({state:'visible',timeout:20000})
+  console.log('PASS B-05 initial historical snapshot created')
+
+  const beforeRestore=merged+'\\nB05-CURRENT-MUST-BE-PRESERVED'
+  await mainEditor.fill(beforeRestore)
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByRole('button',{name:'버전 저장',exact:true}).click()
+  const currentVersionDialog=page.getByRole('dialog')
+  await currentVersionDialog.locator('input').fill('B05-current')
+  await currentVersionDialog.getByRole('button',{name:'저장',exact:true}).click()
+  await page.getByRole('button',{name:/^v2 \(B05-current\)$/}).first()
+    .waitFor({state:'visible',timeout:20000})
+
+  await page.getByRole('button',{name:/^v1 \(B05-old\)$/}).first().click()
+  await page.waitForFunction(expected=>
+    document.querySelector('main textarea')?.value===expected,merged,{timeout:12000})
+  assert.notEqual(await mainEditor.getAttribute('readonly'),null,'B-05 historical version is editable')
+  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
+  const restoreDialog=page.getByRole('dialog')
+  await restoreDialog.getByRole('button',{name:'확인'}).click()
+  await page.getByRole('button',{name:/^v3 \(복원\)$/}).first()
+    .waitFor({state:'visible',timeout:20000})
+  await page.waitForFunction(expected=>
+    document.querySelector('main textarea')?.value===expected,merged,{timeout:12000})
+  assert.equal(await mainEditor.inputValue(),merged,'B-05 restore did not put old snapshot into current editor')
+  assert.equal(await mainEditor.getAttribute('readonly'),null,'B-05 current editor remains read-only after restore')
+
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),merged,'B-05 restored content did not survive reload')
+
+  const getVersionResponse=await fetch(
+    api+'/rest/v1/document_versions?select=version_number,version_name,content&document_id=eq.'+
+    serverRows.find(row=>row.type==='prd')?.id+'&order=version_number.asc',{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    }
+  )
+  assert(getVersionResponse.ok,'B-05 local version history cannot be read')
+  const vrows=await getVersionResponse.json()
+  assert.equal(vrows.length,3,'B-05 expected 2 saved historical versions + restored version')
+  assert.deepEqual(vrows.map(v=>v.version_number),[1,2,3])
+  assert.deepEqual(vrows.map(v=>v.version_name),['B05-old','B05-current','복원'])
+  assert.deepEqual(vrows.map(v=>v.content),[merged,beforeRestore,merged],
+    'B-05 historic/current snapshot was overwritten or restore produced wrong version')
+  const restoredDocResponse=await fetch(
+    api+'/rest/v1/documents?select=content&type=eq.prd&project_id=eq.'+projectId,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(restoredDocResponse.ok)
+  assert.equal((await restoredDocResponse.json())[0].content,merged,
+    'B-05 durable document did not match restored history')
+  console.log('PASS B-05 historical preview is read-only; restore creates v3; v1/v2 remain intact')
+  console.log('PASS B-05 latest restored document survives reload and matches local DB')
+
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
