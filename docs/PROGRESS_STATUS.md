@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.0  
+**문서 버전:** v3.1  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -10,7 +10,7 @@
 ## 전체 로드맵
 | 단계 | 진행 상태 | 완료한 것 | 미완료·다음 확인 |
 |---|---|---|---|
-| 0. 기술 기준선 | **진행 중** | 저장소 212개 항목 목록 확인, SQL 8개 정적 감사, CI 실행·실패 원인 확인, 린트 부분 수정 PR #8 | CI 성공 증빙 확보, 남은 lint 경고 1건·운영 DB 적용 상태, RLS 재현/개선, 배포 환경·회귀 검증 |
+| 0. 기술 기준선 | **진행 중** | 저장소 212개 항목 목록 확인, SQL 8개 정적 감사, CI 실행·실패 원인 확인, 린트 부분 수정 PR #8 | CI 성공 증빙 확보, 남은 lint 경고 1건·운영 DB 적용 상태, RLS 재현/개선, PR #9 브라우저 회귀 검증 |
 | 1. 기획·아키텍처 | **부분 착수(초안)** | 통합 PRD·TF-01~30·IA·화면 기능명세·권한 정책·AI 아키텍처·데이터 모델·API 계약 초안 8개 작성 | 8개 초안 검토·승인, 정책 결정, 실제 워커/큐 선정, 상세 SQL/OpenAPI/보안/QA 설계 및 검증 |
 | 2. 프로젝트·업무 기반 | **미착수** | 없음 | 업무 상태/CRUD/워크스페이스/호환성 |
 | 3. 통제된 AI 실행 | **미착수** | 없음 | 서버 모델, 큐/워커, 승인, 예산, 복구 |
@@ -18,6 +18,12 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## Phase 0 코드·환경 추가 점검 (2026-10-16)
+- **Supabase 프로젝트 발견:** Plan OS 프로젝트의 상태는 `INACTIVE`; 개발 브랜치는 **0개**로 조회됨. `list_migrations`는 DB 연결 시간 초과로 실패해 실제 적용 이력 미확인. 운영 DB 재활성화/마이그레이션/브랜치 생성은 하지 않음.
+- **문서 자동저장 위험 보완 브랜치:** [Draft PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) (`fix/planos-document-autosave-safety-20261016`, 기반 PR #8): 2초 전역 저장 타이머를 문서별 스냅샷/순차 쓰기로 교체, 문서 전환 중 편집 버퍼 보존, 저장 오류 상태 및 단위 테스트 4개 추가.
+- **검증:** [GitHub Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645) **SUCCESS**; `npm ci`·TypeScript/build·lint·`npm run test:unit` 전부 통과. 로컬 Node 22 단위 테스트도 4/4 통과.
+- **계속 차단:** 브라우저에서 문서 전환/이전 버전 복원·재생성·프로젝트 전환 중 동시 저장 회귀 미실행, 개발 DB RLS 미실행. PR #9는 Draft이며 PR #8 기반으로, **main 병합이나 배포 금지**.
 
 ## 제품 정의 현황
 - [데이터 모델 v0.2](engineering/DATA_MODEL.md): 실제 001~008 SQL 정적 확인 기반 CURRENT/ TARGET 구분, 신규 AI 엔터티와 기존 generation_runs 분리. DDL·운영 적용 없음.
@@ -39,7 +45,7 @@
 | 문서 | 진행 현황표 | **브랜치 작성 완료 / 미병합** | [이 문서](PROGRESS_STATUS.md) |
 | CI | build/lint 워크플로 | **PR #5 미병합; CI 성공 근거는 PR #8 최신 브랜치** | [PR #5](https://github.com/happysuyeun-rgb/plan_os/pull/5) / [성공 실행](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570) |
 | 감사 | DB/RLS 정적 감사 | **SQL 8개 검토 완료 / 실제 권한 검증 미완료** | [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2) |
-| 품질 | 빌드/테스트/배포 환경 검증 | **미완료** | [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3) |
+| 품질 | 빌드/테스트/배포 환경 검증 | **PR #9 단위 테스트+CI 통과 / 브라우저·DB 회귀 및 배포 환경 미완료** | [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) / [Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645) / [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3) |
 | 설계 | 서버 AI 실행/승인/비용 ADR | **아키텍처 v0.2 초안 작성 / 선정·승인 미완료** | [설계 초안](engineering/ARCHITECTURE.md) / [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4) |
 | 코드 | 린트 수정 PR #8 | **CI 성공 / 회귀 미검증** | [PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8) |
 | 보안 | RLS 위험 재현·수정 | **정적 위험 발견 / DB 재현 미완료** | [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7) |
@@ -98,16 +104,17 @@
 | 2026-10-16 | v2.8 | 12개 문서 교차감사, CI 최신 스냅샷 통일, Phase 3 계약 선행과 P0 결정/검증 누락 반영 | [문서 품질 감사](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 | 2026-10-16 | v2.9 | PRD·TF·IA·SCREEN·PERMISSIONS·ARCH·DATA·API 문서 v0.2 정합성 보완 및 감사 해결/미해결 구분 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
 | 2026-10-16 | v3.0 | 문서 감사 재검산: CI·아키텍처·TF 매핑의 최신 상태 표현 정리 | [문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md) |
+| 2026-10-16 | v3.1 | Supabase Plan OS 비활성/개발 브랜치 없음·마이그레이션 조회 실패, PR #9 자동저장 코드 수정 및 CI/단위 테스트 성공 기록 | [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) / [Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
 - 권한과 도구가 허용하고 운영 위험이 없는 후속 작업은 추가 지시를 기다리지 않고 이어서 수행한다. 실제 도구 호출 없이 백그라운드 진행을 주장하지 않는다.
 - 운영 DB/배포/결제/PR 병합 등 영향 큰 변경은 별도 승인 이후에만 진행한다.
-- 현재 다음 작업: 문서 감사의 확정 가능한 모순 보완 → PR #8 기능 회귀 검증 및 [Issue #7 — RLS 재현](https://github.com/happysuyeun-rgb/plan_os/issues/7).
+- 현재 다음 작업: [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) 자동저장 브라우저 회귀 검증 → Plan OS 개발 DB 준비 여부 판단 → [Issue #7 — RLS 재현](https://github.com/happysuyeun-rgb/plan_os/issues/7).
 
 ## 바로 다음 작업
-1. [Issue #6](https://github.com/happysuyeun-rgb/plan_os/issues/6): CI 성공 완료. 남은 1개 경고와 프로젝트/문서 기능 회귀 검증.
-2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 안전한 DB에서 RLS 재현 및 수정 PR.
+1. [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9): 문서별 자동저장 단위 테스트/CI 통과. 브라우저에서 탭 전환·저장 실패·버전 복원·재생성 동작 회귀 테스트 전까지 Draft 유지.
+2. [Issue #7](https://github.com/happysuyeun-rgb/plan_os/issues/7): 현재 Plan OS DB 비활성·개발 브랜치 없음. 별도 격리 DB와 역할 계정 확보 후 RLS 재현 및 수정 PR.
 3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): SQL 정적 감사 이후 실제 적용 상태 및 권한 검증 마무리.
 4. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 재검증 및 회귀 기준선.
 5. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
