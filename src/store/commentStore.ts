@@ -55,6 +55,9 @@ interface CommentState {
   reset: () => void
 }
 
+// Ignore out-of-order comment responses after document/filter/project changes.
+let threadsRequestSequence = 0
+
 export const useCommentStore = create<CommentState>((set, get) => ({
   threads: [],
   counts: null,
@@ -68,10 +71,18 @@ export const useCommentStore = create<CommentState>((set, get) => ({
   replyToId: null,
 
   fetchThreads: async (projectId, documentId) => {
+    const sequence = ++threadsRequestSequence
     set({ isLoading: true })
     const { filter, search } = get()
-    const threads = await apiFetchThreads(projectId, documentId, filter, search)
-    set({ threads, isLoading: false })
+    try {
+      const threads = await apiFetchThreads(projectId, documentId, filter, search)
+      if (sequence === threadsRequestSequence) {
+        set({ threads, isLoading: false })
+      }
+    } catch (error) {
+      if (sequence === threadsRequestSequence) set({ isLoading: false })
+      throw error
+    }
   },
 
   fetchCounts: async (projectId) => {
@@ -161,7 +172,9 @@ export const useCommentStore = create<CommentState>((set, get) => ({
     }
   },
 
-  reset: () =>
+  reset: () => {
+    // An in-flight response from the previous project must not repopulate it.
+    threadsRequestSequence += 1
     set({
       threads: [],
       counts: null,
@@ -173,5 +186,6 @@ export const useCommentStore = create<CommentState>((set, get) => ({
       activeThreadId: null,
       pendingSelection: null,
       replyToId: null,
-    }),
+    })
+  },
 }))
