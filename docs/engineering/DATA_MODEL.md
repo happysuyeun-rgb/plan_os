@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v0.1  
-**진행 상태:** 설계 초안 / SQL 작성·적용·실 DB 검증 전  
+**문서 버전:** v0.2  
+**진행 상태:** 설계 정합성 1차 보완 / SQL 작성·적용·실 DB 검증 전  
 **기준:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [AI 아키텍처](ARCHITECTURE.md)  
 **증빙:** GitHub `main`의 `supabase/migrations/001~008` 정적 확인. 실제 운영 DB 적용 상태는 미확인.
 
@@ -62,7 +62,7 @@
 - `project_tasks.id` 1:N `ai_runs`, `task_dependencies`; 계획 버전·작업·계약의 프로젝트 일치 강제.
 - `ai_runs.id` 1:N `ai_run_events`, `ai_tool_calls`, `ai_artifacts`, `ai_usage_ledger`.
 - `ai_artifacts.id` 1:N `ai_artifact_verifications`; `ai_acceptances`는 승인 이벤트 불변 기록.
-- **유니크 제안:** `(project_id, idempotency_key, action_scope)` 또는 별도 요청 테이블, `(project_id, plan_id, version)`, `(run_id, external_idempotency_key)`.
+- **유니크 제안:** `ai_runs(project_id, idempotency_key)` (현재 명세의 컬럼으로 일치; 요청 종류별 범위가 필요한 경우 `action_scope`를 별도 정의한 뒤 복합키로 확장), `project_plans(project_id, version)`, `ai_tool_calls(run_id, external_idempotency_key)` (nullable·외부 제공자 별 멱등성 충돌 정책은 별도 검토). 실제 DDL 전 PK/FK/UNIQUE/부분 인덱스 검증 필요.
 - **불변성:** 계약 수락 시 terms 스냅샷, 승인 대상 digest, 사용 원장/감사 이벤트, 완료된 검증 기록은 직접 UPDATE 금지. 변경은 새 버전/상쇄 이벤트.
 - **동시성:** `state_version` 기반 compare-and-swap; 예산 예약과 run 생성은 원자적 트랜잭션/아웃박스.
 - **삭제:** 외래키 cascade로 비용·감사 증빙을 실수로 삭제하지 않도록 프로젝트 삭제/보존/익명화 정책 확정 전 실제 DDL 금지.
@@ -88,7 +88,13 @@
 4. **Phase 3:** 계약·승인·영속 실행·아웃박스·원장 추가, 장애/동시성 테스트.
 5. **Phase 4~5:** PM·인력사무소 연결. 기존 `generation_runs`의 자동 마이그레이션은 기본 제외.
 
-## 7. 미결정·검증 체크
+## 7. 2026-10-16 교차 감사 보완사항
+- **수정(DQ-06):** 존재하지 않는 `action_scope`를 바로 UNIQUE에 넣던 불일치를 현재 정의된 `(project_id,idempotency_key)` 후보로 정리. API 요청 단위에서 scope가 추가로 필요하면 컬럼부터 명세하고 테스트한다.
+- **미해결(DQ-09):** 실행 비용은 프로젝트/계약/실행 단위 상한의 동시 예약 경쟁과 환불/보상 이벤트를 함께 설계해야 한다. `ai_usage_ledger` 직접 UPDATE 금지, 원장 중복 처리 테스트 필요.
+- **미해결(DQ-04):** 승인 요청의 대상(payload digest), 계약 스냅샷의 변경 불가 원문·버전 보존, 변경 시 새 계약/재승인 정책을 구체적인 DDL로 옮겨야 한다.
+- **미해결:** 계약·작업·실행·승인·산출물에 동일한 `project_id`가 유지되도록 복합 FK/서버 트랜잭션 중 어떤 조합으로 강제할지 선정한다.
+
+## 8. 미결정·검증 체크
 - [x] CURRENT 실제 SQL 기반 테이블/컬럼 구분
 - [x] TARGET 신규 엔터티·관계·불변성·원장 개념 정의
 - [x] 기존 `generation_runs`와 신규 `ai_runs` 분리
@@ -101,3 +107,4 @@
 | 날짜 | 버전 | 변경 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v0.1 | CURRENT 스키마 대비 TARGET 데이터 모델·무결성·권한·단계적 변경 전략 | 검토 전 |
+| 2026-10-16 | v0.2 | DQ-06 유니크 키 불일치 정리, 승인·원장·FK 데이터 무결성 후속 검증 명시 | 검토 전 |
