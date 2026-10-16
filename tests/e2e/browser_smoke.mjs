@@ -148,7 +148,7 @@ try{
   console.log('PASS C-01 pending human edit plus chat request merged and persisted after reload')
 
   // Ensure these are real persisted server values, not only client drafts.
-  const serverResponse=await fetch(api+'/rest/v1/documents?select=type,content&project_id=eq.'+projectId,{
+  const serverResponse=await fetch(api+'/rest/v1/documents?select=id,type,content&project_id=eq.'+projectId,{
     headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
     signal:AbortSignal.timeout(12000),
   })
