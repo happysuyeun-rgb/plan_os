@@ -119,7 +119,8 @@ assert.equal((await queryRows('pending', 'documents', projectOne)).length, 0)
 assert.equal((await queryRows('pending', 'project_members', projectTwo)).length, 0)
 console.log('PASS pending: own invitation only, no project document access')
 
-for (const [role, ownCount] of [['otherOwner',2],['otherEditor',2]]) {
+// Project owners live in projects.user_id; only invited members occupy project_members.
+for (const [role, ownCount] of [['otherOwner',1],['otherEditor',1]]) {
   assert.equal((await queryRows(role,'project_members',projectOne)).length, 0)
   assert.equal((await queryRows(role,'project_members',projectTwo)).length, ownCount)
 }
