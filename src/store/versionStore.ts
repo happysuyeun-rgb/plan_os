@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { DocumentVersion, DocumentVersionSummary } from '../types'
 import { saveDocumentContent } from '../lib/api/documents'
+import { useDocumentStore } from './documentStore'
 import {
   createVersion as apiCreateVersion,
   fetchVersions as apiFetchVersions,
@@ -60,8 +61,12 @@ export const useVersionStore = create<VersionState>((set, get) => ({
   },
 
   restoreVersion: async (documentId, content) => {
-    await apiCreateVersion(documentId, content, '복원')
-    await saveDocumentContent(documentId, content)
+    // Serialize the explicit restore after any pending autosave for this document.
+    // Otherwise a delayed debounce can overwrite the restored version.
+    await useDocumentStore.getState().replaceDocumentContent(documentId, async () => {
+      await apiCreateVersion(documentId, content, '복원')
+      return saveDocumentContent(documentId, content)
+    })
     await get().fetchVersions(documentId)
     const summary = await apiFetchSummaries([documentId])
     set((s) => ({
