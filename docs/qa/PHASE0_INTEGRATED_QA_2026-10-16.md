@@ -1,0 +1,69 @@
+# PlanOS Phase 0 — 통합 브랜치·격리 브라우저 QA 실행 기록
+
+**최초 작성일:** 2026-10-16  
+**최종 수정일:** 2026-10-16  
+**문서 버전:** v1.0  
+**진행 상태:** 통합 브랜치·CI 3종 PASS / 실제 브라우저 스모크 자동화 실행 중 / 전체 브라우저 회귀 미완료  
+**대상:** [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) · `test/planos-phase0-integrated-20261016`
+
+## 1. 통합 구조 (기존 main·운영 DB 변경 없음)
+
+| 계열 | 포함된 수정 | 검증 상태 |
+|---|---|---|
+| [Draft PR #8](https://github.com/happysuyeun-rgb/plan_os/pull/8) → [#9](https://github.com/happysuyeun-rgb/plan_os/pull/9) → [#11](https://github.com/happysuyeun-rgb/plan_os/pull/11) | TS/lint 기준, 문서별 자동저장·명시적 복원/재생성, 채팅 쓰기 충돌 및 저장 테스트 | 앱 기준선 17개 단위 테스트 PASS |
+| [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13) → [#14](https://github.com/happysuyeun-rgb/plan_os/pull/14) | migration 009 프로젝트 멤버 RLS 재귀 제거·010 댓글/알림/버전 권한 보완, 실제 JWT 부정/허용 테스트 | 격리 PostgreSQL·Supabase Auth/JWT/REST PASS |
+| [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) | 두 계열을 테스트 전용 브랜치의 **2-parent merge commit**에 통합, 워크플로를 QA 브랜치에서 실행 | 3종 CI PASS, 브라우저 별도 실증 진행 |
+
+- **통합 시작 부모:** 앱 계열 PR #11 head `108048f4acfb7244c019bb5a8d16c313a3cad4c0`, 보안 계열 PR #14 head `7436e420c18cfe3a056fdbdfcfed63c4ace85051`.
+- **통합 머지 커밋:** `992bb60c8f458f4f813a52747d40463f83674d22`. 보안 브랜치는 `main` 대비 **13개 신규 파일만 추가**했고 앱 계열의 기존 파일은 통합 시 덮어쓰지 않았다. 이후 워크플로별 push 트리거만 테스트 브랜치에서 추가 설정.
+- **목적:** 보안 SQL과 앱 수정이 하나의 소스 트리에 공존하고, 실제 프로젝트의 계정/운영 데이터 없이 함께 검증할 수 있도록 환경을 구성.
+- **금지:** `main` 또는 기존 PR 병합, 운영 Supabase 프로젝트의 DDL/DML, Vercel 운영 배포, 유료 개발 DB 브랜치 생성.
+
+## 2. 검증된 자동 CI 근거
+
+| ID | 항목 | 실증/근거 | 현재 상태 |
+|---|---|---|---|
+| I-01 | TypeScript·빌드·ESLint·단위 테스트 | [Baseline #38855752421](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752421) — SHA `da81cabb65e77b36eb3652d9fa19f2b0a308b293` | **PASS** |
+| I-02 | PostgreSQL RLS 무한 재귀 재현·009 적용 | [RLS SQL #38855752463](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752463) — 동일 SHA | **PASS** |
+| I-03 | 실제 로컬 Supabase Auth/JWT/REST + migration 001~010 | [RLS REST #38855748722](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722) — SHA `3996986106deeae6b2a7d67381debeb54749f6ce` | **PASS** |
+| I-04 | 실제 웹 로그인 → Dashboard → PRD 열기 → 새로고침 | [브라우저 스모크 CI](https://github.com/happysuyeun-rgb/plan_os/actions/workflows/phase0-browser-smoke.yml), `tests/e2e/browser_smoke.mjs` | **실행 중 / 확인 필요** |
+| I-05 | 전체 화면 B-01~12 / C-01~10 / CSEC-01~12 | 개별 [문서 저장 QA](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md), [RLS QA](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-content-hardening-20261016/docs/qa/RLS_CONTENT_HARDENING_2026-10-16.md) | **브라우저 미실행** |
+
+**이력 주의:** CI 실행 중 신규 커밋이 추가되므로 **각 CI 성공 SHA를 반드시 기록**한다. 단일 CI 성공을 서로 다른 커밋에도 자동 적용된 것으로 처리하지 않는다. 앱·보안 소스는 통합 커밋 이후 변경되지 않았고, 추가 작업은 QA 스크립트·워크플로·문서였다.
+
+## 3. 실제 브라우저 QA 환경 구성
+
+- GitHub Actions hosted runner에서 **로컬** Supabase CLI `2.84.2`: PostgreSQL(`127.0.0.1:54322`), GoTrue/Kong/PostgREST(`127.0.0.1:54321`)만 실행. hosted Supabase 토큰·DB URL·운영 사용자 미사용.
+- migration `001~010`을 `psql`로 이 일회용 DB에만 적용. 임시 테스트 사용자는 로컬 Auth Admin API가 생성하며 SQL 테스트 계정과 구분한다.
+- `tests/e2e/local_browser_env.mjs`는 로컬 CLI 출력에서 anon 키를 읽어 GitHub runner의 `.env.local`에만 기록하며 원본 키를 로그에 출력하지 않는다. `VITE_SUPABASE_URL=http://127.0.0.1:54321`.
+- Vite `http://127.0.0.1:5173`, 개발 로그인 표시. Playwright Chromium 헤드리스 브라우저로 비밀번호 로그인, 대시보드 테스트 프로젝트 열람, PRD 본문 표시 및 새로고침까지 확인.
+- 로컬 서비스는 종료 시 `supabase stop --no-backup`, 테스트 키 파일 `.env.local` 삭제. 실패 시 합성 데이터만 담은 화면 캡처를 3일간 Actions 아티팩트로 수집(키/토큰 파일 미수집).
+- **구분:** 이 스모크는 로그인이 가능하고 핵심 화면이 열린다는 검사이며, 문서 저장·댓글·권한 변경·초대·휴지통·재생성·결제의 모든 E2E를 검증하지 않는다.
+
+## 4. 이후 화면별 체크 (실행 전 상태)
+
+| 우선 | 시나리오 | 수용 기준 | 상태 |
+|---|---|---|---|
+| P0 | 로그인·로그아웃·프로젝트 카드·PRD 링크 | 유효 세션만 접근·리다이렉션 정확 | 스모크 중 |
+| P0 | PRD 편집 후 IA 탭 전환·새로고침·동시 저장 | 다른 문서 내용 오염/유실 없음 | 미실행 |
+| P0 | 버전 저장→과거 버전 읽기→복원 | 이력 불변·복원 본문 유지 | 미실행 |
+| P0 | 채팅 저장 중 편집·문서 전환·오프라인 실패 | 편집 보존·중복 메시지/성공 오안내 없음 | 미실행 |
+| P0 | 소유자 초대/역할 관리·pending 자기 초대·viewer 제한 | 화면/서버 권한 일치, 42P17 재발 없음 | 미실행 |
+| P0 | 댓글 작성/답글·삭제/복원·반응·완료 상태 | 정상 기능 허용, 타인 데이터 변조 거부 | 미실행 |
+| P0 | 알림 생성·수신·읽음, 프로젝트 휴지통·복원 | 수신자/프로젝트 격리·링크 및 복원 정상 | 미실행 |
+| P0 | AI 재생성·연쇄 재생성 vs 자동저장 | 늦은 저장 덮어쓰기·중복 발생 없음 | 미실행 |
+| P1 | 스냅샷 동시 번호·알림 본문/활동 위조·삭제 프로젝트 접근 | 서버 권한/원자성 명시 및 거부 테스트 | 미실행 |
+
+## 5. 남은 일정과 종료 조건
+
+- **통합 브랜치/자동 검증:** 기존 3종 CI 완료, 브라우저 스모크 검증 중.
+- **브라우저 전체 회귀:** 테스트 계정·기능 조합에 따라 **1~3 작업일** 잠정 추정.
+- **채팅 INSERT와 문서 UPDATE 원자성, 후속 데이터 정합성:** **1~2 작업일 이상** 별도; 오류 재현 결과에 따라 변동.
+- **Phase 0 종료:** PR #8/#9/#11/#13/#14 코드 및 009/010 역할별/실제 브라우저 테스트 PASS, 신규 P0 결함 수정, 백업·롤백 계획 검토, 별도 병합·배포 승인 필요.
+- **전체 추정:** 기존 **Phase 0 잔여 5~10 작업일**, 전체 **43~79 작업일**을 최신 실증 결과 검토 전까지 임의로 변경하지 않음.
+
+## 변경 이력
+
+| 날짜 | 버전 | 변경 | 상태 |
+|---|---|---|---|
+| 2026-10-16 | v1.0 | 통합 2-parent 커밋·세 CI 결과와 Playwright 격리 브라우저 준비, 화면별 QA/남은 차단 기준 | 브라우저 스모크 실행 중 |
