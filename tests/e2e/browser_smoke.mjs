@@ -222,7 +222,62 @@ try{
   console.log('PASS B-05 historical preview is read-only; restore creates v3; v1/v2 remain intact')
   console.log('PASS B-05 latest restored document survives reload and matches local DB')
 
-  assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
+  // B-05 FAIL-INJECTION: A successful snapshot INSERT followed by a
+  // document PATCH failure must NOT be treated as a successful restore.
+  // Current implementation is deliberately expected to expose the bug.
+  // This is an evidence-gathering test, not a release-passing regression.
+  const changedAfterRestore=merged+'\\nB05-CURRENT-BEFORE-FAILED-RESTORE'
+  await mainEditor.fill(changedAfterRestore)
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByRole('button',{name:/^v1 \(B05-old\)$/}).first().click()
+  let injected=0
+  await page.route('**/rest/v1/documents?*',async route=>{
+    const req=route.request()
+    if(req.method()==='PATCH' && injected===0){
+      injected++
+      await route.fulfill({
+        status:503,
+        contentType:'application/json',
+        body:JSON.stringify({code:'TEST_FAULT',message:'Disposable failure injection'}),
+      })
+    }else{
+      await route.continue()
+    }
+  })
+  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
+  const failedPatchWait=page.waitForResponse(r=>r.request().method()==='PATCH' &&
+    r.url().includes('/rest/v1/documents') && r.status()===503,{timeout:20000})
+  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await failedPatchWait
+  await page.unrouteAll({behavior:'wait'})
+  assert.equal(injected,1,'B-05 injected PATCH fault was never exercised')
+  const versionCheck=await fetch(
+    api+'/rest/v1/document_versions?select=version_number,version_name,content&document_id=eq.'+
+    serverRows.find(row=>row.type==='prd')?.id+'&order=version_number.asc',{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(versionCheck.ok)
+  const afterFaultVersions=await versionCheck.json()
+  const afterFaultDoc=await fetch(
+    api+'/rest/v1/documents?select=content&type=eq.prd&project_id=eq.'+projectId,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(afterFaultDoc.ok)
+  const unchangedContent=(await afterFaultDoc.json())[0].content
+  assert.equal(unchangedContent,changedAfterRestore,'B-05 injected PATCH unexpectedly wrote document')
+  assert.equal(afterFaultVersions.length,4,'B-05 expected partial uncommitted-looking restore history')
+  assert.equal(afterFaultVersions[3].version_name,'복원')
+  assert.equal(afterFaultVersions[3].content,merged)
+  assert.notEqual(afterFaultVersions[3].content,unchangedContent)
+  console.log('REPRODUCED KNOWN DEFECT B-05: version v4 INSERT committed but document PATCH failed')
+  console.log('RELEASE BLOCKED: history now claims a restore even though current content was unchanged')
+  // Some browsers report an unhandled rejection when the UI onConfirm
+  // handler has no catch. Keep a separate explicit assertion for it.
+  const unrelatedErrors=errors.filter(e=>!e.includes('TEST_FAULT')&&!e.includes('Disposable failure injection'))
+  assert.deepEqual(unrelatedErrors,[],'Unexpected browser runtime exception(s)')
+
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
   console.error('Browser smoke failed:',error?.message ?? String(error))
