@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v4.0  
+**문서 버전:** v4.1  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -18,6 +18,14 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## 2026-10-16 Phase 0 — B-05 버전 저장·복원 실제 브라우저 검증 (최신)
+- **실제 Chromium + 일회용 Supabase:** [GitHub Actions #38869950232](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232) **SUCCESS** (source SHA `9f5ff4965490f0ac43b902b9a1a1234e59391ad0`). 같은 SHA [Baseline #38869950358](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950358) TS/build/lint/17 unit PASS.
+- **정상 흐름 B-05:** v1('B05-old') 저장 → 새 본문/명시적 v2('B05-current') 저장 → v1 읽기전용 미리보기 → v1 복원해서 v3('복원') 생성 → 브라우저 리로드/로컬 PostgREST `document_versions`의 v1/v2/v3 콘텐츠(old,new,old)·`documents.content` 확인. 원래 v1/v2 역사 불변.
+- **커버리지:** B-01·B-02·B-05 정상 복원·C-01 = **22 B/C 중 4개 브라우저 정상 경로 확인**, **18개 미실행**. **B-05 실패 시 복구·미저장 최신 입력 보존·동시성은 별도 미검증**, 따라서 B-05 전체 안전성 완료라고 판단 불가.
+- **추가 P0 이슈 [#16](https://github.com/happysuyeun-rgb/plan_os/issues/16):** 버전 복원은 클라이언트에서 version INSERT→documents UPDATE 2건을 순차 실행해 중간 오류/중복 재시도에 원자성 없음(코드상 위험). 사용자 안내 `현재 버전은 보존`은 명시적으로 저장하지 않은 최신 초안에도 보장되는지 미확인. 서버 트랜잭션/잠금/멱등성, 실패 주입 E2E 필요.
+- **다음:** 복원 실패 및 unsnapshotted draft 테스트(B-05 미완 구간) → C-03 채팅 중 탭·프로젝트 이동 → B-03/B-04 오프라인 저장 실패 → 사용자 역할별 팀/댓글/알림/휴지통 회귀. **운영 DB migrations 001~008 유지**, 009/010 미적용; Draft·미병합·미배포.
+- **근거:** [통합 QA v1.4](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md).
 
 ## 2026-10-16 Phase 0 누락 점검·브라우저 회귀 추가 (현재 최우선)
 - **실제 격리 Chromium 사용자 회귀 3건 PASS:** [Actions #38867219334](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867219334) (commit `e933ea9647bd169ec675c1c6ad9061343f14a901`), B-01 PRD→기능명세서 빠른 전환/각각 저장, B-02 5회 연속 편집/마지막 내용 유지, C-01 미저장 초안+채팅 병합 및 리로드. **일회용 PostgREST 저장 데이터까지 대조**했다.
@@ -193,3 +201,5 @@
 3. [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2): SQL 정적 감사 이후 실제 적용 상태 및 권한 검증 마무리.
 4. [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3): CI 재검증 및 회귀 기준선.
 5. [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4): AI 실행 아키텍처 ADR.
+| 2026-10-16 | v4.1 | B-05 저장된 현재 버전→과거 미리보기→복원 v3 실제 Chromium/DB PASS, 원자성·미저장 초안 Issue #16 분리, B/C 4/22 정상 경로 확인 | [Actions #38869950232](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38869950232) / [Issue #16](https://github.com/happysuyeun-rgb/plan_os/issues/16) |
+
