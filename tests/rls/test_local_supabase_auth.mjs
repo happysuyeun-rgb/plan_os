@@ -148,3 +148,6 @@ const ownerDocs = await queryRows('owner','documents',projectOne)
 assert.equal(ownerDocs[0].content, 'One Project PRD')
 console.log('PASS viewer document UPDATE denied, original content preserved')
 console.log('SUCCESS: isolated Supabase Auth -> JWT -> PostgREST member policy integration')
+
+// Reuse the same authenticated, disposable test identities in the next RLS suite.
+export { people, projectOne, projectTwo, call, anonKey, API_URL, db }

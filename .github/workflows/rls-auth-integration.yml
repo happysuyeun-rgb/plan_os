@@ -8,7 +8,7 @@ on:
       - 'tests/rls/**'
       - '.github/workflows/rls-auth-integration.yml'
   push:
-    branches: [fix/planos-rls-member-recursion-20261016]
+    branches: [fix/planos-rls-member-recursion-20261016, fix/planos-rls-content-hardening-20261016]
     paths:
       - 'supabase/migrations/**'
       - 'tests/rls/**'
@@ -60,7 +60,7 @@ jobs:
             exit 1
           fi
           echo "Disposable local Supabase Auth and REST services started"
-      - name: Apply actual migrations 001..009 to LOCAL PostgreSQL ONLY
+      - name: Apply actual migrations 001..010 to LOCAL PostgreSQL ONLY
         env:
           PGHOST: 127.0.0.1
           PGPORT: 54322
@@ -70,13 +70,13 @@ jobs:
           PGSSLMODE: disable
         run: |
           set -euo pipefail
-          for migration in supabase/migrations/00[1-9]_*.sql; do
+          for migration in supabase/migrations/*.sql; do
             echo "Local ONLY migration $(basename "$migration")"
             psql -X -v ON_ERROR_STOP=1 -f "$migration" > /tmp/planos-migration.log
           done
-          echo "Applied repository migrations 001..009 in isolated local DB"
+          echo "Applied repository migrations 001..010 in isolated local DB"
       - name: Test genuine Auth password login JWT, REST and RLS role isolation
-        run: node tests/rls/test_local_supabase_auth.mjs
+        run: node tests/rls/test_local_supabase_content.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |
