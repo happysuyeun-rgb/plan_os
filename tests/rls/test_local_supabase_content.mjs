@@ -28,14 +28,14 @@ const otherDocId=otherDocuments[0].id
 
 // Unlike call(), this helper accepts deliberate 403/42501 denials and
 // PostgREST UPDATE/DELETE empty-row responses as expected outcomes.
-async function rest(role,table,method='GET',query='',body) {
+async function rest(role,table,method='GET',query='',body,prefer='return=representation') {
   const bearer=role==='anon'?anonKey:people[role].access_token
   const response=await fetch(API_URL+'/rest/v1/'+table+(query?'?'+query:''),{
     method,
     headers:{
       apikey:anonKey,Authorization:'Bearer '+bearer,
       'Content-Type':'application/json',
-      Prefer:'return=representation',
+      Prefer:prefer,
     },
     body:body===undefined?undefined:JSON.stringify(body),
     signal:AbortSignal.timeout(12000),
@@ -151,10 +151,16 @@ expectDenied(await rest('editor','user_notifications','POST','',{
 expectDenied(await rest('editor','user_notifications','POST','',{
  ...payload,document_id:otherDocId,
 }),'cross-project notification document')
-expectAllowed(await rest('editor','user_notifications','POST','',payload),1,'active member to owner notification')
-expectAllowed(await rest('owner','user_notifications','POST','',{
+// Notification sender cannot SELECT a recipient's private row, so successful
+// sends must use return=minimal (as the real notify.ts client does).
+const validOwnerNotification=await rest('editor','user_notifications','POST','',payload,'return=minimal')
+assert(validOwnerNotification.ok,'member-to-owner notification must insert successfully')
+const validViewerNotification=await rest('owner','user_notifications','POST','',{
  ...payload,user_id:people.viewer.id,actor_id:people.owner.id,
-}),1,'owner to active viewer notification')
+},'return=minimal')
+assert(validViewerNotification.ok,'owner-to-viewer notification must insert successfully')
+assert((await rows('owner','user_notifications','type=eq.comment.reply')).length>=2)
+assert((await rows('viewer','user_notifications','type=eq.comment.reply')).length>=1)
 assert.equal((await rows('viewer','user_notifications',enc(ownerNotification))).length,0,'viewer sees another recipient notification')
 expectAllowed(await rest('owner','user_notifications','PATCH',enc(ownerNotification),{
  read_at:new Date().toISOString(),
