@@ -2,7 +2,7 @@ name: Baseline checks
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, fix/ci-lint-baseline-20261014]
   push:
     branches: [main]
   workflow_dispatch:
@@ -32,3 +32,5 @@ jobs:
         run: npm run build
       - name: Lint
         run: npm run lint
+      - name: Autosave regression unit tests
+        run: npm run test:unit
