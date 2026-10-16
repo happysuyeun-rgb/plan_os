@@ -386,12 +386,6 @@ export default function DocumentPage() {
     showToast('success', '연관 산출물이 모두 재생성되었습니다')
   }
 
-  const handleChatUpdate = (updated: string) => {
-    updateContent(updated)
-    setReadOnly(false)
-    selectVersion(null)
-  }
-
   const handleOpenHistory = async () => {
     if (!projectId) return
     await fetchActivities(projectId, activeDoc?.id)
@@ -616,7 +610,6 @@ export default function DocumentPage() {
                   chatTitle={currentProject ? resolveChatTitle(currentProject) : 'AI 채팅'}
                   canEditTitle={can('chat.send')}
                   onChatTitleSave={handleChatTitleSave}
-                  onDocumentUpdate={handleChatUpdate}
                   onMessageSent={() =>
                     logActivity({
                       project_id: projectId,
