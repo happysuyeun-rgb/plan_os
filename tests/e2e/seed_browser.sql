@@ -21,3 +21,10 @@ values (
   'prd',
   '# Phase0 E2E Document\n\nBrowser smoke fixture; not production data.'
 );
+
+insert into public.documents(project_id,type,content)
+values (
+  '77777777-7777-4777-8777-777777777777',
+  'ia',
+  '# Phase0 IA Fixture\n\nSecond independent synthetic document.'
+);
