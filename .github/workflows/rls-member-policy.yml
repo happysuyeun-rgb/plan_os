@@ -1,0 +1,87 @@
+name: RLS member policy - isolated PostgreSQL
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/rls/**'
+      - '.github/workflows/rls-member-policy.yml'
+  push:
+    branches: [fix/planos-rls-member-recursion-20261016, test/planos-phase0-integrated-20261016]
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/rls/**'
+      - '.github/workflows/rls-member-policy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rls-member-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-member-rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only-not-a-secret
+          POSTGRES_DB: planos_rls_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d planos_rls_disposable"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: test-only-not-a-secret
+      PGDATABASE: planos_rls_disposable
+    steps:
+      - name: Checkout PR code (never production)
+        uses: actions/checkout@v4
+      - name: Ensure local psql client exists
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+      - name: Bootstrap disposable Supabase auth-role emulation
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/rls/bootstrap_postgres.sql
+      - name: Apply actual repository migrations 001 through 008
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/00[1-8]_*.sql; do
+            echo "Applying ${migration} to disposable PostgreSQL only"
+            psql -X -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+      - name: Seed synthetic owner/editor/viewer/pending/outsider accounts
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/rls/seed_members.sql
+      - name: Before fix - expect actual 42P17 recursion on migration 006
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(psql -X -v ON_ERROR_STOP=1 -c "BEGIN READ ONLY; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001'; SELECT count(*) FROM public.project_members; ROLLBACK;" 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if [ "$status" -eq 0 ]; then
+            echo "::error::Missing expected recursive-RLS failure before migration 009"
+            exit 1
+          fi
+          if ! grep -Fq 'infinite recursion detected in policy' <<< "$output"; then
+            echo "::error::Unexpected SQL failure, not the known 42P17 recursion"
+            exit 1
+          fi
+      - name: Apply proposed migration 009 to disposable PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/009_fix_project_members_select_recursion.sql
+      - name: Validate six roles, invite compatibility and cross-project isolation
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/rls/test_member_select_009.sql
