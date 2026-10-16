@@ -13,6 +13,7 @@ interface SaveTask {
 interface DocumentAutosaveOptions<T> {
   persist: (documentId: string, content: string) => Promise<T>
   onSaved: (documentId: string, content: string, result: T) => void
+  onReplaced: (documentId: string, content: string) => void
   onError: (documentId: string) => void
   delayMs?: number
 }
@@ -20,6 +21,7 @@ interface DocumentAutosaveOptions<T> {
 export function createDocumentAutosave<T>({
   persist,
   onSaved,
+  onReplaced,
   onError,
   delayMs = 2000,
 }: DocumentAutosaveOptions<T>) {
@@ -84,5 +86,45 @@ export function createDocumentAutosave<T>({
     return operation
   }
 
-  return { schedule, flush, getStatus }
+  /**
+   * Run an explicit overwrite (restore / regeneration) in the same per-document
+   * write lane as autosave. First persist pending edits; never overwrite a failed
+   * draft silently. Edits made after this operation starts remain authoritative.
+   */
+  async function replace(
+    documentId: string,
+    overwrite: () => Promise<string>,
+  ): Promise<string> {
+    const task = getTask(documentId)
+    await flush(documentId)
+    if (task.failedRevision === task.revision) {
+      throw new Error('Unsaved document changes must be retried before overwrite')
+    }
+
+    const revision = ++task.revision
+    task.failedRevision = null
+    const operation = task.tail.then(async () => {
+      try {
+        const content = await overwrite()
+        task.savedRevision = revision
+        if (task.revision === revision) {
+          task.content = content
+          onReplaced(documentId, content)
+        }
+        return content
+      } catch (error) {
+        if (task.revision === revision) {
+          task.failedRevision = revision
+          onError(documentId)
+        }
+        throw error
+      }
+    })
+
+    // A failed overwrite must not permanently poison future saves.
+    task.tail = operation.then(() => undefined, () => undefined)
+    return operation
+  }
+
+  return { schedule, flush, replace, getStatus }
 }
