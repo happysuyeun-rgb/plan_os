@@ -2,11 +2,19 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.2  
+**문서 버전:** v2.3  
 **진행 상태:** 진행 중  
 
 
 **초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 실제 로컬 Supabase Auth/JWT/PostgREST API 통합 검증
+- **격리 환경:** [GitHub Actions #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) **SUCCESS**. 공식 CLI 기반 일회용 GoTrue(Auth)/PostgREST/Kong/Postgres 컨테이너, migration 001~009 적용. 생성 계정은 전부 임시이며 운영 접속 정보/실사용자 데이터 없음.
+- **실제 JWT:** 로컬 GoTrue Admin API에서 합성 계정 7명 생성, 비밀번호 로그인으로 JWT 발급, JWT로 `/rest/v1/project_members`·`documents` 접근 확인.
+- **통과:** owner/editor/viewer 해당 프로젝트 SELECT, pending 본인 초대 행만 SELECT, 타 프로젝트 소유자/회원 및 outsider/anon 조회 차단, viewer 문서 PATCH 차단 및 내용 무손상. `42P17` 재귀는 수정된 `009`에서 발생하지 않음.
+- **실패/수정:** 최초 #38852770669의 테스트 기대값에 프로젝트 소유자를 `project_members` 행으로 잘못 포함한 결함이 있었으며, DB 구조(`projects.user_id`) 기준으로 수정 후 위 성공 실행 확인.
+- **한계:** 실제 운영 DB의 `009`는 아직 **미적용**. 웹 UI(팀/초대·역할 전환·프로젝트 삭제/복원), 나머지 RLS 정책, 메시지/문서 저장 원자성 검증 미실행. [상세 QA v1.2](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-member-recursion-20261016/docs/qa/RLS_LIVE_READONLY_2026-10-16.md).
+- **보류:** PR #13 Draft, production schema/API/코드 `main` 미변경. 실제 운영 마이그레이션 적용은 역할별 UI QA/백업·롤백 계획과 별도 승인 후 진행.
 
 ## 2026-10-16 격리 PostgreSQL 17 RLS 009 실증 후속
 - **격리 데이터베이스 구성 완료:** GitHub Actions [#38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220)의 일회용 PostgreSQL 17 (서비스 컨테이너, 합성 데이터, Supabase 운영 DB 미연결). migrations 001~008 원본 적용 및 known 42P17 재귀 재현 → `009` 수정 적용 → 역할별 SELECT 검증 **SUCCESS**.
@@ -161,3 +169,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v2.0 | PR #11 GitHub CI 성공 실측(빌드·린트·17개 테스트 통과) 기록, 브라우저/RLS·메시지 원자성 차단 유지 |
 | 2026-10-16 | v2.1 | 재활성 Plan OS DB 001~008·RLS 실측, project_members 42P17 직접 재현, Supabase Advisor 경고 및 Draft PR #13 기록 |
 | 2026-10-16 | v2.2 | 일회용 PostgreSQL 17 001~008 재귀 재현→009 수정·권한 테스트 CI 성공 및 pending 초대 정보 보존 확인 |
+| 2026-10-16 | v2.3 | 실제 로컬 Supabase Auth 로그인/JWT·PostgREST 역할별 조회/뷰어 쓰기 차단 CI 성공 및 운영/브라우저 미검증 경계 기록 |
