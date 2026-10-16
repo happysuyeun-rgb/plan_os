@@ -279,12 +279,15 @@ export default function DocumentPage() {
     saveLastDocType(projectId, resolved)
   }, [projectId, docTypePath, isLoading, availableTypes, navigate, setActiveDocType])
 
+  // Only document identities affect version summary lookup; editing text
+  // must not re-fetch version summaries on each keystroke.
+  const documentIdsKey = availableTypes
+    .map((type) => documents[type]?.id)
+    .filter((id): id is string => !!id)
+    .join(',')
   useEffect(() => {
-    const docIds = availableTypes
-      .map((t) => documents[t]?.id)
-      .filter((id): id is string => !!id)
-    if (docIds.length > 0) fetchSummaries(docIds)
-  }, [availableTypes, documents, fetchSummaries])
+    if (documentIdsKey) void fetchSummaries(documentIdsKey.split(','))
+  }, [documentIdsKey, fetchSummaries])
 
   // Chat/version history belongs to a document ID. Draft content changing on
   // every keystroke must not clear and refetch the entire chat conversation.
