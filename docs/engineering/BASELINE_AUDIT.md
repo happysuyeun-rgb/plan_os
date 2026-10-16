@@ -2,11 +2,18 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.1  
+**문서 버전:** v2.2  
 **진행 상태:** 진행 중  
 
 
 **초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 격리 PostgreSQL 17 RLS 009 실증 후속
+- **격리 데이터베이스 구성 완료:** GitHub Actions [#38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220)의 일회용 PostgreSQL 17 (서비스 컨테이너, 합성 데이터, Supabase 운영 DB 미연결). migrations 001~008 원본 적용 및 known 42P17 재귀 재현 → `009` 수정 적용 → 역할별 SELECT 검증 **SUCCESS**.
+- **초대 회귀 차단:** 첫 `009` 제안은 pending 사용자의 자기 초대 행까지 가릴 수 있었음. 실제 [PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13)을 `auth.uid() = user_id OR public.can_access_project(project_id)`로 보완. 합성 owner/editor/viewer/pending/타 프로젝트/outsider/anon 역할 검사에서 정상 통과.
+- **CI 보장 범위:** 인증 역할·JWT 세션은 CI에 정의한 `auth.uid()` 최소 에뮬레이션이며, **실제 Supabase Auth/PostgREST·실제 초대 및 삭제/복원 사용자 흐름을 테스트한 것은 아님**. 브라우저/RLS 전체 시스템 배포 게이트는 유지.
+- **근거:** [RLS 읽기 전용·격리 CI 검증 보고서 v1.1](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-member-recursion-20261016/docs/qa/RLS_LIVE_READONLY_2026-10-16.md) 및 [개발 실행계획 v1.5](../roadmap/IMPLEMENTATION_PLAN.md) 잔여 43~79 작업일(잠정).
+- **허용되지 않는 행동:** 운영 DB DDL/DML, 재귀 오류 해결됐다는 운영 주장, 승인 없는 main 병합/배포, 새 유료 Supabase 브랜치 생성.
 
 ## 2026-10-16 Supabase 재활성화: 실제 READ ONLY 감사 (최신)
 - **DB 상태:** Plan OS `ACTIVE_HEALTHY`; 마이그레이션 `001`~`008` 실제 적용 이력 조회, 공개 스키마 12개 테이블 RLS 활성. 개발 DB 브랜치 **0개**. 이전 `INACTIVE`·timeout 문구는 아래 기록의 **과거 시점 상태**.
@@ -153,3 +160,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v1.9 | PR #11의 채팅 직접 DB 쓰기 제거·6개 테스트 추가, 프로젝트/문서 격리 및 메시지 원자성 QA 리스크 기록 |
 | 2026-10-16 | v2.0 | PR #11 GitHub CI 성공 실측(빌드·린트·17개 테스트 통과) 기록, 브라우저/RLS·메시지 원자성 차단 유지 |
 | 2026-10-16 | v2.1 | 재활성 Plan OS DB 001~008·RLS 실측, project_members 42P17 직접 재현, Supabase Advisor 경고 및 Draft PR #13 기록 |
+| 2026-10-16 | v2.2 | 일회용 PostgreSQL 17 001~008 재귀 재현→009 수정·권한 테스트 CI 성공 및 pending 초대 정보 보존 확인 |
