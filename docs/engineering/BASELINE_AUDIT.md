@@ -1,8 +1,8 @@
 # Phase 0 — Repository Baseline Audit (in progress)
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-15  
-**문서 버전:** v1.3  
+**최종 수정일:** 2026-10-16  
+**문서 버전:** v1.4  
 **진행 상태:** 진행 중  
 
 
@@ -78,6 +78,13 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 - 정책 수정 SQL은 **별도 PR**로 작성하고 승인 전 운영 DB에는 적용하지 않음.
 - 문서/댓글/알림/프로젝트 기존 사용자 흐름 회귀 테스트.
 
+## 2026-10-16 CI 검증 및 회귀 시나리오
+- **실측:** [GitHub Actions run #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570) on `fix/ci-lint-baseline-20261014` at commit `152e33968a90eea9e23dc58c63e4ba1beedc6dc4`: `npm ci` PASS, `npm run build` PASS, `npm run lint` PASS with **0 errors, 1 warning**.
+- **남은 경고:** `DocumentPage.tsx:307` effect dependency (`activeDoc`, `setContent`, `setReadOnly`, `versions`). 무작정 의존성을 추가하면 문서/버전 목록 갱신 때 저장 중인 내용을 덮어쓸 수 있으므로 실제 회귀 테스트와 함께 처리.
+- **필수 회귀 체크리스트(아직 실행 안 함):** (1) URL `?panel=comments&thread=...` 직접 진입 및 화면 내 URL 변경 (2) 편집/리뷰 모드와 viewer 권한 (3) 버전 선택·원본 복귀·버전 복원 (4) 화면 목록/와이어프레임 빠른 편집 중 debounce 저장 및 문서 변경 (5) 모달 닫기/재열기·기본값 갱신 (6) owner 프로젝트 휴지통 복원 및 타인 복원 차단.
+- **관찰된 정적 위험:** `DocumentPage.tsx`는 댓글 패널 열림을 URL에서 초기화하므로 동일 컴포넌트가 유지된 채 query만 변경되면 패널 자동 열림이 보장되지 않음. `documentStore.ts`의 전역 saveTimer와 현재 activeDocType 참조도 문서 전환/저장 경합 위험. **실행 재현 전까지 확정 버그로 단정하지 않음.**
+- **다음:** 안전한 개발 환경에서 위 회귀를 수행하고, Issue #7의 RLS 정책은 별도 개발 DB에서 역할별 재현. 운영 DB 변경 금지.
+
 ## 2026-10-15 계획 정합성 재검토
 - **Phase 0 차단 위험:** RLS 정책의 멤버 조회 재귀, 댓글·반응 소유권, 이력 수정 가능성은 실제 개발 DB에서 역할별 테스트가 필요. 정적 발견을 운영 취약점 확정으로 간주하지 않음.
 - **회귀 위험:** PR #8의 프로젝트 복원 사용자 필터 변경은 실제 스키마와 소유자/편집자/관리자 시나리오 검증 전 병합 금지.
@@ -92,3 +99,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-14 | v1.1 | 저장소 목록 및 CI 로그 기록 |
 | 2026-10-14 | v1.2 | SQL 8개 정적 검토와 RLS 위험 가설 기록 |
 | 2026-10-15 | v1.3 | 구형 미검증 서술 수정, 회귀·보안·외부 AI 진입 게이트 추가 |
+| 2026-10-16 | v1.4 | CI 성공 근거와 잔여 lint 경고, 회귀 시나리오·정적 저장 경합 위험 기록 |
