@@ -7,6 +7,7 @@ interface ConfirmModalProps {
   message: string
   confirmLabel?: string
   danger?: boolean
+  confirming?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -17,6 +18,7 @@ export function ConfirmModal({
   message,
   confirmLabel = '확인',
   danger = false,
+  confirming = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -24,11 +26,11 @@ export function ConfirmModal({
     <Modal isOpen={isOpen} onClose={onCancel} title={title}>
       <p className="text-sm text-gray-600">{message}</p>
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel} disabled={confirming}>
           취소
         </Button>
-        <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
-          {confirmLabel}
+        <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} disabled={confirming}>
+          {confirming ? '처리 중...' : confirmLabel}
         </Button>
       </div>
     </Modal>
