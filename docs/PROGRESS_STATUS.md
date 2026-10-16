@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.8  
+**문서 버전:** v3.9  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -18,6 +18,15 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## 2026-10-16 Phase 0 — 테스트 전용 통합 브랜치 및 실제 브라우저 스모크 (최신)
+- **Draft [PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15)** / `test/planos-phase0-integrated-20261016`: 앱 PR #8→#9→#11과 RLS PR #13→#14를 두 부모를 가진 통합 커밋 `992bb60c8f458f4f813a52747d40463f83674d22`으로 연결. 보안 계열의 신규 13개 파일만 앱 기준 트리에 추가해 앱 소스와 충돌 없이 통합. **main/기존 Draft PR은 미병합**.
+- **앱 자동 테스트:** [Baseline #38855752421](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752421) 성공 — npm ci, TS/빌드, lint, 17개 unit 테스트.
+- **SQL 재현:** [RLS PostgreSQL #38855752463](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752463) 성공 — 기존 42P17 재현, 009 적용 뒤 owner/editor/viewer/pending/outsider/anon 격리.
+- **실제 JWT·REST:** [RLS Auth/PostgREST #38855748722](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722) 성공 — 일회용 로컬 Supabase migrations 001~010, 실제 GoTrue 로그인/토큰으로 댓글·알림·문서 버전 권한 검사. 이 실행은 *워크플로 전용 마지막 변경 전 커밋*에 해당하며 앱/SQL 소스는 동일.
+- **실제 Chromium 화면:** [Browser Smoke #38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235) 성공 — 임시 계정 로그인 → 허가된 대시보드 프로젝트 조회 → PRD 문서 열기 → 전체 새로고침 후 문서 표시. 운영 Supabase 접근/배포 없음.
+- **상태:** [통합 QA 보고서 v1.1](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md) 작성. **브라우저 자동저장·버전 복원·채팅 충돌·댓글·초대·알림·휴지통 등 전체 회귀는 아직 미실행**. 메신저/문서 저장의 원자성·잔여 보안 정합성도 미완료.
+- **다음:** 브라우저 B-01~12/C-01~10, 팀/댓글/알림/버전/휴지통 수동·자동 회귀 → 충돌/원자성 보완 → Phase 0 승인 게이트. 잔여 추정 5~10 작업일 유지. 모든 PR Draft/미병합·운영 DB 009/010 미적용.
 
 ## 2026-10-16 Phase 0 — 댓글·반응·알림·문서 버전 RLS 보완 (최신)
 - **별도 [Draft PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14)** (기반 PR #13)에서 migration `010_harden_comments_notifications_versions.sql` 작성. 댓글 필드 보호 트리거, 본인 반응/참여 행 UPDATE·DELETE 제한, 유효 프로젝트 수신자 알림만 발송, 알림 `read_at` 이외 수정 차단, 과거 문서 버전 UPDATE 차단, soft-delete 댓글 빈 본문 CHECK 불일치 보완. 실제 운영 DB **미적용**.
@@ -160,6 +169,7 @@
 | 2026-10-16 | v3.6 | RLS 009 격리 PostgreSQL17 CI PASS·초대 권한 회귀 보완, 남은 기간 43~79 작업일 재산정 | [Actions #38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) / [실행계획 v1.5](roadmap/IMPLEMENTATION_PLAN.md) |
 | 2026-10-16 | v3.7 | 일회용 실제 Supabase Auth/JWT/PostgREST 통합 RLS 테스트 성공, 과거 DB 비활성·Issue #10 미수정 서술 최신화 | [Actions #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) |
 | 2026-10-16 | v3.8 | 댓글·반응·참여상태·알림·버전 010 별도 Draft PR #14, 일회용 Auth/JWT/REST CSEC-01~12 CI PASS·남은 UI/보안 차단 기록 | [Actions #38854258418](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854258418) / [PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14) |
+| 2026-10-16 | v3.9 | PR #15 통합 2-parent merge·앱/SQL/Auth CI 3종 PASS, 실제 Chromium 로그인·대시보드·PRD 스모크 PASS 및 전체 UI 회귀 미완료 기록 | [PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) / [Browser #38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
