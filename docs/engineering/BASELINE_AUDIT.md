@@ -2,11 +2,18 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v2.5  
+**문서 버전:** v2.6  
 **진행 상태:** 진행 중  
 
 
 **초기 조사 범위:** 2026-10-14 GitHub 기본 브랜치 일부 코드 파일로 시작, 이후 저장소 목록·SQL 8개 및 2026-10-16 실제 Supabase READ ONLY 점검으로 확장됨. **운영 DB 001~008 적용 확인·멤버 SELECT 재귀 실증, 나머지 역할별 권한/브라우저는 미검증.**
+
+## 2026-10-16 앱 실제 브라우저 회귀 보완 및 누락 감사
+- **실제 Chromium 저장 검증:** [Actions #38867219334](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867219334)에서 **B-01 PRD/기능명세서 빠른 전환 각각 저장, B-02 문서 연속 5회 편집 마지막 값, C-01 미저장 초안+채팅 병합** 모두 PASS. 새로고침/일회용 PostgREST DB `content`까지 대조; 운영 DB 검증 아님.
+- **추가 코드 결함:** `src/pages/DocumentPage.tsx`의 `useEffect([activeDoc])`가 문서 입력에 따른 `Document` 객체 변경마다 댓글 스레드를 GET하는 불필요한 요청을 반복. `activeDocumentId` 기반으로 수정. `commentStore.fetchThreads`에 요청 순서/프로젝트 reset 판별 추가, 낡은 응답 반영 방지.
+- **자동 테스트 검증:** [PR #11 Actions #38867723560](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867723560)와 [통합 #38867796471](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796471) TS/build/lint/17 unit PASS. [통합 Chromium #38867796404](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796404)에서 B01/B02/C01 재검증 및 문서 입력 중 comment GET **0건** PASS.
+- **남은 P0:** `versionStore.fetchVersions` 늦은 응답/부분적 복원 트랜잭션, B-03/B-04 실패 복구, B-05/10 이력/복원, B-06~09 AI 재생성, C-02~10 채팅 프로젝트 이동·메시지 INSERT/문서 UPDATE 원자성·멱등성, 실제 초대/휴지통/댓글/알림 UI·soft-delete 멤버 권한/참조 무결성. **B/C 22개 중 3개만 실제 브라우저 PASS, 19개 미실행**.
+- **구체적 QA:** [통합 누락·검증 보고서 v1.2](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md), [문서 저장 QA v1.3](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md). 운영 Supabase는 `ACTIVE_HEALTHY`이나 운영 009/010 미적용, Draft/미병합·운영 배포 없음.
 
 ## 2026-10-16 통합 기준선 및 브라우저 스모크
 - **통합 [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15)**: 앱 코드 PR #11을 첫 부모, RLS PR #14를 두 번째 부모로 하는 통합 commit `992bb60c8f458f4f813a52747d40463f83674d22`. GitHub compare에서 RLS 변경 13개는 **기존 파일 수정 없는 신규 파일 추가**였으며 앱 TS/Supabase 소스 충돌 없음.
@@ -185,3 +192,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v2.3 | 실제 로컬 Supabase Auth 로그인/JWT·PostgREST 역할별 조회/뷰어 쓰기 차단 CI 성공 및 운영/브라우저 미검증 경계 기록 |
 | 2026-10-16 | v2.4 | PR #14 migration 010 댓글/반응/참여/알림/버전 실제 로컬 Supabase JWT/REST 12개 권한 시나리오 CI PASS 및 잔여 보안 정리 |
 | 2026-10-16 | v2.5 | 통합 2-parent PR #15과 앱 TS/build/lint/17개 유닛·RLS 009/010 SQL/REST·Chromium 로그인/문서 스모크 CI 통과 증빙 기록 |
+| 2026-10-16 | v2.6 | B-01/B-02/C-01 일회용 Chromium+DB 실증, 댓글 객체 의존 중복 GET/낡은 응답 방지 후 재검증·19개 UI 누락 판정 |
