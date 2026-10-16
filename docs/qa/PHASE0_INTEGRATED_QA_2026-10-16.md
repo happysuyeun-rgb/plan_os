@@ -2,8 +2,8 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.0  
-**진행 상태:** 통합 브랜치·CI 3종 PASS / 실제 브라우저 스모크 자동화 실행 중 / 전체 브라우저 회귀 미완료  
+**문서 버전:** v1.1  
+**진행 상태:** 통합 브랜치 및 앱 빌드·PostgreSQL·실제 JWT/REST·Chromium 로그인/프로젝트/문서 스모크 테스트 모두 PASS / 전체 브라우저 회귀·운영 미완료  
 **대상:** [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) · `test/planos-phase0-integrated-20261016`
 
 ## 1. 통합 구조 (기존 main·운영 DB 변경 없음)
@@ -26,7 +26,7 @@
 | I-01 | TypeScript·빌드·ESLint·단위 테스트 | [Baseline #38855752421](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752421) — SHA `da81cabb65e77b36eb3652d9fa19f2b0a308b293` | **PASS** |
 | I-02 | PostgreSQL RLS 무한 재귀 재현·009 적용 | [RLS SQL #38855752463](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752463) — 동일 SHA | **PASS** |
 | I-03 | 실제 로컬 Supabase Auth/JWT/REST + migration 001~010 | [RLS REST #38855748722](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722) — SHA `3996986106deeae6b2a7d67381debeb54749f6ce` | **PASS** |
-| I-04 | 실제 웹 로그인 → Dashboard → PRD 열기 → 새로고침 | [브라우저 스모크 CI](https://github.com/happysuyeun-rgb/plan_os/actions/workflows/phase0-browser-smoke.yml), `tests/e2e/browser_smoke.mjs` | **실행 중 / 확인 필요** |
+| I-04 | 실제 웹 로그인 → Dashboard → PRD 열기 → 새로고침 | [Chromium Actions #38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235) — SHA `4600ed4e313f03713be5680dab40b6a28bb01528`, `tests/e2e/browser_smoke.mjs` | **PASS** |
 | I-05 | 전체 화면 B-01~12 / C-01~10 / CSEC-01~12 | 개별 [문서 저장 QA](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md), [RLS QA](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-content-hardening-20261016/docs/qa/RLS_CONTENT_HARDENING_2026-10-16.md) | **브라우저 미실행** |
 
 **이력 주의:** CI 실행 중 신규 커밋이 추가되므로 **각 CI 성공 SHA를 반드시 기록**한다. 단일 CI 성공을 서로 다른 커밋에도 자동 적용된 것으로 처리하지 않는다. 앱·보안 소스는 통합 커밋 이후 변경되지 않았고, 추가 작업은 QA 스크립트·워크플로·문서였다.
@@ -44,7 +44,7 @@
 
 | 우선 | 시나리오 | 수용 기준 | 상태 |
 |---|---|---|---|
-| P0 | 로그인·로그아웃·프로젝트 카드·PRD 링크 | 유효 세션만 접근·리다이렉션 정확 | 스모크 중 |
+| P0 | 로그인·프로젝트 카드·PRD 링크·새로고침 | 실제 계정 로그인 및 문서 표시; 로그아웃·미인증 접근은 별도 테스트 | **로그인·대시보드·PRD·리로드 PASS / 로그아웃·미인증 미실행** |
 | P0 | PRD 편집 후 IA 탭 전환·새로고침·동시 저장 | 다른 문서 내용 오염/유실 없음 | 미실행 |
 | P0 | 버전 저장→과거 버전 읽기→복원 | 이력 불변·복원 본문 유지 | 미실행 |
 | P0 | 채팅 저장 중 편집·문서 전환·오프라인 실패 | 편집 보존·중복 메시지/성공 오안내 없음 | 미실행 |
@@ -56,7 +56,7 @@
 
 ## 5. 남은 일정과 종료 조건
 
-- **통합 브랜치/자동 검증:** 기존 3종 CI 완료, 브라우저 스모크 검증 중.
+- **통합 브랜치/자동 검증:** 기존 3종 CI 모두 PASS, 추가 Chromium 실제 브라우저 스모크 PASS. 서로 다른 CI 커밋들은 각 실행별로 위 표에 명확히 기재.
 - **브라우저 전체 회귀:** 테스트 계정·기능 조합에 따라 **1~3 작업일** 잠정 추정.
 - **채팅 INSERT와 문서 UPDATE 원자성, 후속 데이터 정합성:** **1~2 작업일 이상** 별도; 오류 재현 결과에 따라 변동.
 - **Phase 0 종료:** PR #8/#9/#11/#13/#14 코드 및 009/010 역할별/실제 브라우저 테스트 PASS, 신규 P0 결함 수정, 백업·롤백 계획 검토, 별도 병합·배포 승인 필요.
@@ -67,3 +67,4 @@
 | 날짜 | 버전 | 변경 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v1.0 | 통합 2-parent 커밋·세 CI 결과와 Playwright 격리 브라우저 준비, 화면별 QA/남은 차단 기준 | 브라우저 스모크 실행 중 |
+| 2026-10-16 | v1.1 | Playwright Chromium 실제 로그인→대시보드→PRD→새로고침 통과 증빙 및 전체 E2E 미완료 구분 | 4가지 자동 검증 범위 PASS / 전체 UI QA 진행 필요 |
