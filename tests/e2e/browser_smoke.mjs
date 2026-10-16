@@ -460,6 +460,141 @@ try{
   assert(afterConcurrent.slice(-2).every(v=>v.content===merged))
   console.log('PASS CONC-01: two concurrent restore transactions serialized as v7 and v8')
 
+
+  // B-03: A delayed PRD autosave completion must not switch the IA editor
+  // back to PRD, replace its draft, or corrupt either persisted document.
+  let startSlowSave
+  let releaseSlowSave
+  const slowSaveStarted=new Promise(resolve=>{startSlowSave=resolve})
+  const slowSaveGate=new Promise(resolve=>{releaseSlowSave=resolve})
+  let slowSaveIntercepted=false
+  await page.route('**/rest/v1/documents?*',async route=>{
+    if(route.request().method()==='PATCH' && !slowSaveIntercepted){
+      slowSaveIntercepted=true
+      startSlowSave()
+      await slowSaveGate
+    }
+    await route.continue()
+  })
+  const b03Prd=merged+'\nB03-PRD-DELAYED-'+created.id
+  const b03Ia=iaContent+'\nB03-IA-WHILE-PRD-PENDING'
+  await mainEditor.fill(b03Prd)
+  await Promise.race([
+    slowSaveStarted,
+    page.waitForTimeout(14000).then(()=>{throw Error('B-03 PRD PATCH never started')}),
+  ])
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/기능명세서/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
+  await mainEditor.fill(b03Ia)
+  releaseSlowSave()
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),b03Ia,'B-03 delayed PRD response contaminated IA')
+  await page.unrouteAll({behavior:'wait'})
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),b03Ia,'B-03 IA value was lost after reload')
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/PRD/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
+  assert.equal(await mainEditor.inputValue(),b03Prd,'B-03 delayed PRD save did not persist')
+  console.log('PASS B-03: slow PRD save finished after IA switch without cross-document corruption')
+
+  // B-04: A failed document PATCH shows an error and retains the user's draft
+  // after tab switch; a new edit following network recovery persists it.
+  let failedSaveInjected=0
+  await page.route('**/rest/v1/documents?*',async route=>{
+    if(route.request().method()==='PATCH' && failedSaveInjected===0){
+      failedSaveInjected++
+      await route.fulfill({
+        status:503,contentType:'application/json',
+        body:JSON.stringify({code:'B04_DISPOSABLE_FAULT',message:'offline simulation'}),
+      })
+    }else await route.continue()
+  })
+  const b04Draft=b03Prd+'\nB04-UNSAVED-ON-503'
+  await mainEditor.fill(b04Draft)
+  await page.getByText('저장 실패',{exact:true}).waitFor({state:'visible',timeout:22000})
+  assert.equal(failedSaveInjected,1,'B-04 did not inject PATCH failure')
+  await page.unrouteAll({behavior:'wait'})
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/기능명세서/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
+  assert.equal(await mainEditor.inputValue(),b03Ia)
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/PRD/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
+  assert.equal(await mainEditor.inputValue(),b04Draft,'B-04 failed-save draft was discarded on tab return')
+  await page.getByText('저장 실패',{exact:true}).waitFor({state:'visible',timeout:5000})
+  const b04Recovered=b04Draft+'\nB04-RETRY-AFTER-RECOVERY'
+  await mainEditor.fill(b04Recovered)
+  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:22000})
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),b04Recovered,'B-04 recovered content missing after reload')
+  console.log('PASS B-04: 503 save error visible; tab return preserves draft; reedit recovers after network resumes')
+
+  // C-03: Delay the first chat INSERT while switching from PRD to IA.
+  // The eventual chat/document write must target PRD only, not the active IA.
+  let startSlowChat
+  let releaseSlowChat
+  const slowChatStarted=new Promise(resolve=>{startSlowChat=resolve})
+  const slowChatGate=new Promise(resolve=>{releaseSlowChat=resolve})
+  let slowChatIntercepted=false
+  await page.route('**/rest/v1/chat_messages?*',async route=>{
+    if(route.request().method()==='POST' && !slowChatIntercepted){
+      slowChatIntercepted=true
+      startSlowChat()
+      await slowChatGate
+    }
+    await route.continue()
+  })
+  const c03Marker='CHAT-LATE-C03-'+created.id
+  const chatForC03=page.locator('aside textarea[placeholder*="@"]')
+  await chatForC03.fill(c03Marker)
+  await chatForC03.press('Enter')
+  await Promise.race([
+    slowChatStarted,
+    page.waitForTimeout(14000).then(()=>{throw Error('C-03 chat INSERT never started')}),
+  ])
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/기능명세서/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
+  releaseSlowChat()
+  await page.unrouteAll({behavior:'wait'})
+  // Wait for the document-specific debounce and response, then inspect DB.
+  let c03Written=false
+  for(let attempt=0;attempt<28;attempt++){
+    const docResponse=await fetch(
+      api+'/rest/v1/documents?select=type,content&project_id=eq.'+projectId,{
+        headers:{apikey:variables.SERVICE_ROLE_KEY,
+          Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+        signal:AbortSignal.timeout(12000),
+      })
+    assert(docResponse.ok,'C-03 could not read disposable DB')
+    const docs=await docResponse.json()
+    const prd=docs.find(doc=>doc.type==='prd')?.content??''
+    assert.equal(docs.find(doc=>doc.type==='ia')?.content,b03Ia,
+      'C-03 changed IA server content while PRD chat was pending')
+    if(prd.includes(c03Marker)){c03Written=true;break}
+    await page.waitForTimeout(500)
+  }
+  assert(c03Written,'C-03 delayed PRD chat was never persisted')
+  assert.equal(await mainEditor.inputValue(),b03Ia,
+    'C-03 late chat edited currently active IA')
+  assert.equal(await page.getByText(c03Marker,{exact:true}).count(),0,
+    'C-03 PRD chat message leaked into IA conversation')
+  await page.getByRole('navigation',{name:'산출물 탭'})
+    .getByRole('button',{name:/PRD/}).click()
+  await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
+  await page.waitForFunction(marker=>
+    document.querySelector('main textarea')?.value.includes(marker),c03Marker,{timeout:14000})
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert((await mainEditor.inputValue()).includes(c03Marker),
+    'C-03 PRD chat update lost after reload')
+  console.log('PASS C-03: delayed PRD chat edits only PRD; IA content and conversation remain isolated')
+
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
