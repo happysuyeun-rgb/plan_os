@@ -46,8 +46,11 @@ export function createDocumentAutosave<T>({
   function getStatus(documentId?: string): DocumentSaveStatus {
     if (!documentId) return 'saved'
     const task = tasks.get(documentId)
-    if (!task || task.savedRevision === task.revision) return 'saved'
-    return task.failedRevision === task.revision ? 'error' : 'saving'
+    if (!task) return 'saved'
+    // A failed explicit overwrite has no unsaved *draft*, but the failed
+    // operation must still be visible as an error until user retries it.
+    if (task.failedRevision === task.revision) return 'error'
+    return task.savedRevision === task.revision ? 'saved' : 'saving'
   }
 
   function schedule(documentId: string, content: string): void {
@@ -109,6 +112,7 @@ export function createDocumentAutosave<T>({
     task.failedRevision = null
 
     const operation = task.tail.then(async () => {
+      let pendingDraftHandled = false
       try {
         // Flush the snapshot that existed when the user requested restore/
         // regenerate. If a previous in-flight save already wrote it, skip.
@@ -125,6 +129,11 @@ export function createDocumentAutosave<T>({
           }
         }
 
+        // Any subsequent failure is in the explicit overwrite, not in a
+        // human draft. The reserved revision must NOT be re-flushed as though
+        // task.content were a newer unsaved edit (it may be just an empty
+        // placeholder after a full page reload).
+        pendingDraftHandled = true
         const content = await overwrite()
         task.savedRevision = revision
         if (task.revision === revision) {
@@ -134,6 +143,10 @@ export function createDocumentAutosave<T>({
         return content
       } catch (error) {
         if (task.revision === revision) {
+          // Mark only the reserved failed replacement revision as handled.
+          // Keep genuine pending unsaved edits retryable if their preflight
+          // persistence failed. Do not report a failed replace as "saved".
+          if (pendingDraftHandled) task.savedRevision = revision
           task.failedRevision = revision
           onError(documentId)
         }
