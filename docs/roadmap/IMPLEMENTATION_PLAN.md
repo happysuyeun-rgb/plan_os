@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.6  
+**문서 버전:** v1.7  
 **진행 상태:** 잔여 기간 재산정 유지 / Phase 0 로컬 Supabase Auth/JWT/REST 009·010 권한 CI 통과, 브라우저·기타 데이터 정합성/운영 승인 대기  
 
 ## 원칙
@@ -26,6 +26,13 @@
 | 7. 제한 파일럿 | 5–10일 | 관측성, 지원·장애 대응, 사용자 검증, 수정 | 파일럿 수용 기준 + 원가 검증 | Phase 6 | 예정 |
 
 **기존 추정:** 42–75 작업일(초기 전체 기간). **2026-10-16 재산정 잔여 추정:** **43–79 작업일**(전담 개발 1명+AI 보조, 주 5일 기준 약 9~16주; 신규 결함/외부 승인 대기 별도). Phase 0 5~10일, Phase 1 기획 초안 승인 3~6일, Phase 2 5~8일, Phase 3 8~15일, Phase 4 6~10일, Phase 5 6~10일, Phase 6 5~10일, Phase 7 5~10일. 이 추정은 개발 일정 가정이지 제품 완성도 %, 납기 약속이 아니다.
+
+## 2026-10-16 통합 브랜치 및 브라우저 검증 단계 진입
+- **테스트 전용 [Draft PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15)**: 문서/채팅 PR #9·#11과 보안 PR #13·#14를 두 부모 통합 커밋으로 결합(운영 main 미변경).
+- **격리 CI 3종 통과:** 앱 npm ci/TS/build/lint/17 유닛 [#38855752421](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752421); RLS 42P17 before/009 after [#38855752463](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855752463); 실제 로컬 Supabase Auth/JWT/REST 001~010 [#38855748722](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38855748722).
+- **최초 실제 브라우저 스모크 통과:** Playwright Chromium [#38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235)에서 임시 로그인·프로젝트/PRD 조회 및 리로드 SUCCESS. **전체 브라우저 QA 완료가 아닌 Phase 0 부분 진척**.
+- **남은 중요 경로:** 브라우저 B-01~12/C-01~10 및 owner/editor/viewer 초대/댓글/알림·버전·휴지통·복원 회귀, 채팅/문서 원자성, 기타 RLS/참조 무결성, 백업·롤백·병합 승인.
+- **잔여 추정:** Phase 0 5~10 작업일, 전체 43~79 작업일 보수적으로 유지. QA 단계에 진입했지만 결함을 확인하기 전 일정을 인위적으로 줄이지 않음.
 
 ## 2026-10-16 Phase 0 업데이트 — 격리 Supabase SQL·Auth·REST 권한 보완 진척
 - **009:** [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13)의 `project_members` 재귀 제거·pending 본인 초대 행 유지, 일회용 PostgreSQL 17 [#38849011220](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38849011220) + 로컬 Supabase Auth/JWT/REST [#38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) 테스트 PASS.
@@ -113,7 +120,7 @@
 - 기존 로그인, 프로젝트, 문서·버전, 내보내기 기능 회귀 테스트 통과.
 - 비용 추적 및 장애 대응 절차 문서화.
 
-## 진행 기록
+## 변경 이력
 | 날짜 | 내용 | 근거 |
 |---|---|---|
 | 2026-10-14 | 개발 준비도·누락 항목 등록 | PR #1 |
@@ -126,6 +133,7 @@
 | 2026-10-16 | v1.4: 신규 기획/설계 8개 초안 상태, CI 성공, Phase3 계약 선행 의존성, 감사 링크 정합화 | 문서 점검·Actions #38680673570 |
 | 2026-10-16 | v1.5: Phase 0 세부 업무·전체 잔여 43~79 작업일로 재산정, 격리 PostgreSQL 17 RLS SQL 검증 성공 반영 | Actions #38849011220 / PR #13 |
 | 2026-10-16 | v1.6: PR #13(009) 및 PR #14(010) 실제 일회용 Supabase Auth/JWT/REST 권한 CI 통과, 브라우저/기타 보안 차단·잔여 기간 유지 기록 | Actions #38852999398 / #38854258418 |
+| 2026-10-16 | v1.7: PR #15 테스트 전용 앱+RLS 통합/앱 CI·RLS Auth·실제 Chromium 로그인·문서 스모크 통과, 전체 UI QA 미완료와 단계별 잔여 일정 유지 | Actions #38855752421 / #38855748722 / #38856198235 |
 
 ## 관련 자료
 - [진행 현황 인덱스](../README.md)
