@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.6  
+**문서 버전:** v1.7  
 **진행 상태:** 진행 중  
 
 
@@ -13,6 +13,13 @@
 - **실측 미완료:** 브라우저 E2E/문서 자동저장·버전/프로젝트 복원 회귀, 개발 DB owner/editor/viewer/outsider RLS 재현, 운영 DB 마이그레이션 적용 상태/배포 보호 설정 확인.
 - **제품 문서 추가:** [12개 문서 교차 감사](../quality/DOCUMENT_REVIEW_2026-10-16.md), [데이터 모델](DATA_MODEL.md), [API 계약](API_CONTRACTS.md). 설계 초안이 현행 코드에서 구현되었다는 뜻이 아님.
 - **승인 전 금지:** 운영 DB 변경, CI 통과만으로 PR #8 자동 병합, 실제 권한 테스트 없는 신규 서버 서비스 역할 배포.
+
+## 2026-10-16 실제 Supabase 환경 확인 및 코드 회귀 대응
+- **Plan OS Supabase 상태:** 프로젝트 `INACTIVE`; 개발 브랜치 0개. 마이그레이션 조회는 DB connection timeout. **실제 적용된 정책·GRANT·데이터 무검증**. 개발 환경을 별도로 확보해야 SQL RLS 역할 테스트 가능.
+- **코드 변경 별도 Draft PR:** [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) (`fix/planos-document-autosave-safety-20261016`), base PR #8: 문서 ID별 예약 저장, 순차 요청, 문서 전환 중 dirty content 보존, 오래된 프로젝트 fetch 응답 무시. **코드는 변경 브랜치에만 있으며 main 미반영.**
+- **실측 CI:** [Actions #38844552645](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38844552645)에서 npm ci·build/TypeScript·lint·자동저장 유닛테스트 4개 **PASS**. 로컬 Node 22에서도 4개 통과.
+- **미검증 회귀:** 브라우저에서 문서 탭 전환, 이전 버전 보기/복원, regenerate/regenerateCascade, 저장 실패 후 복구, 다른 프로젝트로 이동 중 pending/in-flight save, 비동기 문서 목록 응답, URL/댓글 딥링크. 특히 재생성과 복원이 큐의 미완료 저장과 충돌할 가능성은 추가 차단/회귀 필요.
+- **RLS 계속 보류:** 격리 개발 DB가 없어 실제 SQL 실험을 하지 않았다. 운영 DB 부활·마이그레이션·새 유료 브랜치 생성도 하지 않았다.
 
 ## Verified
 | Area | File | Finding | Impact |
@@ -119,3 +126,4 @@ Do not start AI worker or DB migration until baseline, auth/RLS risk review, arc
 | 2026-10-16 | v1.4 | CI 성공 근거와 잔여 lint 경고, 회귀 시나리오·정적 저장 경합 위험 기록 |
 | 2026-10-16 | v1.5 | RLS 역할별 재현 매트릭스·기대 결과·운영 DB 변경 금지 조건 추가 |
 | 2026-10-16 | v1.6 | CI 최신 성공을 문서 상단에서 단일 상태로 표시·과거 실패 이력 구분·교차 감사 연결 |
+| 2026-10-16 | v1.7 | Plan OS DB 비활성·별도 브랜치 없음/조회 타임아웃 실측, PR #9 자동저장 코드 및 4개 테스트 CI 통과·실제 회귀 미완료 기록 |
