@@ -34,8 +34,9 @@ test('restore after pending draft never lets old debounce overwrite the restored
   })
   assert.equal(restored, 'restored version')
   assert.deepEqual(writes, [['doc-A', 'unsaved typing'], ['doc-A', 'restored version']])
+  // The draft is persisted first, but its obsolete save callback is not
+  // emitted because the explicit replacement owns the final visible state.
   assert.deepEqual(events, [
-    ['saved', 'doc-A', 'unsaved typing'],
     ['replaced', 'doc-A', 'restored version'],
   ])
   assert.equal(save.getStatus('doc-A'), 'saved')
