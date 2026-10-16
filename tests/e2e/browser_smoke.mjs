@@ -363,6 +363,103 @@ try{
     'project_id=eq.'+projectId+'&type=eq.prd'))[0].content,merged)
   console.log('PASS B-05 DRAFT: unsnapshotted current revision saved automatically as v5 before v6 restoration')
 
+  // AUTHZ-01: RPC runs with SECURITY DEFINER, so caller permissions must be
+  // checked explicitly. Neither an authenticated viewer nor anonymous client
+  // may restore. The source version must belong to the requested document.
+  const viewerEmail='viewer-restoration@example.test'
+  const viewerPassword='Synthetic-viewer-test-password-123!'
+  const viewer=await localAdmin('/auth/v1/admin/users','POST',{
+    email:viewerEmail,password:viewerPassword,email_confirm:true,
+  })
+  assert(viewer.id,'Synthetic viewer user not created')
+  const addViewerResponse=await fetch(api+'/rest/v1/project_members',{
+    method:'POST',
+    headers:{apikey:variables.SERVICE_ROLE_KEY,
+      Authorization:'Bearer '+variables.SERVICE_ROLE_KEY,
+      'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify({project_id:projectId,user_id:viewer.id,
+      email:viewerEmail,name:'Synthetic viewer',role:'viewer',status:'active'}),
+    signal:AbortSignal.timeout(12000),
+  })
+  assert(addViewerResponse.ok,'Local synthetic project viewer could not be linked')
+  const viewerTokenResponse=await fetch(api+'/auth/v1/token?grant_type=password',{
+    method:'POST',
+    headers:{apikey:variables.ANON_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:viewerEmail,password:viewerPassword}),
+    signal:AbortSignal.timeout(12000),
+  })
+  assert(viewerTokenResponse.ok)
+  const viewerToken=(await viewerTokenResponse.json()).access_token
+  const authzBody=JSON.stringify({p_document_id:documentId,
+    p_version_id:retriedHistory[0].id,
+    p_operation_id:'88888888-8888-4888-8888-888888888881'})
+  const viewerDenied=await fetch(api+'/rest/v1/rpc/restore_document_version',{
+    method:'POST',
+    headers:{apikey:variables.ANON_KEY,Authorization:'Bearer '+viewerToken,
+      'Content-Type':'application/json'},
+    body:authzBody,signal:AbortSignal.timeout(12000),
+  })
+  assert(!viewerDenied.ok,'AUTHZ-01 viewer unexpectedly restored document')
+  const anonDenied=await fetch(api+'/rest/v1/rpc/restore_document_version',{
+    method:'POST',
+    headers:{apikey:variables.ANON_KEY,
+      Authorization:'Bearer '+variables.ANON_KEY,
+      'Content-Type':'application/json'},
+    body:authzBody,signal:AbortSignal.timeout(12000),
+  })
+  assert(!anonDenied.ok,'AUTHZ-01 anonymous client unexpectedly restored document')
+
+  const iaDocument=serverRows.find(row=>row.type==='ia')?.id
+  const foreignSnapshotResponse=await fetch(api+'/rest/v1/document_versions',{
+    method:'POST',
+    headers:{apikey:variables.SERVICE_ROLE_KEY,
+      Authorization:'Bearer '+variables.SERVICE_ROLE_KEY,
+      'Content-Type':'application/json',Prefer:'return=representation'},
+    body:JSON.stringify({document_id:iaDocument,version_number:1,
+      version_name:'foreign-document',content:'Wrong project document'}),
+    signal:AbortSignal.timeout(12000),
+  })
+  assert(foreignSnapshotResponse.ok)
+  const foreignSnapshot=(await foreignSnapshotResponse.json())[0]
+  const invalidVersionResponse=await fetch(
+    api+'/rest/v1/rpc/restore_document_version',{
+      method:'POST',
+      headers:{apikey:variables.ANON_KEY,Authorization:'Bearer '+userToken,
+        'Content-Type':'application/json'},
+      body:JSON.stringify({p_document_id:documentId,
+        p_version_id:foreignSnapshot.id,
+        p_operation_id:'88888888-8888-4888-8888-888888888882'}),
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(!invalidVersionResponse.ok,
+    'AUTHZ-01 allowed cross-document historical version restoration')
+  assert.equal((await readLocalRows('document_versions','id',queryVersions)).length,6)
+  console.log('PASS AUTHZ-01: viewer/anon and cross-document restore attempts denied')
+
+  // CONC-01: Two authenticated restores with separate IDs must serialize on
+  // the parent document row without version-number collisions.
+  const competingOperations=[
+    '88888888-8888-4888-8888-888888888883',
+    '88888888-8888-4888-8888-888888888884',
+  ]
+  const concurrentReplies=await Promise.all(competingOperations.map(operationId=>
+    fetch(api+'/rest/v1/rpc/restore_document_version',{
+      method:'POST',
+      headers:{apikey:variables.ANON_KEY,Authorization:'Bearer '+userToken,
+        'Content-Type':'application/json'},
+      body:JSON.stringify({p_document_id:documentId,
+        p_version_id:retriedHistory[0].id,p_operation_id:operationId}),
+      signal:AbortSignal.timeout(15000),
+    }),
+  ))
+  assert(concurrentReplies.every(reply=>reply.ok),
+    'CONC-01 simultaneous restore lost transaction or collided on version number')
+  const afterConcurrent=await readLocalRows('document_versions',
+    'version_number,version_name,content',queryVersions)
+  assert.deepEqual(afterConcurrent.map(v=>v.version_number),[1,2,3,4,5,6,7,8])
+  assert(afterConcurrent.slice(-2).every(v=>v.content===merged))
+  console.log('PASS CONC-01: two concurrent restore transactions serialized as v7 and v8')
+
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
