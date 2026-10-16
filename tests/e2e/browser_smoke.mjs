@@ -582,8 +582,27 @@ try{
   assert(c03Written,'C-03 delayed PRD chat was never persisted')
   assert.equal(await mainEditor.inputValue(),b03Ia,
     'C-03 late chat edited currently active IA')
-  assert.equal(await page.getByText(c03Marker,{exact:true}).count(),0,
-    'C-03 PRD chat message leaked into IA conversation')
+  assert.equal(await page.locator('aside .whitespace-pre-wrap')
+    .filter({hasText:c03Marker}).count(),0,
+    'C-03 PRD chat bubble leaked into IA conversation')
+  assert.equal(await page.locator('aside textarea[placeholder*="@"]').inputValue(),'',
+    'C-03 pending PRD input leaked into active IA chat input')
+  const c03ChatResponse=await fetch(
+    api+'/rest/v1/chat_messages?select=document_id,content&project_id=eq.'+projectId,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,
+        Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(c03ChatResponse.ok,'C-03 cannot inspect isolated chat rows')
+  const c03ChatRows=await c03ChatResponse.json()
+  assert(c03ChatRows.some(row=>
+      row.document_id===serverRows.find(doc=>doc.type==='prd')?.id &&
+      row.content.includes(c03Marker)),
+    'C-03 delayed PRD chat was not saved to its owning conversation')
+  assert(!c03ChatRows.some(row=>
+      row.document_id===serverRows.find(doc=>doc.type==='ia')?.id &&
+      row.content.includes(c03Marker)),
+    'C-03 delayed PRD chat was misattributed to the IA document in DB')
   await page.getByRole('navigation',{name:'산출물 탭'})
     .getByRole('button',{name:/PRD/}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
