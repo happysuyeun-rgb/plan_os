@@ -8,7 +8,7 @@ on:
       - 'tests/rls/**'
       - '.github/workflows/rls-auth-integration.yml'
   push:
-    branches: [fix/planos-rls-member-recursion-20261016, fix/planos-rls-content-hardening-20261016]
+    branches: [fix/planos-rls-member-recursion-20261016, fix/planos-rls-content-hardening-20261016, test/planos-phase0-integrated-20261016]
     paths:
       - 'supabase/migrations/**'
       - 'tests/rls/**'
