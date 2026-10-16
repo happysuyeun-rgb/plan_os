@@ -32,6 +32,9 @@ function clearAllAttachmentPreviews(attachments: PendingChatAttachment[]) {
   for (const a of attachments) revokeAttachmentPreview(a)
 }
 
+// Prevent an old request's finally block from resetting a newer chat's spinner.
+let sendSequence = 0
+
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   input: '',
@@ -47,6 +50,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: async (projectId, documentId) => {
+    if (get().isStreaming) return null
+    const requestSequence = ++sendSequence
     const { input, pendingAttachments } = get()
     const trimmed = input.trim()
     if (!trimmed && pendingAttachments.length === 0) return null
@@ -81,7 +86,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }))
       return result.updatedContent
     } finally {
-      set({ isStreaming: false })
+      if (requestSequence === sendSequence) set({ isStreaming: false })
     }
   },
 
@@ -110,6 +115,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   reset: () => {
+    sendSequence += 1
     clearAllAttachmentPreviews(get().pendingAttachments)
     set({ messages: [], input: '', pendingAttachments: [], isStreaming: false, activeContext: null })
   },
