@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.9  
+**문서 버전:** v4.0  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -18,6 +18,15 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## 2026-10-16 Phase 0 누락 점검·브라우저 회귀 추가 (현재 최우선)
+- **실제 격리 Chromium 사용자 회귀 3건 PASS:** [Actions #38867219334](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867219334) (commit `e933ea9647bd169ec675c1c6ad9061343f14a901`), B-01 PRD→기능명세서 빠른 전환/각각 저장, B-02 5회 연속 편집/마지막 내용 유지, C-01 미저장 초안+채팅 병합 및 리로드. **일회용 PostgREST 저장 데이터까지 대조**했다.
+- **새 누락 발견·코드 보완:** [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11)에서 `DocumentPage` 댓글 스레드 effect의 `activeDoc` 객체 의존으로 문서 입력마다 GET 반복되는 문제를 **documentId 의존**으로 교체. `commentStore.fetchThreads`는 요청 순서/프로젝트 reset을 가드하여 늦은 이전 문서 응답이 현재 댓글 목록을 덮지 않도록 했다.
+- **실증:** 수정된 [PR #11 CI #38867723560](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867723560) 및 [통합 Baseline #38867796471](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796471) **TS/build/lint/17 unit PASS**. [통합 Chromium #38867796404](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796404) **SUCCESS**: B-01·B-02·C-01 재통과 및 5회 문서 입력 중 comment GET **0건**.
+- **QA 최신화:** [문서 회귀 v1.3](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-chat-document-write-20261016/docs/qa/DOCUMENT_SAVE_REGRESSION.md)의 과거 `INACTIVE` 표기를 `ACTIVE_HEALTHY`로 정정, B/C 실행 여부 분리. [통합 QA 누락 점검 v1.2](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md)에 판정·증빙·차단 목록 작성.
+- **여전히 미검증:** **B-03~12(10개)·C-02~10(9개)** 브라우저, 버전 과거 조회/복원, 느린 API·저장 실패/재시도, AI 재생성, 동시 프로젝트 변경, 임시 초대 이메일/역할변경/휴지통, 실제 댓글/알림 화면. **채팅 메시지와 문서 쓰기의 원자성/멱등성, 프로젝트 soft-delete 멤버 권한, 과거 버전 동시성은 미해결**. 코드 순서 보호만으로 해당 경합 전체가 실증된 것은 아님.
+- **다음 P0:** B-05 버전 복원, C-03 채팅 중 문서 이동, B-03 느린 저장/프로젝트 이동의 Chromium 재현을 차례로 진행. 전체 Phase 0 잔여 5~10 작업일/전체 43~79 작업일은 보수적으로 유지.
+- **영향 범위:** 모든 PR Draft/미병합. Plan OS 운영 Supabase migrations 001~008 유지, 009/010 미적용, `main`·배포·유료 인프라 변경 없음.
 
 ## 2026-10-16 Phase 0 — 테스트 전용 통합 브랜치 및 실제 브라우저 스모크 (최신)
 - **Draft [PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15)** / `test/planos-phase0-integrated-20261016`: 앱 PR #8→#9→#11과 RLS PR #13→#14를 두 부모를 가진 통합 커밋 `992bb60c8f458f4f813a52747d40463f83674d22`으로 연결. 보안 계열의 신규 13개 파일만 앱 기준 트리에 추가해 앱 소스와 충돌 없이 통합. **main/기존 Draft PR은 미병합**.
@@ -170,12 +179,13 @@
 | 2026-10-16 | v3.7 | 일회용 실제 Supabase Auth/JWT/PostgREST 통합 RLS 테스트 성공, 과거 DB 비활성·Issue #10 미수정 서술 최신화 | [Actions #38852999398](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38852999398) |
 | 2026-10-16 | v3.8 | 댓글·반응·참여상태·알림·버전 010 별도 Draft PR #14, 일회용 Auth/JWT/REST CSEC-01~12 CI PASS·남은 UI/보안 차단 기록 | [Actions #38854258418](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38854258418) / [PR #14](https://github.com/happysuyeun-rgb/plan_os/pull/14) |
 | 2026-10-16 | v3.9 | PR #15 통합 2-parent merge·앱/SQL/Auth CI 3종 PASS, 실제 Chromium 로그인·대시보드·PRD 스모크 PASS 및 전체 UI 회귀 미완료 기록 | [PR #15](https://github.com/happysuyeun-rgb/plan_os/pull/15) / [Browser #38856198235](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38856198235) |
+| 2026-10-16 | v4.0 | B-01/B-02/C-01 브라우저·격리 DB PASS, 댓글 중복 GET 제거와 늦은 응답 보호, 19개 잔여 브라우저/원자성 이슈 누락 점검 | [Browser #38867796404](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38867796404) / [QA v1.2](https://github.com/happysuyeun-rgb/plan_os/blob/test/planos-phase0-integrated-20261016/docs/qa/PHASE0_INTEGRATED_QA_2026-10-16.md) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
 - 권한과 도구가 허용하고 운영 위험이 없는 후속 작업은 추가 지시를 기다리지 않고 이어서 수행한다. 실제 도구 호출 없이 백그라운드 진행을 주장하지 않는다.
 - 운영 DB/배포/결제/PR 병합 등 영향 큰 변경은 별도 승인 이후에만 진행한다.
-- **현재 다음 작업(최신):** PR #13(009)·PR #14(010) 격리 Supabase Auth/JWT/REST 권한 테스트 PASS. 다음은 **브라우저 초대·권한·댓글·알림·버전·휴지통 회귀 → PR #9/#11 자동저장/채팅 회귀 및 메시지 원자성 보완 → 남은 알림/활동 기록 위조·프로젝트 참조 무결성 설계**. 운영 변경은 별도 승인.
+- **현재 다음 작업(최신):** 통합 PR #15 격리 Chromium B-01/B-02/C-01 + 댓글 GET 0건 PASS. 다음 **B-05 버전 복원·C-03 채팅/탭 이동·B-03 느린 저장/프로젝트 이동 E2E → 원자성/권한/초대·댓글·알림·휴지통 QA** 순서. 운영 변경은 별도 승인.
 
 ## 바로 다음 작업
 1. [PR #9](https://github.com/happysuyeun-rgb/plan_os/pull/9) / [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11): 각각 자동저장·복원·채팅 직접 DB 쓰기 코드 수정, **17개 유닛 테스트 CI 통과**. B-01~12/C-01~10 실제 브라우저 및 원자성 검증 전까지 둘 다 Draft 유지.
