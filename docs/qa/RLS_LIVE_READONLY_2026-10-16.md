@@ -1,0 +1,97 @@
+# PlanOS — 활성화된 Supabase 실제 RLS 읽기 전용 감사
+
+**최초 작성일:** 2026-10-16  
+**최종 수정일:** 2026-10-16  
+**문서 버전:** v1.0  
+**진행 상태:** 운영 DB 읽기 전용 기준선 확인 / RLS 재귀 오류 실증 / 수정 미적용·개발 DB 검증 대기  
+**프로젝트:** Plan OS (`ggviusdmxalsflyybamm`)  
+**연결:** [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) · [RLS 수정 제안](../../supabase/migrations/009_fix_project_members_select_recursion.sql) · [기존 기술 감사](../engineering/BASELINE_AUDIT.md)
+
+## 1. 실제 조회 확인 (운영 데이터 미수정)
+- Supabase Plan OS 상태: **ACTIVE_HEALTHY** (이전 INACTIVE 기록은 과거 이력).
+- 적용 마이그레이션 목록: **001~008 확인**. `009`는 GitHub 초안일 뿐 실제 DB에는 적용하지 않음.
+- 개발 DB 브랜치: **0개**. 따라서 DML/정책 수정 및 가짜 사용자 fixture 작성은 금지.
+- `public`의 기존 테이블 **12개 모두 RLS 활성화** 확인. RLS가 켜졌다고 행위별 접근 통제가 안전하다는 뜻은 아님.
+- 시스템 뷰 `pg_policies` / `pg_proc` / `pg_roles` / `pg_class`를 SELECT로 조사. 원본 고객 데이터·비밀번호·비밀키는 조회하지 않음.
+
+## 2. 실제 재현 — project_members 무한 재귀
+
+**진단 SQL** (읽기 전용 트랜잭션, 역할 변경은 트랜잭션 내부에 한정):
+
+```sql
+BEGIN READ ONLY;
+SET LOCAL ROLE authenticated;
+SELECT count(*) AS visible_members FROM public.project_members;
+ROLLBACK;
+```
+
+**실행 결과:**
+
+```text
+ERROR 42P17: infinite recursion detected in policy for relation "project_members"
+```
+
+**정확한 원인:** 적용된 `project_members` SELECT 정책 **`"멤버 조회"`**의 `EXISTS (SELECT ... FROM project_members pm ...)`가 같은 테이블의 RLS를 다시 요구한다. 데이터 행이 없어도 정책 재작성 시 오류가 발생한다.
+
+**무손상 검증:** `BEGIN READ ONLY; SET LOCAL ROLE authenticated; SELECT can_access_project('0000...') ...; ROLLBACK;`는 존재하지 않는 프로젝트에 대해 **false / null** 응답. `get_project_role`, `can_access_project`, `can_edit_project_content`은 `postgres` 소유 SECURITY DEFINER 함수이고 해당 소유자는 `BYPASSRLS` 권한을 갖는 것으로 확인됨. 따라서 helper를 통한 비재귀 SELECT 정책 제안이 타당함.
+
+**제안 마이그레이션 009 (미실행):**
+
+```sql
+drop policy if exists "멤버 조회" on public.project_members;
+create policy "멤버 조회"
+  on public.project_members
+  for select
+  using (public.can_access_project(project_id));
+```
+
+**범위:** 해당 SELECT 정책만 교체. 댓글/알림/함수 EXECUTE/grants는 별도 보안 PR로 분리한다. 실제 배포 전 아래 역할·초대 검증을 통과해야 한다.
+
+## 3. 실제 시스템 정책 조회로 확인한 추가 보안 검토 항목
+
+| 위험 | 실제 정책 정의에서 확인된 조건 | 판정 | 대응 |
+|---|---|---|---|
+| 댓글 UPDATE | `project_comments_update` USING/with_check가 `can_access_project(project_id)`만 요구 | **넓은 권한의 SQL 사실 확인** / 사용자 간 오남용은 별도 테스트 필요 | 작성자 수정/타인 해결권한·컬럼 접근 구분 |
+| 반응 UPDATE/DELETE | `comment_reactions_write` FOR ALL USING은 프로젝트 접근만, WITH CHECK는 user_id 검사 | 기존 행에 대한 소유자 조건 없음 | UPDATE/DELETE 기존 행의 user_id도 본인 검사 |
+| 참여 상태 UPDATE/DELETE | `comment_participant_status_write`도 FOR ALL USING에 본인 조건 없음 | 소유자 행위 테스트 필요 | 같은 방식 수정 |
+| 댓글 INSERT | `can_access_project` 및 `user_id=auth.uid()` | viewer 댓글 가능성이 있음; 현행 프런트 viewer 댓글 권한과 일치하지만 신규 목표 정책과 상충 | 제품 정책 확정 후 RLS/PRD 일치 |
+| 알림 INSERT | `actor_id=auth.uid()` + project 접근만 | 수신자 `user_id`의 프로젝트 멤버십 검사 없음 | cross-project recipient 및 actor spoof 테스트 |
+| 활동 INSERT | `project_activities_insert`는 프로젝트 접근만 확인 | 이벤트 작성자·유형 위조 여지 | 서버 이벤트/actor 검증 |
+| 버전 UPDATE | `document_versions_update`는 editor까지 허용 | 과거 버전 불변성 목표와 충돌 | append-only 설계 검토 |
+| 생성 실행 | `generation_runs_access` FOR ALL은 `can_edit_project_content` | 상태/완료 단계 직접 조작 가능성 | 현재 문서 생성과 새 서버 run 분리 |
+
+**주의:** PostgreSQL GRANT + RLS + 함수 실행 권한의 결합 효과를 고려해야 한다. 위 정책 구성 사실을 실제 사용자 간 공격/침해 성공으로 단정하지 않는다. **유일한 직접 실패 재현은 `project_members` SELECT 42P17이다.**
+
+## 4. Supabase Security Advisor (읽기 전용)
+- **Function Search Path Mutable:** `public.set_updated_at()` (1건) — [공식 점검/보완 가이드](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable).
+- **Anon Can Execute SECURITY DEFINER Function:** `can_access_project`, `can_edit_project_content`, `get_project_role`, `handle_new_user` (4건) — [공식 가이드](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable).
+- **Authenticated Can Execute SECURITY DEFINER Function:** 동일 4건 (4건) — [공식 가이드](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- **Leaked Password Protection Disabled:** Auth 설정 경고 (1건) — [공식 가이드](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+**보안 경고의 의미:** EXECUTE grant 노출은 확인됐으나 함수들이 `auth.uid()`로 내부 권한을 확인하므로 grant 존재만으로 정보 유출을 단정하지 않는다. 트리거 함수 `handle_new_user()`도 일반 RPC 호출 성공을 입증한 것은 아니다. 필요한 함수·역할별 접근 방식, 트리거 영향과 revocation 회귀를 검토한 후 별도 PR로 개선한다.
+
+## 5. 격리 개발 DB 검증 계획 (미실행)
+1. 개발 DB/로컬 Supabase를 별도로 준비하고 migrations `001`~`009` 적용. 운영 DB에서 `db push` 절대 금지.
+2. 테스트 계정: 소유자 A, 활성 editor B, 활성 viewer C, pending 초대 D, 외부인 E, 다른 프로젝트 소유자 F. 테스트 프로젝트 2개와 각 2~3개의 fixture 멤버 행 생성.
+3. 각 사용자 JWT로 프로젝트 목록·`project_members` SELECT 및 권한 없는 타 프로젝트 읽기 시도. SELECT 재귀 없어야 하고 역할/초대 상태대로 행 분리.
+4. owner가 멤버 초대/취소/역할 변경, editor/viewer가 금지된 변경 시도, 프로젝트 soft-delete 및 복원 후 멤버 조회 검증.
+5. 댓글 작성/수정/삭제, 타인 반응/참여 상태·알림 위조, 과거 버전 UPDATE를 허용/거부 매트릭스로 테스트. 테스트 계정별 실제 JWT 및 `auth.uid()` 검증 필수.
+6. 시스템 뷰 `pg_policies` 전후 diff·데이터 무손상, 브라우저 팀/초대 화면 회귀 결과 확인.
+7. 오류 시 rollback 절차: 격리 DB에서 `009` 정책을 제거하고 승인된 이전 동작 정책/전체 schema migration 상태를 별도로 복원. **재귀 정책을 운영에 재적용하는 방법은 긴급 복구안으로 권장하지 않음.**
+8. 테스트·제품 정책 승인 뒤에만 별도 사용자 확인을 거쳐 운영 DB 마이그레이션.
+
+## 6. 완료 정의 및 현재 상태
+- [x] Plan OS 활성화 확인
+- [x] DB 적용 마이그레이션 001~008 조회
+- [x] 테이블 RLS·정책·SECURITY DEFINER·Advisor 읽기 전용 확인
+- [x] `project_members` 42P17 읽기 전용 실제 재현
+- [x] SQL 패치 009 GitHub 초안 작성
+- [ ] 별도 개발 DB 준비/fixture·계정 역할 테스트
+- [ ] 수정 009 적용 후 재귀 제거·역할별 권한 검증
+- [ ] 브라우저 사용자 회귀
+- [ ] 운영 변경/데이터 백업·롤백 계획 승인 및 실행
+
+## 변경 이력
+| 날짜 | 버전 | 변경 내용 | 상태 |
+|---|---|---|---|
+| 2026-10-16 | v1.0 | 활성 DB read-only 실증·42P17 발견·Advisor 및 정책 점검·009 수정 제안/게이트 기록 | 개발 DB/운영 적용 전 |
