@@ -2,14 +2,14 @@
 
 **최초 작성일:** 2026-10-16  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v1.0  
+**문서 버전:** v1.1  
 **진행 상태:** 자동 테스트 일부 완료 / 브라우저·실 DB 테스트 미완료  
 **대상 브랜치:** `fix/planos-document-autosave-safety-20261016` (Draft PR #9, PR #8 기반)  
 **원칙:** 테스트 계정/격리된 개발 DB에서만 수행. 현재 Plan OS Supabase는 INACTIVE, 개발 브랜치 없음. 운영 데이터/배포 금지.
 
 ## 확인된 자동 검증
 - `npm run test:unit`: 문서 ID별 저장·debounce·오래된 응답·저장 실패/재시도·명시적 복원/재생성 직렬화 테스트 **11개**.
-- `npm run build`, `npm run lint`는 PR CI에서 실행. 최종 커밋 CI 성공 링크는 검증 후 기록.
+- PR #9 코드 HEAD `abf15fcb9331b6d8675c9cd95edeb1a9644caa03`의 [GitHub Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357)에서 `npm ci`, `npm run build`(TS 검사 포함), `npm run lint`, `npm run test:unit` **모두 PASS**. 중간 실패는 경합 테스트 동기화/상태 콜백 기대값을 보정해 해결.
 - **주의:** 이 단위 테스트는 서버 실 DB/브라우저 실제 저장/버전 복원의 성공을 보장하지 않는다.
 
 ## 브라우저 실증 시나리오 (미실행)
@@ -30,7 +30,7 @@
 | B-12 | viewer 문서 열기·재생성/복원 접근 | viewer는 읽기만 가능, 서버 권한 재검사 | 미실행 |
 
 ## 안전 점검과 남은 직접 수정 경로
-- `src/lib/api/chat.ts` `sendChatMessage`는 문서 본문을 **직접 UPDATE**한다. 아직 자동저장 큐를 공유하지 않으므로 챗봇 요청과 편집이 동시에 발생하면 경합 위험이 남는다. **후속 별도 수정 필요**.
+- `src/lib/api/chat.ts` `sendChatMessage`는 문서 본문을 **직접 UPDATE**한다. [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10)에 후속 작업 기록. 아직 자동저장 큐를 공유하지 않으므로 챗봇 요청과 편집이 동시에 발생하면 경합 위험이 남는다. **후속 별도 수정 필요**.
 - `src/store/versionStore.ts`의 문서 버전 저장/복원에는 DB 트랜잭션·동시 버전 번호 충돌 가능성이 남아 있다. 단위 테스트만으로 해결됐다고 간주하지 않는다.
 - `src/pages/DocumentPage.tsx`는 `activeVersionId`·`activeDoc?.content`의 effect 기반 UI 동기화가 있다. 패널/버전 변경 중 화면이 이전 콘텐츠로 되돌아가는 회귀를 브라우저에서 확인해야 한다.
 - 개발 DB의 RLS(특히 댓글·문서 버전·viewer/owner 권한)는 격리된 테스트 프로젝트/계정 확보 전 검증할 수 없다.
@@ -53,3 +53,4 @@
 | 날짜 | 버전 | 변경 | 상태 |
 |---|---|---|---|
 | 2026-10-16 | v1.0 | 문서 저장·버전·재생성·권한 회귀 12개와 병합 차단 조건 최초 작성 | 브라우저/DB 검증 미실행 |
+| 2026-10-16 | v1.1 | 최종 코드 커밋 CI 11개 유닛테스트 PASS 증빙과 Issue #10 채팅 문서 쓰기 누락 연결 | 브라우저/DB 검증 미실행 |
