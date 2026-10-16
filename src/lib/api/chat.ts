@@ -41,30 +41,23 @@ export async function saveMessage(
   return unwrap(data, error)
 }
 
+export type ApplyChatDocumentChange = (
+  projectId: string,
+  documentId: string,
+  message: string,
+) => Promise<string>
+
 export async function sendChatMessage(
   projectId: string,
   documentId: string,
   content: string,
+  applyDocumentChange: ApplyChatDocumentChange,
 ): Promise<{ userMessage: ChatMessage; assistantMessage: ChatMessage; updatedContent: string }> {
   const userMessage = await saveMessage(projectId, documentId, 'user', content)
 
-  const { data: doc } = await supabase
-    .from('documents')
-    .select('content')
-    .eq('id', documentId)
-    .maybeSingle()
-
-  const updatedContent = doc
-    ? `${doc.content}\n\n<!-- AI 수정 반영 -->\n> ${content}`
-    : content
-
-  if (doc) {
-    const { error } = await supabase
-      .from('documents')
-      .update({ content: updatedContent })
-      .eq('id', documentId)
-    throwIfError(error)
-  }
+  // The editing coordinator owns both the live draft and the per-document
+  // save queue. This API must not read stale content and write it directly.
+  const updatedContent = await applyDocumentChange(projectId, documentId, content)
 
   const assistantMessage = await saveMessage(
     projectId,
@@ -76,7 +69,7 @@ export async function sendChatMessage(
   const {
     data: { session },
   } = await supabase.auth.getSession()
-  if (session?.user && doc) {
+  if (session?.user) {
     const { data: profile } = await supabase
       .from('users')
       .select('name')
