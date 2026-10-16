@@ -1,27 +1,24 @@
 -- 009: Remove recursive project_members SELECT policy.
 --
--- Verified on 2026-10-16 on the active Plan OS database using a READ ONLY
--- transaction and SET LOCAL ROLE authenticated:
+-- Live, READ ONLY reproduction on 2026-10-16:
 -- ERROR 42P17: infinite recursion detected in policy for relation "project_members".
+-- Cause: migration 006's SELECT policy queries public.project_members within itself.
 --
--- WHY: migration 006 introduced a SELECT policy whose EXISTS subquery reads
--- public.project_members again, causing the PostgreSQL policy rewriter to
--- recursively expand the same relation's RLS policy.
+-- This replaces ONLY that SELECT policy with a nonrecursive role helper.
+-- Preserve the previous rule allowing an authenticated invited user with a
+-- linked user_id to see THEIR OWN pending invitation row. Pending members
+-- must NOT see other members or project documents without active membership.
+-- The security-definer helper is owned by postgres/BYPASSRLS in the current DB.
 --
--- Existing public.can_access_project(uuid) delegates to public.get_project_role,
--- a SECURITY DEFINER function owned by the database's BYPASSRLS role. It
--- authorizes project owner or ACTIVE member without a recursive policy scan.
---
--- The change is intentionally restricted to the SELECT policy. No tables,
--- functions, grants, data, or other RLS policies are changed in this migration.
---
--- IMPORTANT: This file is a proposed migration in a Draft PR. Do NOT run
--- against the live Plan OS project until isolated-db regression tests and
--- explicit release approval are complete.
+-- Deployment gate: isolated Postgres/Supabase role tests + browser invitation
+-- regression + explicit approval. Do not run on the live Plan OS database.
 
 drop policy if exists "멤버 조회" on public.project_members;
 
 create policy "멤버 조회"
   on public.project_members
   for select
-  using (public.can_access_project(project_id));
+  using (
+    auth.uid() = user_id
+    or public.can_access_project(project_id)
+  );
