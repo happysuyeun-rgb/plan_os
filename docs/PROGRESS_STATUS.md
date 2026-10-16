@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-16  
-**문서 버전:** v3.4  
+**문서 버전:** v3.5  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
@@ -18,6 +18,15 @@
 | 5. AI 인력사무소 MVP | **미착수** | 없음 | 프로필·추천·면담·계약·킥오프 |
 | 6. 협업·운영 안정화 | **미착수** | 없음 | 승인함·알림·취소·보안·회귀 |
 | 7. 제한 파일럿 | **미착수** | 없음 | 사용자 검증·원가·장애 대응 |
+
+## Phase 0 Supabase 재활성화 이후 실제 DB 실측 — 최신 상태 (2026-10-16)
+- **Plan OS 활성화 확인:** Supabase 프로젝트 `ggviusdmxalsflyybamm` **ACTIVE_HEALTHY**. 적용 이력 `001`~`008` 실제 조회 성공, public 기존 테이블 12개 모두 RLS enabled. 이전 `INACTIVE`/migration 조회 timeout은 **재활성화 이전 과거 기록**.
+- **격리 환경:** Supabase 개발 브랜치 **0개**. 활성 DB에 쓰기/마이그레이션/테스트 fixture를 생성하지 않음.
+- **실제 RLS 실패 재현:** `BEGIN READ ONLY; SET LOCAL ROLE authenticated; SELECT count(*) FROM public.project_members; ROLLBACK;` → **ERROR 42P17: infinite recursion detected in policy for relation "project_members"**. 마이그레이션 `006`의 `"멤버 조회"` SELECT 정책이 같은 `project_members`를 재조회하는 원인 확인.
+- **권한 함수 실측:** `get_project_role`, `can_access_project`, `can_edit_project_content`은 postgres 소유 SECURITY DEFINER(소유자 BYPASSRLS); 존재하지 않는 프로젝트는 false/null 결과. 그 자체가 모든 역할별 RLS 안전성을 증명하지는 않음.
+- **보안 점검:** Supabase Security Advisor에서 `set_updated_at` search_path, SECURITY DEFINER 함수 4개의 anon/authenticated EXECUTE, 유출 비밀번호 보호 비활성화 경고 확인. 댓글 UPDATE·반응/참여상태·알림의 넓은 정책 정의도 읽기 전용으로 확인했으나 데이터 행위 재현 전.
+- **GitHub:** [P0 Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) + [Draft PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13), 신규 `009_fix_project_members_select_recursion.sql`로 **멤버 SELECT 정책만 좁게 수정하는 제안**. [실측 및 QA 보고서](https://github.com/happysuyeun-rgb/plan_os/blob/fix/planos-rls-member-recursion-20261016/docs/qa/RLS_LIVE_READONLY_2026-10-16.md).
+- **차단/다음:** 격리 개발 DB 또는 로컬 환경에서 migration 009를 적용하고 owner/editor/viewer/pending/outsider·프로젝트 복원·초대·팀 UI 회귀를 확인하기 전까지 **운영 DB에 적용 금지**. `main` 병합·배포 미실행.
 
 ## Phase 0 코드·환경 추가 점검 (2026-10-16)
 - **Supabase 프로젝트 발견:** Plan OS 프로젝트의 상태는 `INACTIVE`; 개발 브랜치는 **0개**로 조회됨. `list_migrations`는 DB 연결 시간 초과로 실패해 실제 적용 이력 미확인. 운영 DB 재활성화/마이그레이션/브랜치 생성은 하지 않음.
@@ -89,6 +98,7 @@
 - **로드맵:** [개발 실행계획 v1.4](roadmap/IMPLEMENTATION_PLAN.md)에 실제 문서 상태·Phase 3 내부 최소 계약 선행·Phase 5 고객 UI 확장 관계 반영. Phase 0은 미완료이며 Phase 1은 선행 초안 작성 상태.
 - **CI 검증 완료 범위:** [PR #8 Actions #38680673570](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38680673570), 커밋 `152e33968a90eea9e23dc58c63e4ba1beedc6dc4`에서 npm ci/build/lint **SUCCESS(ESLint 0 errors, 1 warning)**. 이 검증은 **PR #8 브랜치만**의 증빙이며 main/PR #5가 통과하거나 브라우저 E2E가 통과했다는 뜻이 아님.
 - **미완료 P0 검증:** 댓글 deep-link, DocumentPage 버전 전환·저장, documentStore 전역 debounce 타이머·문서 전환 데이터 덮어쓰기 위험, ScreenListTable/WireframeSlideView 입력 경합, 프로젝트 복원/모달. 자동 테스트·브라우저 회귀를 아직 실행하지 않음.
+- **RLS 보완 최신 참고:** `project_members` SELECT 42P17은 재활성화된 DB에서 **실제 재현**됨([Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12)). 다음 줄의 다른 SQL 위험은 역할별 행위 재현 전의 정적 위험이다.
 - **RLS 정적 위험:** `006` project_members 조회 자기참조, 댓글 작성자·반응 본인 행 변경 제약, 알림 recipient, 활동 위조, 과거 버전 수정·generation_runs 상태 조작. 운영 취약점 확정이 아닌 **개발 DB 재현 필요** 항목. SQL 001~008 정적 검토만 완료.
 - **배포·데이터:** 실제 Supabase 적용 마이그레이션, 운영 환경 분리/설정, 모델 API 계약·원가, 서버 AI 워커 동작 확인 미완료. `main` 병합/운영 DB 수정/배포 없음.
 - **문서 정합성 보완 완료:** 로드맵·CI 최신 상태, Phase 3 계약 순서, 데이터 유니크 키, 산출물 수락 화면 제안, TF 추적성, API 미완성 구간 표기. [12개 문서 감사 v1.1](quality/DOCUMENT_REVIEW_2026-10-16.md)에 증빙·잔여 항목 정리.
@@ -123,6 +133,7 @@
 | 2026-10-16 | v3.2 | 버전 복원·AI 재생성 문서별 쓰기 직렬화, 11개 테스트 CI 성공, QA B-01~12/Issue #10 경합 위험 기록 | [Actions #38845602357](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38845602357) / [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) |
 | 2026-10-16 | v3.3 | PR #11 채팅 직접 DB 쓰기 제거, 문서별 저장 큐 연동 및 6개 신규 테스트, 브라우저 QA/C-01~10·원자성 미완료 기록 | [PR #11](https://github.com/happysuyeun-rgb/plan_os/pull/11) / [Issue #10](https://github.com/happysuyeun-rgb/plan_os/issues/10) |
 | 2026-10-16 | v3.4 | PR #11 CI #38847021222 실측 build/lint·17개 단위 테스트 성공 기록 | [Actions #38847021222](https://github.com/happysuyeun-rgb/plan_os/actions/runs/38847021222) |
+| 2026-10-16 | v3.5 | Supabase ACTIVE/001~008 적용·12개 RLS 확인, 멤버 SELECT 무한 재귀 42P17 실증, Draft PR #13 및 Advisor 경고 기록 | [Issue #12](https://github.com/happysuyeun-rgb/plan_os/issues/12) / [PR #13](https://github.com/happysuyeun-rgb/plan_os/pull/13) |
 
 ## 연속 실행 원칙
 - 업무 종료 시 **완료 → 검증 → 미완료 → 다음 작업 → 바로 실행 가능 여부 → 사용자 승인 필요 사항**을 보고한다.
