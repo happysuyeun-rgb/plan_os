@@ -177,3 +177,34 @@ test('an edit made while overwrite waits for an in-flight save is never dropped'
   assert.equal(events.some(([kind]) => kind === 'replaced'), false)
   assert.equal(save.getStatus('doc-A'), 'saved')
 })
+
+
+test('retry after failed explicit restore never flushes an empty replacement revision as a human draft', async () => {
+  const { save, writes } = setup()
+  await assert.rejects(
+    () => save.replace('doc-A', async () => { throw Error('database transaction rolled back') }),
+    /rolled back/,
+  )
+  assert.equal(save.getStatus('doc-A'), 'error')
+
+  await save.replace('doc-A', async () => 'restored after retry')
+  assert.deepEqual(writes, [],
+    'retry must not persist empty placeholder from a failed restore as a document edit')
+  assert.equal(save.getStatus('doc-A'), 'saved')
+})
+
+test('retry after failed restore does not overwrite a successfully preflushed human draft', async () => {
+  const { save, writes } = setup()
+  save.schedule('doc-A', 'precious before restore')
+  await assert.rejects(
+    () => save.replace('doc-A', async () => { throw Error('restore RPC failed') }),
+    /RPC failed/,
+  )
+  assert.equal(save.getStatus('doc-A'), 'error')
+  assert.deepEqual(writes, [['doc-A', 'precious before restore']])
+
+  await save.replace('doc-A', async () => 'historical document')
+  assert.deepEqual(writes, [['doc-A', 'precious before restore']],
+    'failed replacement reservation must not cause a duplicate or stale write')
+  assert.equal(save.getStatus('doc-A'), 'saved')
+})
