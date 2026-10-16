@@ -222,6 +222,61 @@ try{
   console.log('PASS B-05 historical preview is read-only; restore creates v3; v1/v2 remain intact')
   console.log('PASS B-05 latest restored document survives reload and matches local DB')
 
+  // FAULT-01: Deliberately fail the second client-side REST write in a
+  // restore. This reproducer MUST show how old code can leave a phantom
+  // version when the version INSERT succeeded but document PATCH failed.
+  // This is disposable local-browser synthetic data ONLY.
+  await page.getByRole('button',{name:/^v2 \(B05-current\)$/}).first().click()
+  await page.waitForFunction(expected=>
+    document.querySelector('main textarea')?.value===expected,beforeRestore,{timeout:12000})
+  let injectedFailures=0
+  const simulateDocumentOutage=async route=>{
+    if(route.request().method()==='PATCH' && injectedFailures++===0){
+      await route.fulfill({
+        status:503,contentType:'application/json',
+        body:JSON.stringify({code:'LOCAL_SYNTHETIC_DB_OUTAGE',message:'Synthetic second-write failure'}),
+      })
+    }else{
+      await route.continue()
+    }
+  }
+  await page.route('**/rest/v1/documents?*',simulateDocumentOutage)
+  const outageResponse=page.waitForResponse(response=>
+    response.request().method()==='PATCH' &&
+    response.url().includes('/rest/v1/documents') &&
+    response.status()===503,{timeout:20000})
+  const expectedErrorStart=errors.length
+  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await outageResponse
+  await page.unroute('**/rest/v1/documents?*',simulateDocumentOutage)
+  await page.waitForTimeout(600)
+  assert.equal(injectedFailures,1,'Synthetic document failure was not injected exactly once')
+
+  const brokenRowsResponse=await fetch(
+    api+'/rest/v1/document_versions?select=version_number,content&document_id=eq.'+
+    serverRows.find(row=>row.type==='prd')?.id+'&order=version_number.asc',{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(brokenRowsResponse.ok)
+  const brokenRows=await brokenRowsResponse.json()
+  const inconsistentResponse=await fetch(
+    api+'/rest/v1/documents?select=content&type=eq.prd&project_id=eq.'+projectId,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
+    })
+  assert(inconsistentResponse.ok)
+  const oldContent=(await inconsistentResponse.json())[0].content
+  assert.equal(brokenRows.length,4,'Expected the uncommitted phantom restore snapshot in legacy flow')
+  assert.equal(brokenRows[3].content,beforeRestore,'Legacy INSERT created wrong phantom target')
+  assert.equal(oldContent,merged,'The rejected document UPDATE must not change current document')
+  console.log('REPRODUCED FAULT-01: phantom restored version inserted even though document UPDATE failed')
+  // The client currently throws on the deliberately injected 503. Remove
+  // only the synthetic error from the runtime-error report for this negative test.
+  const injectedErrors=errors.splice(expectedErrorStart)
+  console.log('FAULT-01 expected client exception count:',injectedErrors.length)
+
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
