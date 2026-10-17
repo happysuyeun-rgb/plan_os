@@ -2,7 +2,7 @@ name: Phase 0 integrated browser smoke - disposable environment
 
 on:
   push:
-    branches: [test/planos-phase0-integrated-20261016, fix/planos-version-restore-atomic-20261016]
+    branches: [test/planos-phase0-integrated-20261016, fix/planos-version-restore-atomic-20261016, test/planos-c10-atomic-20261017]
     paths:
       - 'tests/e2e/**'
       - '.github/workflows/phase0-browser-smoke.yml'
