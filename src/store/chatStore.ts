@@ -34,6 +34,9 @@ function clearAllAttachmentPreviews(attachments: PendingChatAttachment[]) {
   for (const a of attachments) revokeAttachmentPreview(a)
 }
 
+// A retry after an ambiguous HTTP error must reuse the same operation UUID.
+// Include user ID in the key so accounts cannot share pending requests.
+const pendingChatRequests = new Map<string, { content: string; operationId: string }>()
 // Prevent an old request's finally block from resetting a newer chat's spinner.
 let sendSequence = 0
 
@@ -69,13 +72,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
         content = content ? `${content}\n\n${attachmentBlock}` : attachmentBlock
       }
 
+      const requestKey = `${useAuthStore.getState().user?.id ?? 'no-user'}:${projectId}:${documentId}`
+      const previous = pendingChatRequests.get(requestKey)
+      const operationId = previous?.content === content
+        ? previous.operationId : crypto.randomUUID()
+      pendingChatRequests.set(requestKey, { content, operationId })
       const result = await apiSendChatMessage(
         projectId,
         documentId,
         content,
-        (targetProjectId, targetDocumentId, message) =>
-          useDocumentStore.getState().applyChatEdit(targetProjectId, targetDocumentId, message),
+        operationId,
+        (targetProjectId, targetDocumentId, message, id) =>
+          useDocumentStore.getState().commitChatEdit(targetProjectId, targetDocumentId, message, id),
       )
+      pendingChatRequests.delete(requestKey)
       useAuthStore.getState().incrementAiGeneration()
       clearAllAttachmentPreviews(pendingAttachments)
       set((s) => ({

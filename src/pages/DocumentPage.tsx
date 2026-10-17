@@ -95,6 +95,7 @@ export default function DocumentPage() {
     reset: resetVersions,
   } = useVersionStore()
   const { messages, fetchMessages, reset: resetChat } = useChatStore()
+  const chatWritingDocumentId = useDocumentStore((state) => state.chatWritingDocumentId)
   const canGenerate = usePlanStore((s) => s.canGenerate)
   const canSaveVersionPlan = usePlanStore((s) => s.canSaveVersion)
   const canInviteMemberPlan = usePlanStore((s) => s.canInviteMember)
@@ -226,7 +227,7 @@ export default function DocumentPage() {
   const canEditDocument = can('document.edit')
   const canComment = can('comment.view')
   const viewMode = canEditDocument ? requestedViewMode : 'review'
-  const editorReadOnly = isReadOnly || !canEditDocument
+  const editorReadOnly = isReadOnly || !canEditDocument || chatWritingDocumentId === activeDocumentId
 
   const loadProject = useCallback(async () => {
     if (!projectId) return

@@ -11,7 +11,7 @@ import {
 import { useAuthStore } from './authStore'
 import { updateProject as apiUpdateProject } from '../lib/api/projects'
 import { createDocumentAutosave } from '../lib/documentAutosave'
-import { applyChatDocumentEdit } from '../lib/chatDocumentEdit'
+import { commitChatDocumentRPC, type AtomicChatEditResult } from '../lib/api/chat'
 
 interface DocumentState {
   documents: Partial<Record<DocumentType, Document>>
@@ -20,6 +20,7 @@ interface DocumentState {
   saveStatus: 'saved' | 'saving' | 'error'
   isReadOnly: boolean
   isLoading: boolean
+  chatWritingDocumentId: string | null
 
   fetchDocuments: (projectId: string) => Promise<void>
   setActiveDocType: (type: DocumentType) => void
@@ -27,7 +28,7 @@ interface DocumentState {
   setContent: (content: string) => void
   autoSave: () => Promise<void>
   replaceDocumentContent: (documentId: string, write: () => Promise<Document>) => Promise<void>
-  applyChatEdit: (projectId: string, documentId: string, message: string) => Promise<string>
+  commitChatEdit: (projectId: string, documentId: string, message: string, operationId: string) => Promise<AtomicChatEditResult>
   regenerate: (projectId: string, type: DocumentType, title: string, targetUser: string) => Promise<void>
   regenerateCascade: (projectId: string, fromType: DocumentType, title: string, targetUser: string) => Promise<void>
   setReadOnly: (readOnly: boolean) => void
@@ -82,6 +83,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   saveStatus: 'saved',
   isReadOnly: false,
   isLoading: false,
+  chatWritingDocumentId: null,
 
   fetchDocuments: async (projectId) => {
     const sequence = ++fetchSequence
@@ -124,10 +126,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setContent: (content) => set({ content }),
 
   updateContent: (content) => {
-    const { activeDocType, documents, isReadOnly } = get()
-    if (isReadOnly) return
+    const { activeDocType, documents, isReadOnly, chatWritingDocumentId } = get()
     const doc = documents[activeDocType]
-    if (!doc) return
+    if (!doc || isReadOnly || chatWritingDocumentId === doc.id) return
     // Keep the user's text with its original document while navigating tabs.
     set((state) => ({
       content,
@@ -157,53 +158,39 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     })
   },
 
-  applyChatEdit: async (projectId, documentId, message) => {
+  commitChatEdit: async (projectId, documentId, message, operationId) => {
+    // The RPC is a server transaction, but the browser still owns an unsaved
+    // editor buffer. Serialize behind that buffer, as for version restore.
     const current = Object.entries(get().documents).find(
       ([, doc]) => doc?.id === documentId && doc.project_id === projectId,
     )
-    if (!current) {
-      throw new Error('Chat document is no longer available in the current project')
+    if (!current) throw new Error('Chat document no longer exists in the active project')
+    if (get().chatWritingDocumentId) throw new Error('Another chat edit is already in progress')
+    if (get().isReadOnly && get().activeDocType === current[0]) {
+      throw new Error('Cannot edit a historical version through chat')
     }
 
-    const type = current[0] as DocumentType
-    return applyChatDocumentEdit(message, {
-      readDraft: () => {
-        const state = get()
-        const doc = state.documents[type]
-        if (!doc || doc.id !== documentId || doc.project_id !== projectId) {
-          throw new Error('Chat document changed while the message was being sent')
-        }
-        if (state.activeDocType === type && state.isReadOnly) {
-          throw new Error('Cannot edit a historical version through chat')
-        }
-        return doc.content
-      },
-      queueDraft: (next) => {
-        // Keep this update and scheduling synchronous: they represent one
-        // document-specific revision. A later human edit uses the new buffer.
-        set((state) => {
-          const doc = state.documents[type]
-          if (!doc || doc.id !== documentId || doc.project_id !== projectId) {
-            throw new Error('Chat document changed while scheduling the update')
-          }
-          return {
-            documents: {
-              ...state.documents,
-              [type]: { ...doc, content: next },
-            },
-            content:
-              state.activeDocType === type && !state.isReadOnly
-                ? next
-                : state.content,
-            saveStatus:
-              state.activeDocType === type ? 'saving' : state.saveStatus,
-          }
-        })
-        autosave.schedule(documentId, next)
-      },
-      flushDraft: () => autosave.flush(documentId),
-      getSaveStatus: () => autosave.getStatus(documentId),
-    })
+    // Do not allow a new human edit of this document while its atomic RPC is
+    // pending. Otherwise a later local autosave could overwrite the server
+    // append with content based on a pre-chat buffer. Other tabs stay editable.
+    set({ chatWritingDocumentId: documentId })
+    let result: AtomicChatEditResult | null = null
+    try {
+      await autosave.replace(documentId, async () => {
+        const stillCurrent = Object.values(get().documents).some(
+          (doc) => doc?.id === documentId && doc.project_id === projectId,
+        )
+        if (!stillCurrent) throw new Error('Chat document changed before commit')
+        result = await commitChatDocumentRPC(projectId, documentId, message, operationId)
+        return result.updatedContent
+      })
+      if (!result) throw new Error('No committed chat transaction response')
+      return result
+    } finally {
+      if (get().chatWritingDocumentId === documentId) {
+        set({ chatWritingDocumentId: null })
+      }
+    }
   },
 
   regenerate: async (projectId, type, title, targetUser) => {
