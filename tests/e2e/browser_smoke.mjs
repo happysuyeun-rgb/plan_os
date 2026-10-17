@@ -534,14 +534,14 @@ try{
   assert.equal(await mainEditor.inputValue(),b04Recovered,'B-04 recovered content missing after reload')
   console.log('PASS B-04: 503 save error visible; tab return preserves draft; reedit recovers after network resumes')
 
-  // C-03: Delay the first chat INSERT while switching from PRD to IA.
+  // C-03: Delay the atomic chat RPC while switching from PRD to IA.
   // The eventual chat/document write must target PRD only, not the active IA.
   let startSlowChat
   let releaseSlowChat
   const slowChatStarted=new Promise(resolve=>{startSlowChat=resolve})
   const slowChatGate=new Promise(resolve=>{releaseSlowChat=resolve})
   let slowChatIntercepted=false
-  await page.route('**/rest/v1/chat_messages?*',async route=>{
+  await page.route('**/rest/v1/rpc/commit_chat_document_edit',async route=>{
     if(route.request().method()==='POST' && !slowChatIntercepted){
       slowChatIntercepted=true
       startSlowChat()
@@ -555,7 +555,7 @@ try{
   await chatForC03.press('Enter')
   await Promise.race([
     slowChatStarted,
-    page.waitForTimeout(14000).then(()=>{throw Error('C-03 chat INSERT never started')}),
+    page.waitForTimeout(14000).then(()=>{throw Error('C-03 chat RPC never started')}),
   ])
   await page.getByRole('navigation',{name:'산출물 탭'})
     .getByRole('button',{name:/기능명세서/}).click()
