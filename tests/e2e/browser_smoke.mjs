@@ -615,44 +615,147 @@ try{
   console.log('PASS C-03: delayed PRD chat edits only PRD; IA content and conversation remain isolated')
 
 
-  // C-10 NEGATIVE CONTROL on original non-atomic client:
-  // user chat INSERT succeeded but document PATCH fails. A safe send must
-  // have zero orphan message rows AND must not falsely acknowledge success.
+  // C-10: Atomic DB transaction with fault AFTER chat user INSERT but during
+  // documents UPDATE. The entire transaction must roll back all rows.
   const c10DocId=serverRows.find(row=>row.type==='prd')?.id
-  const c10Marker='C10-ORPHAN-FAULT-'+created.id
-  const c10BeforeRes=await fetch(
-    api+'/rest/v1/chat_messages?select=id,content&document_id=eq.'+c10DocId,{
+  async function c10Read(table,fields,query){
+    const reply=await fetch(api+'/rest/v1/'+table+'?select='+fields+'&'+query,{
       headers:{apikey:variables.SERVICE_ROLE_KEY,
         Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+      signal:AbortSignal.timeout(12000),
     })
-  assert(c10BeforeRes.ok)
-  const c10Before=(await c10BeforeRes.json()).length
-  let c10FailedPatch=0
-  await page.route('**/rest/v1/documents?*',async route=>{
-    if(route.request().method()==='PATCH' && c10FailedPatch++===0){
+    assert(reply.ok,'C-10 cannot inspect local '+table+' DB')
+    return reply.json()
+  }
+  const c10ChatQuery='document_id=eq.'+c10DocId+'&order=created_at.asc'
+  const c10BeforeRows=await c10Read('chat_messages','id,role,content',c10ChatQuery)
+  const c10BeforeDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
+  const c10OpsQuery='document_id=eq.'+c10DocId
+  const c10BeforeOps=await c10Read('document_chat_operations','id',c10OpsQuery)
+  execFileSync('psql',['-X','-v','ON_ERROR_STOP=1',
+    '-f',process.cwd()+'/tests/e2e/inject_chat_update_failure.sql'],{
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
+    stdio:['ignore','pipe','pipe'],timeout:30000,
+  })
+  const c10Marker='C10-ATOMIC-FAULT-'+created.id
+  const c10ChatInput=page.locator('aside textarea[placeholder*="@"]')
+  const c10FailedRpc=page.waitForResponse(reply=>
+    reply.url().includes('/rest/v1/rpc/commit_chat_document_edit') &&
+    !reply.ok(),{timeout:25000})
+  await c10ChatInput.fill(c10Marker)
+  await c10ChatInput.press('Enter')
+  await c10FailedRpc
+  await page.getByText('채팅 요청을 문서에 반영하지 못했습니다.',{exact:false})
+    .waitFor({state:'visible',timeout:15000})
+  const c10RolledBack=await c10Read('chat_messages','id,role,content',c10ChatQuery)
+  const c10RolledBackDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
+  const c10RolledBackOps=await c10Read('document_chat_operations','id',c10OpsQuery)
+  assert.equal(c10RolledBack.length,c10BeforeRows.length,
+    'C-10 left orphan chat INSERT after server document UPDATE fault')
+  assert.equal(c10RolledBackDoc,c10BeforeDoc,'C-10 modified document despite DB rollback')
+  assert.equal(c10RolledBackOps.length,c10BeforeOps.length,
+    'C-10 left operation record after failed transaction')
+  console.log('PASS C-10 FAULT: injected DB UPDATE failure rolls back user/assistant messages, document and request log')
+
+  execFileSync('psql',['-X','-v','ON_ERROR_STOP=1',
+    '-c','drop trigger qa_fail_chat_document_update on public.documents'],{
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
+    stdio:['ignore','pipe','pipe'],timeout:30000,
+  })
+  // A retry with the unchanged input must reuse its original operation UUID.
+  await c10ChatInput.press('Enter')
+  await page.waitForFunction(marker=>
+    document.querySelector('main textarea')?.value.includes(marker),
+    c10Marker,{timeout:20000})
+  const c10RetryRows=await c10Read('chat_messages','id,role,content',c10ChatQuery)
+  const c10RetryOps=await c10Read('document_chat_operations',
+    'id,input_content,user_message_id,assistant_message_id',c10OpsQuery)
+  assert.equal(c10RetryRows.length,c10BeforeRows.length+2,
+    'C-10 retry did not commit exactly one paired user/assistant chat')
+  assert.equal(c10RetryOps.length,c10BeforeOps.length+1,
+    'C-10 retry did not create exactly one request UUID')
+  assert.equal(c10RetryOps.at(-1).input_content,c10Marker)
+  assert.equal(c10RetryRows.filter(row=>row.content===c10Marker).length,1)
+  const c10RetriedDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
+  assert.equal(c10RetriedDoc.split(c10Marker).length-1,1,
+    'C-10 retry appended the same chat multiple times')
+  console.log('PASS C-10 RETRY: one user+assistant pair, one document append, one operation')
+
+  // Ambiguous transport: the DB commits but the first HTTP response is lost.
+  // Replaying the exact UUID must return the original messages without a
+  // second append or overwriting any newer durable editor revision.
+  const c10AmbiguousMarker='C10-LOST-RESPONSE-'+created.id
+  let c10ResponseSwallowed=0
+  await page.route('**/rest/v1/rpc/commit_chat_document_edit',async route=>{
+    if(c10ResponseSwallowed++===0){
+      const realReply=await route.fetch()
+      assert(realReply.ok(),'C-10 lost-response fixture did not commit')
       await route.fulfill({status:503,contentType:'application/json',
-        body:JSON.stringify({code:'C10_TEST_FAULT',message:'Synthetic document patch failure'})})
+        body:JSON.stringify({code:'C10_LOST_RESPONSE',message:'synthetic response loss'})})
     }else await route.continue()
   })
-  await page.locator('aside textarea[placeholder*="@"]').fill(c10Marker)
-  await page.locator('aside textarea[placeholder*="@"]').press('Enter')
+  await c10ChatInput.fill(c10AmbiguousMarker)
+  await c10ChatInput.press('Enter')
   await page.getByText('채팅 요청을 문서에 반영하지 못했습니다.',{exact:false})
-    .waitFor({state:'visible',timeout:22000})
+    .waitFor({state:'visible',timeout:18000})
   await page.unrouteAll({behavior:'wait'})
-  assert(c10FailedPatch>0,'C-10 document PATCH fault not exercised')
-  const c10AfterRes=await fetch(
-    api+'/rest/v1/chat_messages?select=id,content&document_id=eq.'+c10DocId,{
-      headers:{apikey:variables.SERVICE_ROLE_KEY,
-        Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+  assert.equal(c10ResponseSwallowed,1,'C-10 did not inject ambiguous transport response')
+  const c10AfterLostRows=await c10Read('chat_messages','id,role,content',c10ChatQuery)
+  assert.equal(c10AfterLostRows.length,c10BeforeRows.length+4,
+    'C-10 ambiguous response did not commit exactly two server rows')
+  const c10AfterLostDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
+  assert.equal(c10AfterLostDoc.split(c10AmbiguousMarker).length-1,1)
+  await c10ChatInput.press('Enter')
+  await page.waitForFunction(marker=>
+    document.querySelector('main textarea')?.value.includes(marker),
+    c10AmbiguousMarker,{timeout:20000})
+  const c10FinalRows=await c10Read('chat_messages','id,role,content',c10ChatQuery)
+  const c10FinalDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
+  assert.equal(c10FinalRows.length,c10AfterLostRows.length,
+    'C-10 ambiguous response retry duplicated chat rows')
+  assert.equal(c10FinalDoc,c10AfterLostDoc,'C-10 replay duplicated or reverted document')
+  console.log('PASS C-10 IDEMPOTENCY: committed-but-lost HTTP response replay does not duplicate content or chat')
+
+  // Auth/JWT checks: SECURITY DEFINER must never make viewer, anon, or a
+  // mismatching project-document pair able to alter protected data.
+  const c10AuthBody={
+    p_project_id:projectId,p_document_id:c10DocId,
+    p_content:'C10-UNAUTHORIZED',
+    p_operation_id:'77777777-7777-4777-8777-777777777781',
+  }
+  async function c10RpcAs(token,body){
+    return fetch(api+'/rest/v1/rpc/commit_chat_document_edit',{
+      method:'POST',headers:{apikey:variables.ANON_KEY,
+        Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify(body),signal:AbortSignal.timeout(12000),
     })
-  assert(c10AfterRes.ok)
-  const c10After=await c10AfterRes.json()
-  console.log('C-10 NEGATIVE CONTROL count',JSON.stringify({
-    before:c10Before,after:c10After.length,
-    insertedUserOrphan:c10After.some(row=>row.content===c10Marker),
-  }))
-  assert.equal(c10After.length,c10Before,
-    'C-10 DEFECT: chat row committed even though document write failed')
+  }
+  const c10Viewer=await c10RpcAs(viewerToken,c10AuthBody)
+  assert(!c10Viewer.ok,'C-10 viewer could edit via SECURITY DEFINER')
+  const c10Anon=await c10RpcAs(variables.ANON_KEY,c10AuthBody)
+  assert(!c10Anon.ok,'C-10 anonymous could write chat document')
+  const c10Cross=await c10RpcAs(userToken,{
+    ...c10AuthBody,p_project_id:'88888888-8888-4888-8888-888888888888',
+    p_operation_id:'77777777-7777-4777-8777-777777777782',
+  })
+  assert(!c10Cross.ok,'C-10 accepted mismatched document/project')
+  const c10ReplayCollision=await c10RpcAs(userToken,{
+    ...c10AuthBody,p_content:'C10-REUSED-UUID-CHANGED-MESSAGE',
+    p_operation_id:c10RetryOps.at(-1).id,
+  })
+  assert(!c10ReplayCollision.ok,'C-10 replay UUID was accepted for changed content')
+  assert.equal((await c10Read('chat_messages','id',c10ChatQuery)).length,
+    c10FinalRows.length,'C-10 unauthorized calls wrote chat rows')
+  console.log('PASS C-10 AUTHZ: viewer, anon, cross-project and altered-content UUID replay denied')
+
+  await page.reload({waitUntil:'domcontentloaded'})
+  await mainEditor.waitFor({state:'visible',timeout:20000})
+  assert.equal(await mainEditor.inputValue(),c10FinalDoc,
+    'C-10 atomic/retried content did not survive browser reload')
+  console.log('PASS C-10 durability: final document matches local DB after full reload')
+
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
