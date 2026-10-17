@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, fix/ci-lint-baseline-20261014, fix/planos-document-autosave-safety-20261016]
   push:
-    branches: [main, test/planos-phase0-integrated-20261016, fix/planos-version-restore-atomic-20261016]
+    branches: [main, test/planos-phase0-integrated-20261016, fix/planos-version-restore-atomic-20261016, test/planos-c10-atomic-20261017]
   workflow_dispatch:
 
 permissions:
