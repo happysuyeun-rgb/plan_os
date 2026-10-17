@@ -614,6 +614,45 @@ try{
     'C-03 PRD chat update lost after reload')
   console.log('PASS C-03: delayed PRD chat edits only PRD; IA content and conversation remain isolated')
 
+
+  // C-10 NEGATIVE CONTROL on original non-atomic client:
+  // user chat INSERT succeeded but document PATCH fails. A safe send must
+  // have zero orphan message rows AND must not falsely acknowledge success.
+  const c10DocId=serverRows.find(row=>row.type==='prd')?.id
+  const c10Marker='C10-ORPHAN-FAULT-'+created.id
+  const c10BeforeRes=await fetch(
+    api+'/rest/v1/chat_messages?select=id,content&document_id=eq.'+c10DocId,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,
+        Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+    })
+  assert(c10BeforeRes.ok)
+  const c10Before=(await c10BeforeRes.json()).length
+  let c10FailedPatch=0
+  await page.route('**/rest/v1/documents?*',async route=>{
+    if(route.request().method()==='PATCH' && c10FailedPatch++===0){
+      await route.fulfill({status:503,contentType:'application/json',
+        body:JSON.stringify({code:'C10_TEST_FAULT',message:'Synthetic document patch failure'})})
+    }else await route.continue()
+  })
+  await page.locator('aside textarea[placeholder*="@"]').fill(c10Marker)
+  await page.locator('aside textarea[placeholder*="@"]').press('Enter')
+  await page.getByText('채팅 요청을 문서에 반영하지 못했습니다.',{exact:false})
+    .waitFor({state:'visible',timeout:22000})
+  await page.unrouteAll({behavior:'wait'})
+  assert(c10FailedPatch>0,'C-10 document PATCH fault not exercised')
+  const c10AfterRes=await fetch(
+    api+'/rest/v1/chat_messages?select=id,content&document_id=eq.'+c10DocId,{
+      headers:{apikey:variables.SERVICE_ROLE_KEY,
+        Authorization:'Bearer '+variables.SERVICE_ROLE_KEY},
+    })
+  assert(c10AfterRes.ok)
+  const c10After=await c10AfterRes.json()
+  console.log('C-10 NEGATIVE CONTROL count',JSON.stringify({
+    before:c10Before,after:c10After.length,
+    insertedUserOrphan:c10After.some(row=>row.content===c10Marker),
+  }))
+  assert.equal(c10After.length,c10Before,
+    'C-10 DEFECT: chat row committed even though document write failed')
   assert.deepEqual(errors,[],'Unexpected browser runtime exception(s)')
   console.log('SUCCESS local browser smoke and B-01/B-02/C-01 document regressions on integrated PR #15')
 }catch(error){
