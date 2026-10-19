@@ -1,8 +1,8 @@
 # PlanOS 3.0 — 단계별 개발 실행계획
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v1.9  
+**최종 수정일:** 2026-10-19  
+**문서 버전:** v2.0  
 **진행 상태:** 잔여 기간 재산정 유지 / Phase 0 로컬 Supabase Auth/JWT/REST 009·010 권한 CI 통과, 브라우저·기타 데이터 정합성/운영 승인 대기  
 
 ## 원칙
@@ -74,6 +74,12 @@
 - **의존성 정리:** Phase 3에는 내부 최소 AI 역할·계약·승인·예산 정보가 필요함. Phase 5는 그 기반을 고객용 인력사무소 탐색/면담/계약 UX로 확장함. 계약 전체를 Phase 5까지 미루지 않음.
 - 미확정 주요 정책: 첫 전문 AI 실제 작업 1종, 승인 위임, R2 도구, 과금·환불/보존, 워커/큐·모델 공급자 선정.
 - 자세한 P0 차단 이슈는 [문서 정합성 감사](../quality/DOCUMENT_REVIEW_2026-10-16.md)에 기록.
+
+## 2026-10-19 Phase 1 P1-1 설계 산출물·남은 게이트
+- **선행 기획 작업 완료(문서 범위):** [첫 전문 AI 업무 선정·수용 기준](../product/FIRST_SPECIALIST_AI_MVP_2026-10-19.md) — 후보 3종 비교, `requirements_auditor_v1` 권고, 문서 읽기만 허용한 최소 수직 슬라이스, PM/전문 AI/서버 검증기 역할·12개 AC·FR/TF/API/DB 연결 작성.
+- **아직 미완료:** D-01 실제 제품 선택/사용자 승인, 실제 검사 정확성 fixture/사용자 평가, D-05 권한 정책, 비용·유료 공급자·보존, 워커·큐 제품 ADR, API/SQL/Threat Model/QA Plan/Release Runbook, Phase 0 차단.
+- **다음 순서:** (1) P1-2 최소 계약/권한·실행/비용 정책 (2) P1-3 1회 사용자 여정 UX (3) P1-4 워커/ModelGateway 기술 ADR (4) P1-5/6 검증 가능한 API/DB·QA → P1-7 교차 검수. 설계 문서 작성만으로 Phase 1 전체 DONE 처리 금지.
+- **추정:** 종전 Phase 1 잔여 3~6 전담 작업일/전체 43~79 작업일은 초기 잠정치이며 이번 문서 작성으로 자동 단축하지 않는다.
 
 ## 구현 전 필수 결정 및 누락 사항 (기존 준비도 문서 통합)
 | ID | 결정할 사항 | 통과 기준 |
@@ -158,3 +164,5 @@
 - [Issue #2](https://github.com/happysuyeun-rgb/plan_os/issues/2)
 - [Issue #3](https://github.com/happysuyeun-rgb/plan_os/issues/3)
 - [Issue #4](https://github.com/happysuyeun-rgb/plan_os/issues/4)
+
+| 2026-10-19 | v2.0: 첫 전문 AI P1-1 후보 비교·기획 검수 AI 권고/12개 AC 문서화; D-01 승인 및 Phase 0/나머지 Phase 1 차단 명시 | [설계안](../product/FIRST_SPECIALIST_AI_MVP_2026-10-19.md) / Draft PR #1 |
