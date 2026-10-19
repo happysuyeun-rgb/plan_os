@@ -167,6 +167,14 @@ Content-Type: application/json
 - `API-14`의 Idempotency-Key는 **HTTP 헤더가 기준**이며 본문에 중복 전달하지 않는 방향으로 설계한다(기존 표의 idempotencyKey는 정식 필드로 확정하지 않음).
 - 계획 생성에 실제 LLM이 필요한 경우 API-05는 장시간 동기 응답으로 단정하지 않는다. 비용 예약/모델 호출/실패 복구 계약 확정 후 async job 패턴을 선정한다.
 
+### 2026-10-19 계약 선행·비용 발생 PM 계획·R0/R1 API 보정 요구사항 (미구현)
+- **API-05 모델 계획 생성:** 현재 제안의 동기 반환 'planned'는 고객 예산 예약·유료 계획 생성·서버 재시작을 표현하지 못한다. **비모델 수동 계획 draft**는 별도 구분하고, 유료 모델 계획은 계약 사전 동의+원자 예산 예약 후 **202 / plan generation job ID → GET 상태/비용/실패** 흐름을 정의해야 한다. 계획은 owner가 최종 approve하기 전 approved 불가.
+- **API-10/11:** 계약 조건 고정·명시 consent·terms/version/digest+소속 프로젝트/문서 ID·공급자 데이터 처리/PM 비용 상한, 생성/수락 중복 방지. 세부 GET/PATCH 및 만료/중단 상태는 신규 계약으로 추가.
+- **API-14~18:** run 생성·예산 예약·outbox는 원자적; 같은 key 재요청은 같은 run. 문서 snapshot mismatch/프로젝트 변경/멤버십 해지/승인 범위 초과는 재승인 또는 안전한 409/403. 외부 공급자 과금의 idempotency는 별도.
+- **API-19/20:** 위험 행위 approval을 서버가 생성(GET 상세, 철회, 만료 포함). 모델이 approval 결정 레코드를 생성하지 못하게 서버 내부 이벤트·digest 검증. 초기 검사 AI는 R2/R3 도구 자체 금지.
+- **API-21/22:** report 신규 artifact 저장은 서버만, 입력 문서 원본 변경 금지. machine verifier PASS/사용자 acceptance/출처 참조와 권한별 GET, artifact version/digest 고정. provider usage 관측·원가 원장 정산은 acceptance와 독립.
+- **P1-5 미완:** 정확한 URL/schema/status/HTTP 오류/OpenAPI·SQL·RLS·테스트는 아직 없음. [P1-2 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md) / [감사](../quality/PHASE1_CROSS_AUDIT_2026-10-19.md).
+
 ## 10. 미결정
 - API 서버/호스팅·큐 공급자, 인증 세션 전달 방식, 상태 enum 최종 형태.
 - editor 승인 위임 정책, 계약/결제 법적 표현, 통화/크레딧 정산 규칙.
