@@ -94,6 +94,12 @@
 - **미해결(DQ-04):** 승인 요청의 대상(payload digest), 계약 스냅샷의 변경 불가 원문·버전 보존, 변경 시 새 계약/재승인 정책을 구체적인 DDL로 옮겨야 한다.
 - **미해결:** 계약·작업·실행·승인·산출물에 동일한 `project_id`가 유지되도록 복합 FK/서버 트랜잭션 중 어떤 조합으로 강제할지 선정한다.
 
+### 2026-10-19 문서 스냅샷·비용 승인 계약 미구현 보완
+- **보고서 입력 스냅샷:** document_id / project_id / 고정한 문서 버전 또는 digest / 서버 읽기 시각 / 선택한 소스 범위 / origin 문서 타입과 run·artifact ID 관계. 실제 원자적 snapshot capture, 변경 시 409, 감사 중 stale label 등은 상세 SQL/REST 설계가 필요하며 기존 documents.updated_at 하나로 충분하다고 단정하지 않음.
+- **R0/R1 자원 분리:** 전문 역할의 문서 읽기는 read-only policy, artifact 서비스는 새로운 비공개 ai_artifacts로만 write. 기존 문서 직접 PATCH 허용하지 않음. 신규 artifact의 project/run/task 복합 FK·Storage RLS/서명 URL 검증 필요.
+- **비용 원장:** AI PM 계획 생성 예산/공급자 원가와 전문 AI 실행 예약/원가를 모두 포함하고 고객 청구/환불은 별도. 공급자 응답 유실·실제 과금 지연 시 pending으로 보존, 동일 provider_ref 중복 집계 금지. 정확한 원가·상한 SQL 수식/국외 전송·retention은 미정.
+- **인간 수락:** ai_artifact_verifications의 machine PASS != ai_acceptances의 owner accepted. 비위임 editor/viewer는 신규 최종 수락/검증 행 위조 불가. [P1-2 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md).
+
 ## 8. 미결정·검증 체크
 - [x] CURRENT 실제 SQL 기반 테이블/컬럼 구분
 - [x] TARGET 신규 엔터티·관계·불변성·원장 개념 정의
