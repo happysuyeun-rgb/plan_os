@@ -15,6 +15,7 @@ import DashboardPage from './pages/DashboardPage'
 import ProjectListPage from './pages/ProjectListPage'
 import ProjectCreatePage from './pages/ProjectCreatePage'
 import DocumentPage from './pages/DocumentPage'
+import ProjectTasksPage from './pages/ProjectTasksPage'
 import SettingsPage from './pages/SettingsPage'
 import TrashPage from './pages/TrashPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -52,6 +53,7 @@ function App() {
             <Route path="/projects/trash" element={<TrashPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
+          <Route path="/projects/:projectId/tasks" element={<ProjectTasksPage />} />
           <Route path="/projects/:projectId" element={<DocumentPage />} />
           <Route path="/projects/:projectId/:docType" element={<DocumentPage />} />
         </Route>
