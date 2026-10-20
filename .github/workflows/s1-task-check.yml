@@ -1,0 +1,24 @@
+name: S1 task checks
+on:
+  pull_request:
+    paths:
+      - 'src/lib/taskPrototype.ts'
+      - 'src/pages/ProjectTasksPage.tsx'
+      - 'src/App.tsx'
+      - 'tests/task-prototype.test.mjs'
+      - 'package.json'
+      - '.github/workflows/s1-task-check.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:s1
+      - run: npm run build
+      - run: npm run lint
