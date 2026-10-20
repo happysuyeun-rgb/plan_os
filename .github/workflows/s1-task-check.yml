@@ -8,6 +8,7 @@ on:
       - 'src/pages/ProjectTasksPage.tsx'
       - 'src/App.tsx'
       - 'tests/task-prototype.test.mjs'
+      - 'tests/task-sql-contract.test.mjs'
       - 'package.json'
       - '.github/workflows/s1-task-check.yml'
   workflow_dispatch:
@@ -22,6 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:s1
+      - run: node --test tests/task-sql-contract.test.mjs
       - run: npm run build
       - name: Lint S1 changed code
         run: npx eslint src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
