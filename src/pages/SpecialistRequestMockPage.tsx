@@ -16,11 +16,7 @@ export default function SpecialistRequestMockPage() {
 
   useEffect(() => {
     let mounted = true
-    if (!projectId || !userId) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
+    if (!projectId || !userId) return
     void setCurrentProject(projectId)
       .catch(() => { if (mounted) setError('프로젝트를 불러올 수 없습니다.') })
       .finally(() => { if (mounted) setLoading(false) })
@@ -50,7 +46,7 @@ export default function SpecialistRequestMockPage() {
         <p className="mt-3 text-sm text-gray-600">실제 AI 실행, 계약, 저장, 과금 및 외부 데이터 전송은 발생하지 않습니다. 이 화면의 초안은 새로고침하면 사라집니다.</p>
       </div>
 
-      {loading ? <p role="status">프로젝트 권한을 확인하고 있습니다.</p> : !accessible ? (
+      {loading && projectId && userId ? <p role="status">프로젝트 권한을 확인하고 있습니다.</p> : !accessible ? (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4">프로젝트에 접근할 수 없거나 삭제된 프로젝트입니다.</div>
       ) : !owner ? (
         <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4">현재 Mock 업무 요청은 프로젝트 소유자만 작성할 수 있습니다. 멤버 권한 연결은 아직 검증되지 않았습니다.</div>
