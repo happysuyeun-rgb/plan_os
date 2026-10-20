@@ -139,7 +139,7 @@
 - [x] 기존 `saveDocumentContent`가 문서 ID만 조건으로 UPDATE하여 다른 클라이언트의 새 내용을 덮어쓸 수 있음을 실제 코드에서 확인.
 - [x] 별도 Draft [PR #22](https://github.com/happysuyeun-rgb/plan_os/pull/22)에서 `saveDocumentContentIfUnchanged(id, expectedServerContent, nextContent)` 서버 WHERE content 비교 조건부 UPDATE 초안 작성. 이는 기존 저장 경로와 **아직 미연결**.
 - [x] `tests/document-cas-contract.test.mjs`에 정적 계약 검사 및 CI 추가. **정적 계약은 실제 DB에서의 원자성/RLS 보증 테스트가 아님**.
-- [ ] PR #22 CI 최종 결과 확인.
+- [x] PR #22 CI 최종 결과 확인: GitHub Actions #39496242165 SUCCESS (정적 계약 테스트·빌드·변경 파일 린트).
 - [ ] 문서별 last-acknowledged server baseline·실패/충돌 UI·초안 보호/재시도 계약을 autosave 및 PR #19 복원 플로우에 연결.
 - [ ] 동시성·권한·복원 원자성·브라우저/격리 DB 회귀 테스트.
 - [ ] PR #15/#19/#22 병합 (조건 충족 전 전부 보류).
