@@ -27,3 +27,11 @@
 - No-op content UPDATE does not advance revision; changed content advances once.
 - Cross-project, viewer, outsider and revoked member reject writes.
 - Long document body is supplied in POST body; URL carries no full text.
+
+## G1-B-07 staged write contract (2026-10-21)
+- [x] Draft CAS RPC now checks that the project is active and the actor can edit it, independently of generic UPDATE RLS. SECURITY DEFINER requires a separate privilege/search_path review and isolated permissions test.
+- [x] Revision trigger keeps all changes monotonic, without double-increment in CAS RPC.
+- [ ] **Critical bypass:** users retaining direct UPDATE(content) permissions or legacy upsert can silently overwrite changed content despite the trigger. Only after all clients/RPCs are migrated, revoke direct write permissions or enforce a server-only guarded write path. A column revoke alone does not cancel an existing table-level UPDATE grant.
+- [ ] Chat and restore SECURITY DEFINER RPCs require separate owner/editor and revision checks; verify migration order and SQL under isolated Postgres before deploy.
+- [ ] Concurrent editor race, revocation, stale content retry and rollback need executable DB assertions.
+**Rollout:** Phase A draft SQL/client APIs and tests; Phase B isolated DB with all writers migrated; Phase C coordinated privilege cutover only with deployment approval. No partial production rollout.
