@@ -1,5 +1,5 @@
 -- S1 isolated development migration. Do NOT apply to production before review.
-create table if not exists public.project_tasks (
+create table public.project_tasks (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
   created_by uuid not null references auth.users(id),
@@ -21,27 +21,28 @@ create table if not exists public.project_tasks (
 create index if not exists project_tasks_active_idx
   on public.project_tasks (project_id, updated_at desc) where deleted_at is null;
 alter table public.project_tasks enable row level security;
+create or replace function public.is_valid_task_assignee(p_project_id uuid, p_user_id uuid)
+returns boolean language sql stable security definer set search_path = public as $
+  select p_user_id is null or exists (
+    select 1 from public.projects p where p.id = p_project_id and p.deleted_at is null and p.user_id = p_user_id
+  ) or exists (
+    select 1 from public.project_members pm where pm.project_id = p_project_id and pm.user_id = p_user_id and pm.status = 'active'
+  );
+$;
+revoke all on function public.is_valid_task_assignee(uuid, uuid) from public;
+grant execute on function public.is_valid_task_assignee(uuid, uuid) to authenticated;
+
 create policy "task_members_read" on public.project_tasks for select to authenticated
   using (public.can_access_project(project_id));
 create policy "task_editors_create" on public.project_tasks for insert to authenticated
   with check (public.can_edit_project_content(project_id) and created_by = auth.uid()
-    and (assignee_user_id is null or exists (
-      select 1 from public.project_members m
-      where m.project_id = project_tasks.project_id and m.user_id = assignee_user_id
-        and m.status = 'active'
-    ) or exists (select 1 from public.projects p where p.id = project_id
-      and p.user_id = assignee_user_id)));
+    and public.is_valid_task_assignee(project_id, assignee_user_id));
 create policy "task_editors_update" on public.project_tasks for update to authenticated
   using (public.can_edit_project_content(project_id))
   with check (public.can_edit_project_content(project_id)
-    and (assignee_user_id is null or exists (
-      select 1 from public.project_members m
-      where m.project_id = project_tasks.project_id and m.user_id = assignee_user_id
-        and m.status = 'active'
-    ) or exists (select 1 from public.projects p where p.id = project_id
-      and p.user_id = assignee_user_id)));
+    and public.is_valid_task_assignee(project_id, assignee_user_id));
 -- No direct DELETE policy: use deleted_at, keep an audit trail.
--- Follow-up: immutable project_id/created_by, server CAS and status event trail.
+-- Follow-up: append-only status events and idempotency before production.
 
 -- Keep task tenant, actor and version server-controlled even for direct PostgREST updates.
 create or replace function public.validate_project_task_change()
@@ -57,6 +58,9 @@ begin
       or new.created_by is distinct from old.created_by
       or new.created_at is distinct from old.created_at then
     raise exception 'IMMUTABLE_TASK_FIELDS' using errcode = '23514';
+  end if;
+  if old.deleted_at is not null and (new.deleted_at is not null or new.deleted_at <> old.deleted_at) then
+    raise exception 'TASK_DELETED_REQUIRES_RESTORE' using errcode = '23514';
   end if;
   if new.version <> old.version + 1 then
     raise exception 'TASK_VERSION_CONFLICT' using errcode = '40001';
@@ -76,5 +80,5 @@ $$;
 create trigger project_task_validate_change
 before insert or update on public.project_tasks
 for each row execute function public.validate_project_task_change();
--- A second read-by-version or RPC CAS is still required to turn stale clients
--- into clean HTTP 409 responses; this migration is NOT production-ready.
+-- Client version compare-and-swap maps empty UPDATE result to a conflict.
+-- This migration still requires isolated DB and RLS tests before application.
