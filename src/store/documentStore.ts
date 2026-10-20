@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from './authStore'
 import { updateProject as apiUpdateProject } from '../lib/api/projects'
 import { createDocumentAutosave } from '../lib/documentAutosave'
+import { getUnsavedDraft, storeUnsavedDraft, clearUnsavedDraft } from '../lib/unsavedDraft'
 import { commitChatDocumentRPC, type AtomicChatEditResult } from '../lib/api/chat'
 
 interface DocumentState {
@@ -37,7 +38,9 @@ interface DocumentState {
 // The callbacks are invoked only after the store is initialized and edits occur.
 const autosave = createDocumentAutosave<Document>({
   persist: apiSaveDocumentContent,
-  onSaved: (documentId, _content, updated) => {
+  onSaved: (documentId, savedContent, updated) => {
+    const userId = useAuthStore.getState().user?.id
+    if (userId) clearUnsavedDraft(userId, documentId, savedContent)
     useDocumentStore.setState((state) => {
       const entry = Object.entries(state.documents).find(([, doc]) => doc?.id === documentId)
       if (!entry) return state // e.g. user has switched projects
@@ -92,12 +95,24 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const docs = await apiFetchDocuments(projectId)
       if (sequence !== fetchSequence) return // ignore an older project's response
       const map: Partial<Record<DocumentType, Document>> = {}
+      const userId = useAuthStore.getState().user?.id
       for (const doc of docs) {
         const cached = get().documents[doc.type]
-        map[doc.type] =
-          cached?.id === doc.id && autosave.getStatus(doc.id) !== 'saved'
-            ? { ...doc, content: cached.content } // do not wipe unsaved edits
-            : doc
+        if (cached?.id === doc.id && autosave.getStatus(doc.id) !== 'saved') {
+          map[doc.type] = { ...doc, content: cached.content }
+          continue
+        }
+        const draft = userId ? getUnsavedDraft(userId, doc.id) : null
+        if (draft && draft.base === doc.content && draft.content !== doc.content) {
+          // Recover only if another client has not modified the server baseline.
+          map[doc.type] = { ...doc, content: draft.content }
+          autosave.schedule(doc.id, draft.content)
+        } else {
+          map[doc.type] = doc
+          if (draft && userId && draft.content === doc.content) {
+            clearUnsavedDraft(userId, doc.id, doc.content)
+          }
+        }
       }
       const { activeDocType } = get()
       const active = map[activeDocType]
@@ -138,6 +153,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         [activeDocType]: { ...doc, content },
       },
     }))
+    const userId = useAuthStore.getState().user?.id
+    if (userId) storeUnsavedDraft(userId, doc.id, doc.content, content)
     autosave.schedule(doc.id, content)
   },
 
