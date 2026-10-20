@@ -6,6 +6,7 @@ export interface PrototypeTask {
   title: string
   objective: string
   assigneeName: string | null
+  assigneeId: string | null
   deletedAt: string | null
   status: TaskStatus
   blockedReason: string | null
@@ -44,9 +45,10 @@ export function readPrototypeTasks(userId: string, projectId: string): Prototype
         && typeof t.title === 'string' && typeof t.objective === 'string'
         && typeof t.status === 'string' && isTaskStatus(t.status)
         && (t.assigneeName === undefined || t.assigneeName === null || typeof t.assigneeName === 'string')
+        && (t.assigneeId === undefined || t.assigneeId === null || typeof t.assigneeId === 'string')
         && (t.deletedAt === undefined || t.deletedAt === null || typeof t.deletedAt === 'string')
     })
-    return valid.map((task) => ({...task, assigneeName: task.assigneeName ?? null, deletedAt: task.deletedAt ?? null}))
+    return valid.map((task) => ({...task, assigneeName: task.assigneeName ?? null, assigneeId: task.assigneeId ?? null, deletedAt: task.deletedAt ?? null}))
   } catch { return [] }
 }
 export function writePrototypeTasks(userId: string, projectId: string, tasks: PrototypeTask[]): boolean {
