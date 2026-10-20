@@ -17,6 +17,7 @@ import ProjectCreatePage from './pages/ProjectCreatePage'
 import DocumentPage from './pages/DocumentPage'
 import ProjectTasksPage from './pages/ProjectTasksPage'
 import AuditSourceSelectionPage from './pages/AuditSourceSelectionPage'
+import SpecialistRequestMockPage from './pages/SpecialistRequestMockPage'
 import SettingsPage from './pages/SettingsPage'
 import TrashPage from './pages/TrashPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -56,6 +57,7 @@ function App() {
           </Route>
           <Route path="/projects/:projectId/tasks" element={<ProjectTasksPage />} />
           <Route path="/projects/:projectId/audits/new" element={<AuditSourceSelectionPage />} />
+          <Route path="/projects/:projectId/specialists/request" element={<SpecialistRequestMockPage />} />
           <Route path="/projects/:projectId" element={<DocumentPage />} />
           <Route path="/projects/:projectId/:docType" element={<DocumentPage />} />
         </Route>
