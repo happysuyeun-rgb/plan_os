@@ -1,5 +1,6 @@
 -- S2 isolated development migration. Never apply to production before RLS testing.
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 create table public.audit_source_manifests (
  id uuid primary key default gen_random_uuid(),
  project_id uuid not null references public.projects(id) on delete cascade,
@@ -25,7 +26,7 @@ begin
    raise exception 'INVALID_SOURCE_SELECTION' using errcode = '22023';
  end if;
  select jsonb_agg(jsonb_build_object('documentId',d.id,'type',d.type,
-   'revision',d.updated_at,'digest','sha256:' || encode(digest(convert_to(d.content,'UTF8'),'sha256'),'hex')) order by d.id)
+   'revision',d.updated_at,'digest','sha256:' || encode(extensions.digest(convert_to(d.content,'UTF8'),'sha256'),'hex')) order by d.id)
  into v_sources from public.documents d where d.project_id=p_project_id and d.id=any(p_document_ids);
  if coalesce(jsonb_array_length(v_sources),0) <> cardinality(p_document_ids) then
    raise exception 'SOURCE_NOT_FOUND' using errcode = '22023';
@@ -47,7 +48,7 @@ begin
   select 1 from jsonb_array_elements(v_sources) as e
   left join public.documents d on d.id=(e->>'documentId')::uuid and d.project_id=v_project
   where d.id is null or to_jsonb(d.updated_at) <> (e->'revision')
-    or ('sha256:' || encode(digest(convert_to(d.content,'UTF8'),'sha256'),'hex')) <> (e->>'digest')
+    or ('sha256:' || encode(extensions.digest(convert_to(d.content,'UTF8'),'sha256'),'hex')) <> (e->>'digest')
  );
 end; $$;
 revoke all on function public.is_audit_source_manifest_current(uuid) from public;
