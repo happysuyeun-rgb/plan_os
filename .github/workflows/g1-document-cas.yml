@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/lib/api/documents.ts'
       - 'tests/document-cas-contract.test.mjs'
+      - 'tests/document-cas-behavior.test.mjs'
       - '.github/workflows/g1-document-cas.yml'
   workflow_dispatch:
 jobs:
@@ -16,6 +17,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: node --test tests/document-cas-contract.test.mjs
+      - run: node --test tests/document-cas-contract.test.mjs tests/document-cas-behavior.test.mjs
       - run: npm run build
       - run: npx eslint src/lib/api/documents.ts
