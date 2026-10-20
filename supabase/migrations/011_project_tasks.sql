@@ -54,7 +54,7 @@ begin
     end if;
     return new;
   end if;
-  if old.deleted_at is not null and new.deleted_at is null and public.get_project_role(old.project_id) <> 'owner' then
+  if old.deleted_at is not null and new.deleted_at is null and public.get_project_role(old.project_id) is distinct from 'owner' then
     raise exception 'ONLY_OWNER_MAY_RESTORE_TASK' using errcode = '42501';
   end if;
   if new.project_id is distinct from old.project_id
@@ -65,11 +65,17 @@ begin
   if old.deleted_at is not null and (new.deleted_at is not null or new.deleted_at <> old.deleted_at) then
     raise exception 'TASK_DELETED_REQUIRES_RESTORE' using errcode = '23514';
   end if;
-  if old.deleted_at is null and new.deleted_at is not null and public.get_project_role(old.project_id) <> 'owner' then
+  if old.deleted_at is null and new.deleted_at is not null and public.get_project_role(old.project_id) is distinct from 'owner' then
     raise exception 'ONLY_OWNER_MAY_DELETE_TASK' using errcode = '42501';
   end if;
   if new.version <> old.version + 1 then
     raise exception 'TASK_VERSION_CONFLICT' using errcode = '40001';
+  end if;
+  if old.deleted_at is not null and new.deleted_at is null and (
+    new.status is distinct from old.status or new.title is distinct from old.title
+    or new.objective is distinct from old.objective or new.assignee_user_id is distinct from old.assignee_user_id
+  ) then
+    raise exception 'RESTORE_ONLY_NO_CONTENT_CHANGE' using errcode = '23514';
   end if;
   if new.status is distinct from old.status and not (
     (old.status = 'todo' and new.status in ('in_progress','blocked'))
