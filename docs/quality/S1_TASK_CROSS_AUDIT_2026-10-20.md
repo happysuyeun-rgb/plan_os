@@ -11,7 +11,7 @@
 | S1-05 | P0 | 클라이언트 full-list replace는 여러 기기의 업데이트를 덮어씀 | 서버 모드에 단건 INSERT/UPDATE version CAS 도입; 로컬 모드는 데모만 |
 | S1-06 | P1 | owner-only 완료 상태 재오픈/사유 정책과 현재 done terminal이 불일치 | 첫 MVP에서는 done 재오픈 불가를 채택. 이후 owner 재오픈은 별도 감사 사건으로 구현 |
 | S1-07 | P0 | 멤버 제거/권한 변경 이후 업데이트 권한과 UI 캐시 불일치 가능 | RLS 재검증 필수, 프런트 캐시만 보안으로 간주하지 않음 |
-| S1-08 | P1 | AI 담당자 및 acceptance criteria, 이벤트/감사기록, 생성 멱등성 부재 | S1 후속 구현 필요. AI 할당은 실행 승인 아님 |
+| S1-08 | P1 | AI 담당자 및 acceptance criteria, 이벤트/감사기록, 생성 멱등성 부재 | **2026-10-21 정합화:** acceptance criteria UI/API/SQL 코드 및 감사 이벤트 스키마 초안 존재. AI 담당자·업무 상세·생성 멱등성·이력 UI·실 DB/E2E는 미완료. AI 할당은 실행 승인 아님 |
 | S1-09 | P1 | 전체 repo lint는 레거시 오류 다수. CI에서 S1만 강제 | S1 changed-file lint 필수 / repo 전체 lint 별도 비차단 기록 |
 | S1-10 | P0 | SQL 실제 실행, 동시 수정, owner/editor/viewer/outsider RLS 테스트 부재 | 운영 마이그레이션 금지. 격리 개발 DB 후 PASS 필요 |
 | S1-11 | P1 | 서버 모드 flag가 운영 배포 시 켜질 위험 | 개발 환경 내에서만 사용. 실제 운영 배포 시 별도 구성 검토 필수 |
@@ -24,3 +24,8 @@
 4. 전체 레거시 lint 문제 분리 처리하고 PR #20 검증 후 병합 여부 결정.
 
 **완료 판정:** 코드 작성/CI 통과와 배포/운영 적합 판정은 별개이다.
+
+## 2026-10-21 상태 점검 메모
+- PR #20은 main 병합 완료. 본 문서의 최초 감사 당시 PR 상태와 혼동 금지.
+- DB 011·012를 실제 운영에 적용하지 않았으며 SQL/권한·브라우저 E2E 미실행.
+- 후속 수정/검증 순서는 [통합 실행계획서 G0~G7](../plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md)를 기준으로 한다.
