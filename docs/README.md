@@ -1,3 +1,30 @@
+# PlanOS 3.0 문서 가이드 (2026-10-21 정리)
+
+> 이 페이지는 최신 문서를 찾아가기 위한 **색인**입니다. 설계·코드·테스트·운영 반영은 서로 다른 완료 단계입니다.
+
+## 현재 작업에서 먼저 확인할 문서
+1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
+2. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
+3. [서비스 기획서](product/SERVICE_PLAN_V1_2026-10-20.md) / [PRD](product/PRD.md) — 범위·고객가치
+4. [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 역할·비용·계약
+5. [MVP 구현 상세명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) — 상세 기술 계약
+
+## 폴더별 문서 정책
+- `product/`: 현재 제품 정의/요구사항
+- `ux/`: UX·IA·화면 흐름
+- `engineering/`: 데이터/서버/API·아키텍처 설계
+- `plans/`: 일정·업무 큐·실행계획
+- `quality/`: 결함·정합성 감사
+- `archive/`: 과거 버전 원문(현재 기준으로 사용 금지)
+
+[2026-10-21 문서 인벤토리와 이동 현황](DOCUMENT_INVENTORY_2026-10-21.md) · [아카이브 안내](archive/README.md)
+
+## 기존 문서 색인 보존
+
+아래는 정리 전 docs/README.md의 기존 내용입니다. 내용 중 과거 진행 상태와 링크는 최신 실행계획서와 대조해야 합니다.
+
+---
+
 # PlanOS 3.0 — 개발 문서 안내
 
 **최초 작성일:** 2026-10-14  
