@@ -63,6 +63,9 @@ const autosave = createDocumentAutosave<Document>({
       }
     })
   },
+  onCommitted: (documentId, content) => {
+    acknowledgedContent.set(documentId, content)
+  },
   onReplaced: (documentId, content) => {
     acknowledgedContent.set(documentId, content)
     useDocumentStore.setState((state) => {
