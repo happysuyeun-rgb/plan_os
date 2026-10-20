@@ -175,6 +175,11 @@ Content-Type: application/json
 - **API-21/22:** report 신규 artifact 저장은 서버만, 입력 문서 원본 변경 금지. machine verifier PASS/사용자 acceptance/출처 참조와 권한별 GET, artifact version/digest 고정. provider usage 관측·원가 원장 정산은 acceptance와 독립.
 - **P1-5 미완:** 정확한 URL/schema/status/HTTP 오류/OpenAPI·SQL·RLS·테스트는 아직 없음. [P1-2 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md) / [감사](../quality/PHASE1_CROSS_AUDIT_2026-10-19.md).
 
+### 2026-10-20 P1-5 구현 인계(설계안)
+- [API·DB 상세 계약 P1-5](AI_API_DB_CONTRACT_P1_5_2026-10-20.md) P5-01~16에서 계약 GET/PATCH, 유료 비동기 PM 계획 job/조회, approval 요청 서버 발행/상세/철회, 실행 이벤트 cursor, artifact 검토·수락 상태 GET, 사용량 기록·원가 대사 내부 API를 구체화.
+- 기존 API-05와 동기 planned 반환은 유료 plan-generation에 부적합하므로 실구현 전에 수정; API-20 decision과 승인 요청 생성, API-22 acceptance와 machine verdict는 별도 사건.
+- 명세 초안 완료일 뿐 OpenAPI 실제 schema/런타임 API/SQL/RLS 구현은 미실행.
+
 ## 10. 미결정
 - API 서버/호스팅·큐 공급자, 인증 세션 전달 방식, 상태 enum 최종 형태.
 - editor 승인 위임 정책, 계약/결제 법적 표현, 통화/크레딧 정산 규칙.
