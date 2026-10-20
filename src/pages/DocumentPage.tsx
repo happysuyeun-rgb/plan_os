@@ -73,6 +73,7 @@ export default function DocumentPage() {
     activeDocType,
     content,
     saveStatus,
+    recoveryConflicts,
     isReadOnly,
     isLoading,
     fetchDocuments,
@@ -575,9 +576,19 @@ export default function DocumentPage() {
   }
 
   const hasNoDocuments = availableTypes.length === 0 && !TEST_UNLOCK_ALL_DOCUMENTS
+  const conflictingDraft = activeDocumentId ? recoveryConflicts[activeDocumentId] : undefined
 
   return (
     <>
+      {conflictingDraft !== undefined && (
+        <section role="alert" className="mx-5 my-3 rounded-lg border border-amber-400 bg-amber-50 p-4 text-sm text-gray-900">
+          <h2 className="font-semibold">저장되지 않은 로컬 초안이 있습니다</h2>
+          <p className="my-2">서버 문서가 변경되어 자동 복원하지 않았습니다.
+            아래 원고를 복사하여 변경 내용을 비교하세요. 서버 문서는 그대로 유지됩니다.</p>
+          <textarea aria-label="충돌한 로컬 초안" readOnly value={conflictingDraft}
+            rows={6} className="w-full rounded border border-amber-300 bg-white p-2 font-mono text-xs" />
+        </section>
+      )}
       <DocumentLayout
         projectTitle={currentProject?.title ?? ''}
         canEditProjectTitle={canEditProjectTitle}
