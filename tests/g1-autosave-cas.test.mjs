@@ -65,3 +65,5 @@ test('explicit replacement updates baseline without replacing later edits',async
  assert.equal(committed,'server-version')
  assert.equal(replacementShown,false)
 })
+
+// Note: mock storage only; actual multi-client RLS/DB tests remain release blockers.
