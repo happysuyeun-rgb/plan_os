@@ -144,3 +144,11 @@
 - [ ] 동시성·권한·복원 원자성·브라우저/격리 DB 회귀 테스트.
 - [ ] PR #15/#19/#22 병합 (조건 충족 전 전부 보류).
 **미해결 P0:** 현재 실사용 `saveDocumentContent`는 blind update 유지. 조건부 API만 작성됐다고 완료 판정 금지.
+
+## 2026-10-21 G1-B 세부 작업 #3 — CAS 행동 테스트 및 선행 의존성 확인
+- [x] **선행 조건 발견:** main의 `documentStore.ts`는 전역 타이머 기반이며 `src/lib/documentAutosave.ts` 파일이 없음. PR #19의 초안 복구 기능은 이 문서별 저장 엔진에 의존. PR #22 API만 main에 머지하여도 기존 실제 자동저장은 보호되지 않음.
+- [x] PR #22에 `tests/document-cas-behavior.test.mjs` 추가: 정상 조건부 저장, 오래된 초안 충돌, 읽기 권한/대상 없음 케이스 **실행형 mock** 3건.
+- [x] GitHub Actions [#39496715024](https://github.com/happysuyeun-rgb/plan_os/actions/runs/39496715024) SUCCESS — 계약 테스트 + 동작 mock 테스트 + 빌드 + 변경 코드 린트.
+- [ ] **다음 작업 G1-B-04:** PR #15 저장 엔진의 기준 버전·동시쓰기 흐름과 PR #19 복구 경로를 공통 브랜치에서 조정하고, 문서별 마지막 서버 확인값을 통해 CAS로 저장하도록 실제 연결.
+- [ ] 원격 서버·실제 DB의 멀티클라이언트 동시성/RLS 및 복구 E2E는 미검증. 위 mock 테스트로 G1-B 완료 선언 금지.
+- [ ] PR #15/#19/#22 Draft 유지; 사용자 데이터 보존 테스트 통과 전 main 기능 병합 금지.
