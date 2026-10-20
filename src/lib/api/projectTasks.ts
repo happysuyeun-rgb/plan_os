@@ -59,3 +59,25 @@ export async function patchServerTask(
   if (!data) throw new TaskConflictError()
   return toTask(data as DbTask)
 }
+
+export type TaskEvent = {
+  id: number
+  project_id: string
+  task_id: string
+  actor_id: string | null
+  event_type: 'created' | 'updated' | 'status_changed' | 'deleted' | 'restored'
+  previous_status: TaskStatus | null
+  next_status: TaskStatus
+  version: number
+  happened_at: string
+}
+
+/** Read-only history; records are written exclusively by a database trigger. */
+export async function listServerTaskEvents(projectId: string, taskId: string): Promise<TaskEvent[]> {
+  const { data, error } = await supabase.from('project_task_events')
+    .select('id,project_id,task_id,actor_id,event_type,previous_status,next_status,version,happened_at')
+    .eq('project_id', projectId).eq('task_id', taskId)
+    .order('happened_at', { ascending: false }).limit(100)
+  if (error) throw error
+  return (data ?? []) as TaskEvent[]
+}
