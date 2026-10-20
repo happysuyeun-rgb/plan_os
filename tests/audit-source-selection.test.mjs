@@ -22,3 +22,14 @@ test('rejects deleted, unsaved, and unversioned sources', () => {
   assert.equal(validate('p1',[candidate('a'),candidate('b',{hasUnsavedChanges:true})]).reason,'UNSAVED_SOURCE')
   assert.equal(validate('p1',[candidate('a'),candidate('b',{digest:''})]).reason,'MISSING_SNAPSHOT')
 })
+
+test('manifest becomes stale after document edit or removal', async () => {
+  const textSource = readFileSync(new URL('../src/lib/auditManifestContract.ts', import.meta.url), 'utf8')
+  const script = ts.transpileModule(textSource, {compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
+  const {detectStaleSources} = await import('data:text/javascript;base64,'+Buffer.from(script).toString('base64'))
+  const sources=[candidate('a'),candidate('b')]
+  const saved={projectId:'p1',sources}
+  assert.deepEqual(detectStaleSources(saved,sources),[])
+  assert.deepEqual(detectStaleSources(saved,[candidate('a',{revision:'v2'}),candidate('b')]),['a'])
+  assert.deepEqual(detectStaleSources(saved,[candidate('a')]),['b'])
+})
