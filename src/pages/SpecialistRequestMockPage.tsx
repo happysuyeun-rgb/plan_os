@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
-import { MOCK_SPECIALIST, createMockDraft, previewMockContract, type MockRequest, type MockContractReview } from '../lib/mockSpecialistRequest'
+import { MOCK_SPECIALIST, createMockDraft, previewMockContract, getMockBudgetReview, type MockRequest, type MockContractReview } from '../lib/mockSpecialistRequest'
 
 export default function SpecialistRequestMockPage() {
   const { projectId } = useParams()
@@ -14,6 +14,7 @@ export default function SpecialistRequestMockPage() {
   const [error, setError] = useState('')
   const [noticeRead, setNoticeRead] = useState(false)
   const [contractPreview, setContractPreview] = useState<MockContractReview | null>(null)
+  const budgetReview = contractPreview ? getMockBudgetReview(contractPreview) : null
   const [verifiedProjectId, setVerifiedProjectId] = useState<string | null>(null)
   const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,7 +85,7 @@ export default function SpecialistRequestMockPage() {
               <button type="button" onClick={reset} className="rounded-md border px-4 py-2">초기화</button>
             </div>
           </section>
-          {contractPreview && <section role="status" aria-label="모의 계약 검토" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm"><h2 className="font-semibold">모의 계약 조건 검토</h2><p>검토 상태: {contractPreview.status} · 실제 계약 아님 · 실제 AI 실행 불가 · 외부 데이터 전송 불가 · 과금 불가</p><p className="mt-2">정식 동의·철회·예산 상한과 서버 검증은 아직 구현되지 않았습니다.</p></section>}
+          {contractPreview && <section role="status" aria-label="모의 계약 검토" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm"><h2 className="font-semibold">모의 계약 조건 검토</h2><p>검토 상태: {contractPreview.status} · 실제 계약 아님 · 실제 AI 실행 불가 · 외부 데이터 전송 불가 · 과금 불가</p><p className="mt-2">정식 동의·철회·예산 상한과 서버 검증은 아직 구현되지 않았습니다.</p><div className="mt-3 rounded border border-amber-300 bg-white p-3"><h3 className="font-semibold">예상 비용·예산 검토 (Mock)</h3><p>예상 비용: 산정 불가 · 최대 청구금액: 미정 · 결제: 불가</p><p className="mt-1">{budgetReview?.reason}</p></div></section>}
           {draft && (
             <section aria-label="업무 요청 초안" className="mt-6 rounded-xl border border-green-300 bg-green-50 p-5">
               <h2 className="text-lg font-bold">요청 초안 생성됨 · 실행 대기 아님</h2>
