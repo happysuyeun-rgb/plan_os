@@ -93,6 +93,11 @@
 - [ ] 실제 Figma/브라우저 와이어프레임/모바일 접근성·서버 API/DB 연결·사용자 승인·실제 테스트는 미실행. 제품 출시/Phase 1 종료 아님.
 - **다음:** P1-4 서버 worker/queue/ModelGateway 기술 ADR → P1-5 SQL/OpenAPI/승인·원가 계약 → P1-6 Threat Model/QA/Runbook.
 
+## 2026-10-20 P1-3 재감사 및 P1-4 상세 아키텍처
+- [x] [UXA-01~10 UX 재감사](../quality/PHASE1_UX_ARCH_AUDIT_2026-10-20.md)와 [ADR-002 설계 초안](../engineering/AI_EXECUTION_ADR_002_2026-10-20.md) 문서화. 사용자 계약/모델 비용 동의 선행, plan 비동기 job·R0/R1, run+outbox+예산 예약 원자성, 외부 공급자 응답 유실·cost pending 복구.
+- [ ] 워커/호스트·provider 실제 선정/서비스 조건·실증·최종 기술 승인, P1-3B 모바일/접근성/실제 UI 검증.
+- **다음 설계:** P1-5 async API/원장 SQL/RLS → P1-6 위협 모델·테스트·릴리스 런북. 기존 Phase 0 데이터 손실/권한 누락 닫기 전 신규 코드·운영 투입 금지.
+
 ## 구현 전 필수 결정 및 누락 사항 (기존 준비도 문서 통합)
 | ID | 결정할 사항 | 통과 기준 |
 |---|---|---|
