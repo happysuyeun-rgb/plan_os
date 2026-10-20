@@ -1,0 +1,39 @@
+name: S1 task checks
+on:
+  pull_request:
+    paths:
+      - 'src/lib/taskPrototype.ts'
+      - 'src/lib/api/projectTasks.ts'
+      - 'src/lib/api/auditManifests.ts'
+      - 'supabase/migrations/012_audit_source_manifests.sql'
+      - 'supabase/migrations/011_project_tasks.sql'
+      - 'src/pages/ProjectTasksPage.tsx'
+      - 'src/App.tsx'
+      - 'tests/task-prototype.test.mjs'
+      - 'tests/task-sql-contract.test.mjs'
+      - 'tests/audit-source-selection.test.mjs'
+      - 'src/lib/auditSourceSelection.ts'
+      - 'src/lib/auditManifestContract.ts'
+      - 'src/pages/AuditSourceSelectionPage.tsx'
+      - 'package.json'
+      - '.github/workflows/s1-task-check.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:s1
+      - run: node --test tests/task-sql-contract.test.mjs
+      - run: node --test tests/audit-source-selection.test.mjs
+      - run: npm run build
+      - name: Lint S1 changed code
+        run: npx eslint src/lib/api/auditManifests.ts src/lib/auditManifestContract.ts src/pages/AuditSourceSelectionPage.tsx src/lib/auditSourceSelection.ts src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
+      - name: Existing repository lint baseline (non-blocking)
+        run: npm run lint
+        continue-on-error: true
