@@ -19,7 +19,7 @@ function memoryStorage() {
 function exampleTask(projectId='project-1') {
   return {
     id: 'task-1', projectId, title: 'Review PRD', objective: 'Review',
-    assigneeName: null, assigneeId: null, deletedAt: null,
+    assigneeName: null, assigneeId: null, deletedAt: null, acceptanceCriteria: ['verified output'],
     status: 'todo', blockedReason: null,
     createdAt: '2026-10-20T00:00:00.000Z', updatedAt: '2026-10-20T00:00:00.000Z',
   }
@@ -60,4 +60,12 @@ test('malformed storage and mismatched project records are discarded', () => {
   assert.deepEqual(readPrototypeTasks('user-a', 'project-1'), [])
   store.setItem('planos:s1-prototype:v1:user-a:project-1', JSON.stringify([exampleTask('project-2')]))
   assert.deepEqual(readPrototypeTasks('user-a', 'project-1'), [])
+})
+
+test('legacy tasks receive empty acceptance criteria', () => {
+  globalThis.localStorage = memoryStorage()
+  const old = exampleTask()
+  delete old.acceptanceCriteria
+  assert.equal(writePrototypeTasks('legacy', 'project-1', [old]), true)
+  assert.deepEqual(readPrototypeTasks('legacy', 'project-1')[0].acceptanceCriteria, [])
 })
