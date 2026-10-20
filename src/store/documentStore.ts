@@ -11,7 +11,7 @@ import {
 import { useAuthStore } from './authStore'
 import { updateProject as apiUpdateProject } from '../lib/api/projects'
 import { createDocumentAutosave } from '../lib/documentAutosave'
-import { getUnsavedDraft, storeUnsavedDraft, clearUnsavedDraft } from '../lib/unsavedDraft'
+import { getUnsavedDraft, storeUnsavedDraft, clearUnsavedDraft, acknowledgeSavedDraft } from '../lib/unsavedDraft'
 import { commitChatDocumentRPC, type AtomicChatEditResult } from '../lib/api/chat'
 
 interface DocumentState {
@@ -41,7 +41,7 @@ const autosave = createDocumentAutosave<Document>({
   persist: apiSaveDocumentContent,
   onSaved: (documentId, savedContent, updated) => {
     const userId = useAuthStore.getState().user?.id
-    if (userId) clearUnsavedDraft(userId, documentId, savedContent)
+    if (userId) acknowledgeSavedDraft(userId, documentId, savedContent)
     useDocumentStore.setState((state) => {
       const entry = Object.entries(state.documents).find(([, doc]) => doc?.id === documentId)
       if (!entry) return state // e.g. user has switched projects
@@ -51,7 +51,7 @@ const autosave = createDocumentAutosave<Document>({
           ...state.documents,
           [type]: { ...updated, content: local.content },
         },
-        saveStatus: state.activeDocType === type ? 'saved' : state.saveStatus,
+        saveStatus: state.activeDocType === type ? autosave.getStatus(documentId) : state.saveStatus,
       }
     })
   },
