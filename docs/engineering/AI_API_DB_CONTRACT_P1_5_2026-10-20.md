@@ -104,6 +104,12 @@
 
 **완료 분리:** `P5T-01~12`는 **테스트 명세 정의만 완료, 실제 서버·DB·CI·브라우저 실행은 0건**.
 
+### 2026-10-20 재감사로 정정한 구현 계약
+- **신규 생성 POST:** `Idempotency-Key` + canonical payload digest와 owner/contract/manifest 조건 버전 필수. **아직 생성되지 않은 리소스에는 If-Match 의무가 없음**. PATCH·기존 리소스 승인/취소·상태 변경은 expectedVersion/If-Match와 idempotency를 결합한다. 동일 요청 키+다른 payload → 409.
+- **P5-08 승인 요청 생성 경로 정정:** `/api/v1/projects/:p/approvals/requests`를 브라우저 호출 가능한 API처럼 구현하지 않는다. **서버 내부 Policy/Approval service 명령** `createApprovalRequest(projectId,actionDigest,actorContext,...)`으로만 호출, 사용자는 P5-09 조회와 API-20 decide·P5-10 revoke만 권한에 따라 사용. 내부 HTTP 노출 여부/주소는 P1-5B 결정; 외부 권한 우회 불가.
+- **T4 예산 계산:** 예약과 이미 관측된 provider cost가 같은 obligation이면 이중 차감하지 않게 obligation/coverage relationship를 별도 모델링하고, `unknown provider cost`는 보수적 pending liability로 보유. 실제 SQL 수식/동시 테스트 전 출시 불가.
+- **미확정:** 유료 PM plan generation의 ai_runs 통합 vs 별도 테이블, provider 중복 과금 대응, R1 Storage/DB 원자성, CAS/tenant composite FK, 데이터 삭제·보존. [재감사 P5A-01~13](../quality/PHASE1_P5_REAUDIT_2026-10-20.md), [Threat Model](../quality/THREAT_MODEL_2026-10-20.md), [QA 계획](../quality/TEST_PLAN_2026-10-20.md), [런북](../operations/RELEASE_RUNBOOK_2026-10-20.md) 인계.
+
 ## 8. 열린 설계 차단 및 다음 순서
 - [x] 신규 API 보완 16건, DB 관계/제약·역할·상태·트랜잭션/테스트 12건 작성.
 - [ ] 정확한 JSON Schema/OpenAPI 기계 검증 및 generated types, 실제 SQL DDL/함수/FK/RLS/lock 구현, provider/webhook/비동기 사용량·보존·삭제 스펙 확정.
