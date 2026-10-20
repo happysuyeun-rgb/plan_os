@@ -8,6 +8,9 @@ import {
   type PrototypeTask, type TaskStatus,
 } from '../lib/taskPrototype'
 
+import { listServerTasks, createServerTask, patchServerTask, TaskConflictError } from '../lib/api/projectTasks'
+
+const useServerTasks = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 const labels: Record<TaskStatus, string> = {
   todo: '대기', in_progress: '진행 중', in_review: '검토 중', blocked: '차단', done: '완료',
 }
@@ -20,6 +23,7 @@ export default function ProjectTasksPage() {
   const members = useMemberStore((state) => state.members)
   const fetchMembers = useMemberStore((state) => state.fetchMembers)
   const [tasks, setTasks] = useState<PrototypeTask[]>([])
+  const [versions, setVersions] = useState<Record<string, number>>({})
   const [title, setTitle] = useState('')
   const [objective, setObjective] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
@@ -38,9 +42,10 @@ export default function ProjectTasksPage() {
     if (!projectId || !userId) return
     void setCurrentProject(projectId).then(() => {
       if (!mounted) return
-      void prototypeTaskRepository.list(userId, projectId).then((items) => {
+      void (useServerTasks ? listServerTasks(projectId) : prototypeTaskRepository.list(userId, projectId)).then((items) => {
         if (!mounted) return
         setTasks(items)
+        setVersions(Object.fromEntries(items.map((t) => [t.id, 'version' in t ? Number(t.version) : 0])))
         setReady(true)
       }).catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
     }).catch(() => { if (mounted) setError('프로젝트를 확인할 수 없습니다.') })
@@ -58,12 +63,34 @@ export default function ProjectTasksPage() {
     if (!projectId || !userId || !canEdit || saving) return false
     setSaving(true)
     try {
-      await prototypeTaskRepository.replace(userId, projectId, next)
-      setTasks(next)
+      if (useServerTasks) {
+        const previous = tasks
+        const before = new Map(previous.map((t) => [t.id, t]))
+        const newTask = next.find((t) => !before.has(t.id))
+        if (newTask) {
+          const saved = await createServerTask(projectId, { title: newTask.title, objective: newTask.objective, assigneeId: newTask.assigneeId })
+          setTasks([saved, ...previous])
+          setVersions((v) => ({ ...v, [saved.id]: saved.version }))
+        } else {
+          const changed = next.find((t) => { const old = before.get(t.id); return old && JSON.stringify(old) !== JSON.stringify(t) })
+          if (!changed) return true
+          const version = versions[changed.id]
+          if (!version) throw new TaskConflictError()
+          const saved = await patchServerTask(projectId, changed.id, version, {
+            title: changed.title, objective: changed.objective, assigneeId: changed.assigneeId,
+            status: changed.status, blockedReason: changed.blockedReason, deletedAt: changed.deletedAt,
+          })
+          setTasks(previous.map((t) => t.id === saved.id ? saved : t))
+          setVersions((v) => ({ ...v, [saved.id]: saved.version }))
+        }
+      } else {
+        await prototypeTaskRepository.replace(userId, projectId, next)
+        setTasks(next)
+      }
       setError('')
       return true
-    } catch {
-      setError('업무 저장에 실패했습니다. 변경사항을 다시 확인하세요.')
+    } catch (failure) {
+      setError(failure instanceof TaskConflictError ? failure.message : '업무 저장에 실패했습니다. 변경사항을 다시 확인하세요.')
       return false
     } finally {
       setSaving(false)
@@ -128,8 +155,8 @@ export default function ProjectTasksPage() {
       <header>
         <h1 className="text-2xl font-bold text-gray-900">프로젝트 업무 관리</h1>
         <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900" role="note">
-          S1 개발 시안: 이 화면의 업무는 현재 브라우저에만 저장됩니다.
-          팀 공유·서버 저장·권한 통합은 아직 제공하지 않습니다.
+          {useServerTasks ? '개발 DB 테스트 모드: 업무를 서버에 저장합니다. 운영 환경에서는 사용하지 마세요.' : 'S1 개발 시안: 이 화면의 업무는 현재 브라우저에만 저장됩니다.'}
+          실제 운영용 업무 관리·권한 통합은 아직 검증되지 않았습니다.
         </p>
       </header>
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
