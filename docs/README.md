@@ -34,6 +34,9 @@
 
 - [P1-5 API·DB 상세 계약 v0.1](engineering/AI_API_DB_CONTRACT_P1_5_2026-10-20.md) — 신규 보강 API 16건, 상태·트랜잭션·DB/RLS 제약, 12개 검증 케이스(정의만), 구현·승인 미완료.
 
+- [P1-5 재감사 P5A-01~13](quality/PHASE1_P5_REAUDIT_2026-10-20.md) — 최초 생성 If-Match·서버 승인 요청 범위/예산 중복 차감 등 누락 정리.
+- [P1-6 보안 위협 모델](quality/THREAT_MODEL_2026-10-20.md) · [QA 테스트 계획](quality/TEST_PLAN_2026-10-20.md) · [출시·롤백 런북](operations/RELEASE_RUNBOOK_2026-10-20.md) — 문서 초안. 보안/테스트/배포 완료 아님.
+
 ## 교차 문서 품질 점검
 - [2026-10-16 통합 문서 감사](quality/DOCUMENT_REVIEW_2026-10-16.md) — 12개 문서별 누락·충돌, P0~P2 결함, 완료·미완료·다음 수정 우선순위. **기획/보안/개발 검증 통과가 아니라 문서 품질 점검 결과**.
 - [2026-10-19 첫 전문 AI 교차 감사](quality/PHASE1_CROSS_AUDIT_2026-10-19.md) — 불일치·누락 AUD-01~12, 문서 정정 범위와 **미해결 API/DB·승인·보안·실제 테스트** 확인.
