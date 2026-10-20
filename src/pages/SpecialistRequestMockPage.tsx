@@ -15,19 +15,20 @@ export default function SpecialistRequestMockPage() {
   const [noticeRead, setNoticeRead] = useState(false)
   const [contractPreview, setContractPreview] = useState<MockContractReview | null>(null)
   const [verifiedProjectId, setVerifiedProjectId] = useState<string | null>(null)
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     if (!projectId || !userId) return
     void setCurrentProject(projectId)
-      .then(() => { if (mounted) setVerifiedProjectId(projectId) })
-      .catch(() => { if (mounted) { setVerifiedProjectId(null); setError('프로젝트를 불러올 수 없습니다.') } })
+      .then(() => { if (mounted) { setVerifiedProjectId(projectId); setVerifiedUserId(userId) } })
+      .catch(() => { if (mounted) { setVerifiedProjectId(null); setVerifiedUserId(null); setError('프로젝트를 불러올 수 없습니다.') } })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
   }, [projectId, userId, setCurrentProject])
 
-  const accessible = Boolean(userId && projectId && verifiedProjectId === projectId && currentProject?.id === projectId && !currentProject.deleted_at)
+  const accessible = Boolean(userId && projectId && verifiedProjectId === projectId && verifiedUserId === userId && currentProject?.id === projectId && !currentProject.deleted_at)
   // Mock approval is restricted to the project owner until full membership/RLS is validated.
   const owner = accessible && currentProject?.user_id === userId
   const submit = () => {
