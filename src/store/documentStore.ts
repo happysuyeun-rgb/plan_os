@@ -22,6 +22,7 @@ interface DocumentState {
   isReadOnly: boolean
   isLoading: boolean
   chatWritingDocumentId: string | null
+  recoveryConflicts: Record<string, string>
 
   fetchDocuments: (projectId: string) => Promise<void>
   setActiveDocType: (type: DocumentType) => void
@@ -87,6 +88,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   isReadOnly: false,
   isLoading: false,
   chatWritingDocumentId: null,
+  recoveryConflicts: {},
 
   fetchDocuments: async (projectId) => {
     const sequence = ++fetchSequence
@@ -96,6 +98,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       if (sequence !== fetchSequence) return // ignore an older project's response
       const map: Partial<Record<DocumentType, Document>> = {}
       const userId = useAuthStore.getState().user?.id
+      const recoveryConflicts: Record<string, string> = {}
       for (const doc of docs) {
         const cached = get().documents[doc.type]
         if (cached?.id === doc.id && autosave.getStatus(doc.id) !== 'saved') {
@@ -109,6 +112,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           autosave.schedule(doc.id, draft.content)
         } else {
           map[doc.type] = doc
+          if (draft && draft.base !== doc.content && draft.content !== doc.content) {
+            recoveryConflicts[doc.id] = draft.content
+          }
           if (draft && userId && draft.content === doc.content) {
             clearUnsavedDraft(userId, doc.id, doc.content)
           }
@@ -118,6 +124,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const active = map[activeDocType]
       set({
         documents: map,
+        recoveryConflicts,
         content: active?.content ?? '',
         isLoading: false,
         saveStatus: autosave.getStatus(active?.id),
