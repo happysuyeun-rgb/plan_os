@@ -1,12 +1,12 @@
 import { supabase } from '../supabase'
 
 /** Draft server contract. Use only with isolated development database migrated to 012. */
-export async function createAuditManifest(projectId: string, documentIds: string[]): Promise<string> {
+export async function createAuditManifest(projectId: string, documentIds: string[], requestKey: string): Promise<string> {
   if (documentIds.length < 2 || documentIds.length > 20 || new Set(documentIds).size !== documentIds.length) {
     throw new Error('검수할 문서를 중복 없이 2~20개 선택하세요.')
   }
   const { data, error } = await supabase.rpc('create_audit_source_manifest', {
-    p_project_id: projectId, p_document_ids: documentIds,
+    p_project_id: projectId, p_document_ids: documentIds, p_request_key: requestKey,
   })
   if (error) throw error
   if (typeof data !== 'string') throw new Error('문서 스냅샷 생성 결과가 올바르지 않습니다.')
