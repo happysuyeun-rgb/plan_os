@@ -32,6 +32,8 @@ try {
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: '계약 조건 모의 검토' }).click()
   await page.getByText('검토 상태: review_only', { exact: false }).waitFor()
+  await page.getByText('예상 비용: 산정 불가', { exact: false }).waitFor()
+  await page.getByText('최대 청구금액: 미정', { exact: false }).waitFor()
   await page.getByRole('button', { name: '초안 취소' }).click()
   assert.equal(await page.getByText('검토 상태: review_only', { exact: false }).count(), 0)
   await page.reload()
