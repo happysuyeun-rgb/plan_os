@@ -4,6 +4,9 @@
 
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
 
+## 사업전략실 별도 검증 트랙
+- [시장·경쟁·고객 구매 동기 및 Go-to-Market 실행계획 v1.0](plans/PLANOS_BUSINESS_VALIDATION_STRATEGY_2026-10-21.md) — 개발 완료와 별개로 수요·가격·경쟁 실증 관리(상용 출시/가격 확정 아님).
+
 ## 현재 작업에서 먼저 확인할 문서
 1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
 2. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
