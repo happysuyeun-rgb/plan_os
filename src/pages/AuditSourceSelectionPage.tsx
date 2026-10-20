@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchDocuments } from '../lib/api/documents'
+import { createAuditManifest, isAuditManifestCurrent } from '../lib/api/auditManifests'
 import { useDocumentStore } from '../store/documentStore'
 import { useProjectStore } from '../store/projectStore'
 import { useAuthStore } from '../store/authStore'
 import { DOCUMENT_TYPE_LABELS, type Document } from '../types'
 import { validateAuditSourceSelection, type AuditSourceCandidate } from '../lib/auditSourceSelection'
 
+const enableManifest = import.meta.env.DEV && import.meta.env.VITE_S2_MANIFEST_RPC === 'true'
 const errorLabels = {
   NEED_TWO_SOURCES: '검수할 문서를 2개 이상 선택해야 합니다.',
   DUPLICATE_SOURCE: '같은 문서를 중복 선택할 수 없습니다.',
@@ -33,6 +35,8 @@ export default function AuditSourceSelectionPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [checked, setChecked] = useState(false)
+  const [manifestId, setManifestId] = useState('')
+  const [persisting, setPersisting] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -46,6 +50,7 @@ export default function AuditSourceSelectionPage() {
   const accessible = currentProject?.id === projectId && currentProject?.deleted_at === null
   const toggle = (id: string) => {
     setChecked(false)
+    setManifestId('')
     setCandidates([])
     setSelected((current) => current.includes(id) ? current.filter((v) => v !== id) : [...current, id])
   }
@@ -53,6 +58,7 @@ export default function AuditSourceSelectionPage() {
   const verify = async () => {
     if (!projectId || !accessible) return
     setChecked(false)
+    setManifestId('')
     setError('')
     try {
       // Always re-read server data before local preflight. This is not a server-side
@@ -82,6 +88,18 @@ export default function AuditSourceSelectionPage() {
     }
   }
 
+  const persistManifest = async () => {
+    if (!enableManifest || !projectId || !checked || persisting) return
+    setPersisting(true)
+    setError('')
+    try {
+      const id = await createAuditManifest(projectId, candidates.map((d) => d.id))
+      const current = await isAuditManifestCurrent(id)
+      if (!current) { setError('문서가 변경되었습니다. 다시 검증해 주세요.'); setChecked(false); return }
+      setManifestId(id)
+    } catch { setError('서버 문서 스냅샷 저장에 실패했습니다. 개발 DB 설정과 접근 권한을 확인하세요.') }
+    finally { setPersisting(false) }
+  }
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-6 py-10">
       <Link to={projectId ? `/projects/${projectId}/tasks` : '/projects'} className="text-sm text-gray-600 hover:underline">← 업무 관리</Link>
@@ -123,6 +141,8 @@ export default function AuditSourceSelectionPage() {
             </div>
           ))}
           <p className="text-sm text-gray-600">다음 단계: 서버에서 문서 소속과 버전·해시를 재확인하고 불변 manifest를 생성합니다.</p>
+          {enableManifest && <button type="button" disabled={persisting || !!manifestId} onClick={() => { void persistManifest() }} className="rounded border px-4 py-2 text-sm">격리 개발 DB에 스냅샷 생성</button>}
+          {manifestId && <p className="break-all text-sm">서버 스냅샷 ID: {manifestId} (실행 승인 아님)</p>}
         </section>}
       </>}
     </main>
