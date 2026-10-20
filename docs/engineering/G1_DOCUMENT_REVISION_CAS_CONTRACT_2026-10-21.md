@@ -16,3 +16,8 @@ Status: DRAFT. No database migration executed. No production deployment.
 - Integrate with the existing autosave and recovery branches only after these checks.
 
 The SQL file 013_document_revision_cas_DRAFT.sql illustrates the contract but is NOT a ready-to-run migration. Do not apply it until cross-writer protection and isolated tests are complete.
+
+## G1-B-06 addendum
+- DRAFT 013 now illustrates a BEFORE UPDATE trigger deriving revision on every content change. The CAS RPC does not increment again.
+- This trigger cannot stop legacy blind updates from overwriting newer content. Writer-by-writer conditional mutation and permission checks remain release blockers.
+- [Document writer audit](G1_DOCUMENT_WRITER_AUDIT_2026-10-21.md) records code paths and remaining inspection work.
