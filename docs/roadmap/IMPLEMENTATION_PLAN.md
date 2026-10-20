@@ -88,6 +88,11 @@
 - **다음:** P1-3 UX_FLOWS → P1-4 워커/ModelGateway/원장 ADR → P1-5 API/OpenAPI·DB/RLS → P1-6 Threat Model/TEST_PLAN/Runbook → P1-7 최종 대조. Phase 0 완료 및 사용자 운영 승인 전 Phase 2 코드/DB 실투입 금지.
 - **기간:** 기존 3~6 Phase 1 전담 작업일·43~79 전체 개발 작업일은 10/16 잠정치. 정책 승인·실제 검증에 따라 재산정 필요, 이 문서 진척만으로 일정 단축하지 않는다.
 
+## 2026-10-20 P1-3 UX 와이어플로 초안
+- [x] [UX_FLOWS](../ux/UX_FLOWS.md) — 최초 전문 AI 사용자 동선/화면·권한·승인·실패 복구, N11 최종 수락 CTA·N09/N12 승인 이벤트 단일화, UX-01~12 명세.
+- [ ] 실제 Figma/브라우저 와이어프레임/모바일 접근성·서버 API/DB 연결·사용자 승인·실제 테스트는 미실행. 제품 출시/Phase 1 종료 아님.
+- **다음:** P1-4 서버 worker/queue/ModelGateway 기술 ADR → P1-5 SQL/OpenAPI/승인·원가 계약 → P1-6 Threat Model/QA/Runbook.
+
 ## 구현 전 필수 결정 및 누락 사항 (기존 준비도 문서 통합)
 | ID | 결정할 사항 | 통과 기준 |
 |---|---|---|
