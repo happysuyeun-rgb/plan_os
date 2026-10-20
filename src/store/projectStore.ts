@@ -147,6 +147,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   setCurrentProject: async (id) => {
+    // Isolated browser E2E only: never enabled in a production build.
+    if (import.meta.env.DEV && import.meta.env.VITE_S3_E2E_FIXTURE === 'true') {
+      const viewer = id === 'fixture-viewer'
+      const project = id.startsWith('fixture-') && id !== 'fixture-missing' ? {
+        id, user_id: viewer ? 'some-other-owner' : 'local-dev-user',
+        title: 'S3 E2E fixture', description: '', service_type: 'mock', target_user: '',
+        memory_summary: '', chat_title: '', interview_answers: {},
+        deleted_at: id === 'fixture-deleted' ? new Date(0).toISOString() : null,
+        deleted_by: null, created_at: new Date(0).toISOString(), updated_at: new Date(0).toISOString(),
+      } : null
+      set({ currentProject: project })
+      return
+    }
     const project = await apiFetchProject(id)
     set({ currentProject: project })
   },
