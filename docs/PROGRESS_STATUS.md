@@ -34,6 +34,13 @@
 - [ ] **P1-3B 최종 검증:** 와이어프레임 시안·모바일/키보드/스크린리더 실제 테스트, API/SQL 화면 동작 연결, 정책·사용자 최종 승인 및 UX-01~12 실제 실행 미완료.
 - [ ] **다음:** P1-4 영속 worker/queue/ModelGateway/원가 사용량 ADR, P1-5 서버 API/DB, P1-6 QA/보안/출시. Phase 0 안전성 문제와 main/운영 승인 미완료.
 
+### 2026-10-20 Phase 1 P1-3 재감사 + P1-4 아키텍처 초안 (최신)
+- [x] **P1-3 UX 누락 재감사:** [UXA-01~10](quality/PHASE1_UX_ARCH_AUDIT_2026-10-20.md) 발견/조치·미해결 검증 기록. UI 실패→재실행은 무제한 자동 재시도가 아니라 서버 원가·상태 대사와 owner 승인 후 제한 실행. N05 임시 선택·PM 비용/계약·N09/N12 동일 승인/N11 단일 수락·브라우저 복귀/권한 캐시 점검.
+- [x] **P1-4A 상세 구조 설계 초안:** [AI_EXECUTION_ADR_002](engineering/AI_EXECUTION_ADR_002_2026-10-20.md)에 BFF/Auth Policy, 영속 run+budget reservation+outbox, 단일 lease worker, 공급자 어댑터 ModelGateway, R0 문서 read/R1 검증 산출물 write, 감사·비용 원장/재시도/장애 복구와 격리 PoC 검증 게이트 작성.
+- [ ] **P1-4B 기술 확정/검증:** 실제 worker 호스트·queue 서비스·모델/provider 데이터 처리/가격·PM plan job 스키마·예산 트랜잭션 선택/승인, 격리 worker crash/중복/예산/RLS 테스트 미실행.
+- [ ] **P1-3B:** 실제 UI 와이어프레임·모바일/접근성·API 연계/실사용 검증. Phase 0/1 전체 종료, main·운영 DB·배포 미실행.
+- **다음:** P1-5 상세 OpenAPI/SQL·RLS/승인/원가 상태 계약, P1-6 위협모델/QA/릴리스 런북, P1-7 정합성 재검수.
+
 ## 전체 로드맵
 | 단계 | 진행 상태 | 완료한 것 | 미완료·다음 확인 |
 |---|---|---|---|
