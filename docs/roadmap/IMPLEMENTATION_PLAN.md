@@ -103,6 +103,11 @@
 - [ ] 실제 OpenAPI validation, SQL DDL/RLS/worker/비용 대사 구현, 통합·E2E QA와 승인. Phase 0 데이터 안전성 선행 게이트 유지.
 - **다음:** P1-6 Threat Model·TEST_PLAN·RELEASE_RUNBOOK → P1-7 전체 FR/TF/UX/API/DB/test 대조.
 
+## 2026-10-20 P1-5 재감사 + P1-6 보안/QA/운영 런북 초안
+- [x] [P1-5 재감사 P5A-01~13](../quality/PHASE1_P5_REAUDIT_2026-10-20.md), [Threat Model](../quality/THREAT_MODEL_2026-10-20.md), [TEST_PLAN](../quality/TEST_PLAN_2026-10-20.md), [RELEASE_RUNBOOK](../operations/RELEASE_RUNBOOK_2026-10-20.md). 서버 승인/원가/멀티테넌트와 Phase 0 회귀·롤백 게이트 연결.
+- [ ] 실제 OpenAPI/DDL/RLS/브라우저/worker/원가/복구 테스트, 공급자 약관·고객 정책·운영 승인 미완료. 문서상 [x]를 릴리스 승인으로 사용 불가.
+- **다음:** P1-7 전체 FR/TF/UI/API/DB/테스트 추적성 최종 감사 및 미결정 우선순위 고정.
+
 ## 구현 전 필수 결정 및 누락 사항 (기존 준비도 문서 통합)
 | ID | 결정할 사항 | 통과 기준 |
 |---|---|---|
