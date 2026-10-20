@@ -5,6 +5,7 @@ export interface PrototypeTask {
   projectId: string
   title: string
   objective: string
+  acceptanceCriteria: string[]
   assigneeName: string | null
   assigneeId: string | null
   deletedAt: string | null
@@ -43,12 +44,13 @@ export function readPrototypeTasks(userId: string, projectId: string): Prototype
       const t = x as Partial<PrototypeTask>
       return t.projectId === projectId && typeof t.id === 'string'
         && typeof t.title === 'string' && typeof t.objective === 'string'
+        && (t.acceptanceCriteria === undefined || (Array.isArray(t.acceptanceCriteria) && t.acceptanceCriteria.every((v) => typeof v === 'string')))
         && typeof t.status === 'string' && isTaskStatus(t.status)
         && (t.assigneeName === undefined || t.assigneeName === null || typeof t.assigneeName === 'string')
         && (t.assigneeId === undefined || t.assigneeId === null || typeof t.assigneeId === 'string')
         && (t.deletedAt === undefined || t.deletedAt === null || typeof t.deletedAt === 'string')
     })
-    return valid.map((task) => ({...task, assigneeName: task.assigneeName ?? null, assigneeId: task.assigneeId ?? null, deletedAt: task.deletedAt ?? null}))
+    return valid.map((task) => ({...task, assigneeName: task.assigneeName ?? null, assigneeId: task.assigneeId ?? null, deletedAt: task.deletedAt ?? null, acceptanceCriteria: task.acceptanceCriteria ?? []}))
   } catch { return [] }
 }
 export function writePrototypeTasks(userId: string, projectId: string, tasks: PrototypeTask[]): boolean {
