@@ -86,3 +86,9 @@
 - G0-B: 기능정의서 FD-10/F-105 현황과 S1 감사 대장 S1-08을 현재 코드·PR 상태로 정정.
 - **다음 G1-A 진입 시 강제 확인:** PR #15 충돌 파일, PR #19 초안 정책, Issues #10/#12/#16 결함의 중복 수정 여부를 비교하고 결함별 처리 브랜치 및 테스트를 지정한다.
 - 운영 DB·배포·코드 기능 병합 추가 없음. 설계 완료와 실제 기능 완료를 구분한다.
+
+## 2026-10-21 실행 로그 #2 — G1-A PR 변경 파일 1차 분석
+- **PR #15 (20개 파일):** `src/pages/DocumentPage.tsx`, `src/store/commentStore.ts`, `supabase/migrations/009_*`·`010_*`, E2E/RLS CI·테스트가 포함됨. 현재 main과 병합 충돌: **기존 문서/댓글/권한 코드 재검토 없이 자동 병합 금지**.
+- **PR #19 (3개 파일):** `src/lib/unsavedDraft.ts`, `src/pages/DocumentPage.tsx`, `src/store/documentStore.ts`. **PR #15와 `DocumentPage.tsx` 직접 중복 수정**이 확인됨. 병합 가능 표시와 무관하게 초안·복원 정책 통합 검토 필요.
+- **확정된 처리 순서:** G1-B에서 버전/초안 보존 계약 및 실패 테스트 확보 → PR #15 저장/채팅/RLS 핵심 변경을 현 main에 단계별 재적용·충돌 수정 → PR #19의 중복 `DocumentPage` 변경 수동 병합·테스트 → G1-C로 권한/회귀 검증.
+- **잔여 조사:** PR별 구체 코드 hunk·Issue #10/#12/#16와 테스트 매칭, RLS migration 009/010 적용 조건, 실패 경로 재현. 따라서 G1-A는 **조사 진행 중**으로 유지.
