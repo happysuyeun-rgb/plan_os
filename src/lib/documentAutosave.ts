@@ -14,6 +14,7 @@ interface DocumentAutosaveOptions<T> {
   persist: (documentId: string, content: string) => Promise<T>
   onSaved: (documentId: string, content: string, result: T) => void
   onReplaced: (documentId: string, content: string) => void
+  onCommitted?: (documentId: string, content: string) => void
   onError: (documentId: string) => void
   delayMs?: number
 }
@@ -22,6 +23,7 @@ export function createDocumentAutosave<T>({
   persist,
   onSaved,
   onReplaced,
+  onCommitted,
   onError,
   delayMs = 2000,
 }: DocumentAutosaveOptions<T>) {
@@ -138,10 +140,11 @@ export function createDocumentAutosave<T>({
         pendingDraftHandled = true
         const content = await overwrite()
         task.savedRevision = revision
-        // The server changed even if newer local edits arrived meanwhile.
-        onReplaced(documentId, content)
+        // Always advance server baseline, but never clobber a newer local draft.
+        onCommitted?.(documentId, content)
         if (task.revision === revision) {
           task.content = content
+          onReplaced(documentId, content)
         }
         return content
       } catch (error) {
