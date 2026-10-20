@@ -5,6 +5,8 @@ export interface PrototypeTask {
   projectId: string
   title: string
   objective: string
+  assigneeName: string | null
+  deletedAt: string | null
   status: TaskStatus
   blockedReason: string | null
   createdAt: string
@@ -35,13 +37,16 @@ export function readPrototypeTasks(userId: string, projectId: string): Prototype
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((x): x is PrototypeTask => {
+    const valid = parsed.filter((x): x is PrototypeTask => {
       if (!x || typeof x !== 'object') return false
       const t = x as Partial<PrototypeTask>
       return t.projectId === projectId && typeof t.id === 'string'
         && typeof t.title === 'string' && typeof t.objective === 'string'
         && typeof t.status === 'string' && isTaskStatus(t.status)
+        && (t.assigneeName === undefined || t.assigneeName === null || typeof t.assigneeName === 'string')
+        && (t.deletedAt === undefined || t.deletedAt === null || typeof t.deletedAt === 'string')
     })
+    return valid.map((task) => ({...task, assigneeName: task.assigneeName ?? null, deletedAt: task.deletedAt ?? null}))
   } catch { return [] }
 }
 export function writePrototypeTasks(userId: string, projectId: string, tasks: PrototypeTask[]): boolean {
@@ -49,4 +54,20 @@ export function writePrototypeTasks(userId: string, projectId: string, tasks: Pr
     localStorage.setItem(storageKey(userId, projectId), JSON.stringify(tasks))
     return true
   } catch { return false }
+}
+
+/** Adapter boundary for replacing local-only persistence with a server-backed repository. */
+export interface TaskRepository {
+  list(userId: string, projectId: string): Promise<PrototypeTask[]>
+  replace(userId: string, projectId: string, tasks: PrototypeTask[]): Promise<void>
+}
+export const prototypeTaskRepository: TaskRepository = {
+  async list(userId, projectId) {
+    return readPrototypeTasks(userId, projectId)
+  },
+  async replace(userId, projectId, tasks) {
+    if (!writePrototypeTasks(userId, projectId, tasks)) {
+      throw new Error('Local task storage failed')
+    }
+  },
 }
