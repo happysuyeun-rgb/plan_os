@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
+import { useMemberStore } from '../store/memberStore'
 import {
   prototypeTaskRepository, permittedTransition,
   type PrototypeTask, type TaskStatus,
@@ -16,14 +17,17 @@ export default function ProjectTasksPage() {
   const { projectId } = useParams()
   const userId = useAuthStore((s) => s.user?.id)
   const { currentProject, setCurrentProject } = useProjectStore()
+  const members = useMemberStore((state) => state.members)
+  const fetchMembers = useMemberStore((state) => state.fetchMembers)
   const [tasks, setTasks] = useState<PrototypeTask[]>([])
   const [title, setTitle] = useState('')
   const [objective, setObjective] = useState('')
-  const [assigneeName, setAssigneeName] = useState('')
+  const [assigneeId, setAssigneeId] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editObjective, setEditObjective] = useState('')
-  const [editAssignee, setEditAssignee] = useState('')
+  const [editAssigneeId, setEditAssigneeId] = useState('')
+  const [membersLoaded, setMembersLoaded] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
@@ -31,6 +35,7 @@ export default function ProjectTasksPage() {
   useEffect(() => {
     let mounted = true
     setReady(false)
+    setMembersLoaded(false)
     if (!projectId || !userId) return
     void setCurrentProject(projectId).then(() => {
       if (!mounted) return
@@ -40,10 +45,14 @@ export default function ProjectTasksPage() {
         setReady(true)
       }).catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
     }).catch(() => { if (mounted) setError('프로젝트를 확인할 수 없습니다.') })
+    void fetchMembers(projectId).then(() => { if (mounted) setMembersLoaded(true) }).catch(() => { if (mounted) setError('팀 멤버 정보를 불러올 수 없어 담당자 지정이 제한됩니다.') })
     return () => { mounted = false }
-  }, [projectId, userId, setCurrentProject])
+  }, [projectId, userId, setCurrentProject, fetchMembers])
 
   const activeProject = currentProject?.id === projectId
+  const activeMembers = membersLoaded ? members.filter((member) => member.project_id === projectId && member.status === 'active' && member.user_id) : []
+  const assignee = (id: string) => activeMembers.find((member) => member.user_id === id)
+  const assigneeLabel = (id: string | null) => id ? (assignee(id)?.name || assignee(id)?.email || '접근 불가/제외된 멤버') : '미지정'
   async function save(next: PrototypeTask[]): Promise<boolean> {
     if (!projectId || !userId || !activeProject) return false
     try {
@@ -59,10 +68,13 @@ export default function ProjectTasksPage() {
   async function createTask() {
     if (!projectId || !activeProject || !title.trim()) return
     const now = new Date().toISOString()
+    const selected = assigneeId ? assignee(assigneeId) : undefined
+    if (assigneeId && !selected) { setError('유효한 프로젝트 멤버를 지정하세요.'); return }
     const saved = await save([{ id: crypto.randomUUID(), projectId, title: title.trim(),
-      objective: objective.trim(), assigneeName: assigneeName.trim() || null, deletedAt: null,
+      objective: objective.trim(), assigneeId: selected?.user_id ?? null,
+      assigneeName: selected?.name || selected?.email || null, deletedAt: null,
       status: 'todo', blockedReason: null, createdAt: now, updatedAt: now }, ...tasks])
-    if (saved) { setTitle(''); setObjective(''); setAssigneeName('') }
+    if (saved) { setTitle(''); setObjective(''); setAssigneeId('') }
   }
   function changeStatus(task: PrototypeTask, status: TaskStatus) {
     if (!permittedTransition(task.status, status)) {
@@ -82,13 +94,16 @@ export default function ProjectTasksPage() {
     setEditingId(task.id)
     setEditTitle(task.title)
     setEditObjective(task.objective)
-    setEditAssignee(task.assigneeName ?? '')
+    setEditAssigneeId(task.assigneeId ?? '')
   }
   async function saveEdit(task: PrototypeTask) {
     if (!editTitle.trim()) { setError('업무 제목을 입력하세요.'); return }
+    const selected = editAssigneeId ? assignee(editAssigneeId) : undefined
+    if (editAssigneeId && !selected) { setError('유효한 프로젝트 멤버를 지정하세요.'); return }
     const ok = await save(tasks.map((item) => item.id === task.id ? {
       ...item, title: editTitle.trim(), objective: editObjective.trim(),
-      assigneeName: editAssignee.trim() || null, updatedAt: new Date().toISOString(),
+      assigneeId: selected?.user_id ?? null,
+      assigneeName: selected?.name || selected?.email || null, updatedAt: new Date().toISOString(),
     } : item))
     if (ok) setEditingId(null)
   }
@@ -125,9 +140,12 @@ export default function ProjectTasksPage() {
               <textarea value={objective} onChange={(e) => setObjective(e.target.value)}
                 className="mt-1 w-full rounded border p-2" rows={3} />
             </label>
-            <label className="block text-sm">담당자 이름 (개발 시안, 실제 팀 멤버와 미연동)
-              <input value={assigneeName} maxLength={80} onChange={(e) => setAssigneeName(e.target.value)}
-                className="mt-1 w-full rounded border p-2" />
+            <label className="block text-sm">담당 프로젝트 멤버
+              <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}
+                disabled={!membersLoaded} className="mt-1 w-full rounded border p-2">
+                <option value="">미지정</option>
+                {activeMembers.map((member) => <option key={member.id} value={member.user_id ?? ''}>{member.name || member.email}</option>)}
+              </select>
             </label>
             <button type="button" onClick={() => { void createTask() }} disabled={!title.trim()}
               className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40">업무 추가</button>
@@ -151,9 +169,13 @@ export default function ProjectTasksPage() {
                       <textarea value={editObjective} onChange={(e) => setEditObjective(e.target.value)}
                         className="mt-1 w-full rounded border p-2" rows={3} />
                     </label>
-                    <label className="block text-sm">담당자 이름 (개발 시안)
-                      <input value={editAssignee} maxLength={80} onChange={(e) => setEditAssignee(e.target.value)}
-                        className="mt-1 w-full rounded border p-2" />
+                    <label className="block text-sm">담당 프로젝트 멤버
+                      <select value={editAssigneeId} disabled={!membersLoaded}
+                        onChange={(e) => setEditAssigneeId(e.target.value)}
+                        className="mt-1 w-full rounded border p-2">
+                        <option value="">미지정</option>
+                        {activeMembers.map((member) => <option key={member.id} value={member.user_id ?? ''}>{member.name || member.email}</option>)}
+                      </select>
                     </label>
                     <button type="button" onClick={() => { void saveEdit(task) }} className="mr-2 rounded bg-gray-900 px-3 py-2 text-white">변경 저장</button>
                     <button type="button" onClick={() => setEditingId(null)} className="rounded border px-3 py-2">취소</button>
@@ -162,7 +184,7 @@ export default function ProjectTasksPage() {
                   <>
                     <h3 className="font-semibold">{task.title}</h3>
                     {task.objective && <p className="mt-2 whitespace-pre-wrap text-sm">{task.objective}</p>}
-                    <p className="mt-1 text-xs text-gray-500">담당: {task.assigneeName || '미지정'}</p>
+                    <p className="mt-1 text-xs text-gray-500">담당: {assigneeLabel(task.assigneeId)}</p>
                   </>
                 )}
                 {task.blockedReason && <p className="mt-2 text-sm text-red-700">차단 사유: {task.blockedReason}</p>}
