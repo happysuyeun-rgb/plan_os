@@ -93,3 +93,18 @@
 **제품 완료 정의:** 실제 SQL/RLS·API·E2E/장애/비용 검증 + 상용 정책 승인 + 제한 파일럿. 현재 이 문서만으로 제품 검증 완료가 아니다.
 
 **관계:** 서비스 상품·가치·고객 여정은 `SERVICE_PLAN_V1_2026-10-20.md`, 구현 API/DB는 `../engineering/MVP_BUILD_READY_SPEC_2026-10-20.md`, 초기 권한은 `PERMISSIONS_POLICY.md`, 구체 비용/계약 근거는 `MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md`. 최초 기획 PRD 및 기존 Phase 1 설계는 보존.
+
+## 12. 2026-10-20 교차 점검 반영 — 개발 우선 규칙
+
+| 번호 | 누락·불일치 | 구현에 적용할 조정 |
+|---|---|---|
+| SVC-01 | PRD의 계약 상태 accepted/active/suspended/terminated, 상세 명세의 draft/active/revoked/expired가 상이 | DB 기준은 draft/active/revoked/expired. accepted는 계약 활성화 감사 이벤트, suspended는 실행 잠금 상태, terminated는 revoked의 고객용 표현. 두 개의 불일치 enum 생성 금지 |
+| SVC-02 | PRD가 task와 run을 하나의 상태표에 묶으나 실제 사람 업무와 비동기 AI 실행의 생명주기는 다름 | project_tasks.status는 todo/in_progress/in_review/blocked/done, ai_runs.status는 queued/running/validating/succeeded/failed/cancel_requested/cancelled/blocked_reconciliation. UI에서만 합성 |
+| SVC-03 | PRD MVP에 공개 AI 카탈로그·면담이 포함, 개발 상세 명세는 첫 E2E 이후 공개 | 내부 첫 MVP에서는 기획 검수 AI 1종 고정 진입을 우선하며 공개 카탈로그·면담은 첫 E2E 이후 단계. 고객용 UX 최종 출시 범위는 별도 게이트 |
+| SVC-04 | 상품/무료 정책의 가격·한도·환불 조건 미승인 | mock·내부 개발은 가능, 고객 실과금과 외부 제공사 실제 데이터 전송은 조건 확정 전 차단 |
+| SVC-05 | AI 업무 배정이 곧 실행으로 해석될 위험 | 담당 agentKey는 메타데이터만. 계약 동의→계획 승인→run 생성은 별도 owner 승인 |
+| SVC-06 | 보고서 생성·자동검증·사용자 수락을 하나의 완료 상태로 오표기 위험 | succeeded/validated와 accepted를 분리하고 acceptance의 버전/digest 재검증 |
+| SVC-07 | 개인정보/회원 탈퇴·데이터 보존이 정해지지 않음 | 로컬 개발은 익명화 fixture만. 실제 고객 데이터 전송·상용 공개는 약관/보존/백업 삭제 기한 전제 |
+| SVC-08 | 서비스 정책만으로 실제 DB 테이블/RLS가 확정된 듯 보일 위험 | 운영 DB 변경은 제외, 신규 S1 코드는 mock 및 격리 테스트부터. 전용 개발 DB/권한 검증 이전에는 '통합 완료' 금지 |
+
+**실행 결론:** 상세 개발 명세 `MVP_BUILD_READY_SPEC_2026-10-20.md`의 S1~S7 순서를 유지하고, 즉시 S1 코드(타입·상태 전이·UI·mock 저장소) 개발을 시작한다. 동일 프로젝트 문서 URL과 운영 Supabase를 변경하지 않는다.
