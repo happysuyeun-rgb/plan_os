@@ -45,3 +45,26 @@ export function clearUnsavedDraft(userId: string, documentId: string, savedConte
     // Keep server save independent of device storage.
   }
 }
+
+/** The server acknowledged one revision. Retain newer text but rebase its
+ * recovery baseline to the saved revision so reload is not a false conflict.
+ */
+export function acknowledgeSavedDraft(
+  userId: string, documentId: string, savedContent: string,
+): void {
+  try {
+    const draft = getUnsavedDraft(userId, documentId)
+    if (!draft) return
+    if (draft.content === savedContent) {
+      localStorage.removeItem(unsavedDraftKey(userId, documentId))
+    } else {
+      localStorage.setItem(unsavedDraftKey(userId, documentId), JSON.stringify({
+        base: savedContent,
+        content: draft.content,
+        timestamp: draft.timestamp,
+      } satisfies UnsavedDraft))
+    }
+  } catch {
+    // Persisted server acknowledgement is independent of browser storage.
+  }
+}
