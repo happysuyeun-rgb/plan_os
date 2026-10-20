@@ -42,3 +42,39 @@ create policy "task_editors_update" on public.project_tasks for update to authen
       and p.user_id = assignee_user_id)));
 -- No direct DELETE policy: use deleted_at, keep an audit trail.
 -- Follow-up: immutable project_id/created_by, server CAS and status event trail.
+
+-- Keep task tenant, actor and version server-controlled even for direct PostgREST updates.
+create or replace function public.validate_project_task_change()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.version <> 1 or new.status <> 'todo' or new.deleted_at is not null then
+      raise exception 'INVALID_TASK_INITIAL_STATE' using errcode = '23514';
+    end if;
+    return new;
+  end if;
+  if new.project_id is distinct from old.project_id
+      or new.created_by is distinct from old.created_by
+      or new.created_at is distinct from old.created_at then
+    raise exception 'IMMUTABLE_TASK_FIELDS' using errcode = '23514';
+  end if;
+  if new.version <> old.version + 1 then
+    raise exception 'TASK_VERSION_CONFLICT' using errcode = '40001';
+  end if;
+  if new.status is distinct from old.status and not (
+    (old.status = 'todo' and new.status in ('in_progress','blocked'))
+    or (old.status = 'in_progress' and new.status in ('in_review','blocked'))
+    or (old.status = 'in_review' and new.status in ('done','in_progress','blocked'))
+    or (old.status = 'blocked' and new.status = 'in_progress')
+  ) then
+    raise exception 'INVALID_TASK_STATUS_TRANSITION' using errcode = '23514';
+  end if;
+  new.updated_at = now();
+  return new;
+end;
+$$;
+create trigger project_task_validate_change
+before insert or update on public.project_tasks
+for each row execute function public.validate_project_task_change();
+-- A second read-by-version or RPC CAS is still required to turn stale clients
+-- into clean HTTP 409 responses; this migration is NOT production-ready.
