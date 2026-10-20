@@ -15,6 +15,7 @@ const labels: Record<TaskStatus, string> = {
   todo: '대기', in_progress: '진행 중', in_review: '검토 중', blocked: '차단', done: '완료',
 }
 const allStatuses = Object.keys(labels) as TaskStatus[]
+const parseCriteria = (text: string) => text.split('\n').map((v) => v.trim()).filter(Boolean).slice(0, 20)
 
 export default function ProjectTasksPage() {
   const { projectId } = useParams()
@@ -26,10 +27,12 @@ export default function ProjectTasksPage() {
   const [versions, setVersions] = useState<Record<string, number>>({})
   const [title, setTitle] = useState('')
   const [objective, setObjective] = useState('')
+  const [criteriaText, setCriteriaText] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editObjective, setEditObjective] = useState('')
+  const [editCriteriaText, setEditCriteriaText] = useState('')
   const [editAssigneeId, setEditAssigneeId] = useState('')
   const [membersLoaded, setMembersLoaded] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
@@ -68,7 +71,7 @@ export default function ProjectTasksPage() {
         const before = new Map(previous.map((t) => [t.id, t]))
         const newTask = next.find((t) => !before.has(t.id))
         if (newTask) {
-          const saved = await createServerTask(projectId, { title: newTask.title, objective: newTask.objective, assigneeId: newTask.assigneeId })
+          const saved = await createServerTask(projectId, { title: newTask.title, objective: newTask.objective, acceptanceCriteria: newTask.acceptanceCriteria, assigneeId: newTask.assigneeId })
           setTasks([saved, ...previous])
           setVersions((v) => ({ ...v, [saved.id]: saved.version }))
         } else {
@@ -77,7 +80,7 @@ export default function ProjectTasksPage() {
           const version = versions[changed.id]
           if (!version) throw new TaskConflictError()
           const saved = await patchServerTask(projectId, changed.id, version, {
-            title: changed.title, objective: changed.objective, assigneeId: changed.assigneeId,
+            title: changed.title, objective: changed.objective, acceptanceCriteria: changed.acceptanceCriteria, assigneeId: changed.assigneeId,
             status: changed.status, blockedReason: changed.blockedReason, deletedAt: changed.deletedAt,
           })
           setTasks(previous.map((t) => t.id === saved.id ? saved : t))
@@ -102,10 +105,10 @@ export default function ProjectTasksPage() {
     const selected = assigneeId ? assignee(assigneeId) : undefined
     if (assigneeId && !selected) { setError('유효한 프로젝트 멤버를 지정하세요.'); return }
     const saved = await save([{ id: crypto.randomUUID(), projectId, title: title.trim(),
-      objective: objective.trim(), assigneeId: selected?.user_id ?? null,
+      objective: objective.trim(), acceptanceCriteria: parseCriteria(criteriaText), assigneeId: selected?.user_id ?? null,
       assigneeName: selected?.name || selected?.email || null, deletedAt: null,
       status: 'todo', blockedReason: null, createdAt: now, updatedAt: now }, ...tasks])
-    if (saved) { setTitle(''); setObjective(''); setAssigneeId('') }
+    if (saved) { setTitle(''); setObjective(''); setCriteriaText(''); setAssigneeId('') }
   }
   function changeStatus(task: PrototypeTask, status: TaskStatus) {
     if (!canEdit || saving) return
@@ -126,6 +129,7 @@ export default function ProjectTasksPage() {
     setEditingId(task.id)
     setEditTitle(task.title)
     setEditObjective(task.objective)
+    setEditCriteriaText(task.acceptanceCriteria.join('\n'))
     setEditAssigneeId(task.assigneeId ?? '')
   }
   async function saveEdit(task: PrototypeTask) {
@@ -134,7 +138,7 @@ export default function ProjectTasksPage() {
     const selected = editAssigneeId ? assignee(editAssigneeId) : undefined
     if (editAssigneeId && !selected) { setError('유효한 프로젝트 멤버를 지정하세요.'); return }
     const ok = await save(tasks.map((item) => item.id === task.id ? {
-      ...item, title: editTitle.trim(), objective: editObjective.trim(),
+      ...item, title: editTitle.trim(), objective: editObjective.trim(), acceptanceCriteria: parseCriteria(editCriteriaText),
       assigneeId: selected?.user_id ?? null,
       assigneeName: selected?.name || selected?.email || null, updatedAt: new Date().toISOString(),
     } : item))
@@ -174,6 +178,9 @@ export default function ProjectTasksPage() {
               <textarea value={objective} onChange={(e) => setObjective(e.target.value)}
                 className="mt-1 w-full rounded border p-2" rows={3} />
             </label>
+            <label className="block text-sm">완료 기준 (한 줄에 하나씩, 최대 20개)
+              <textarea value={criteriaText} onChange={(e) => setCriteriaText(e.target.value)} rows={3} className="mt-1 w-full rounded border p-2" />
+            </label>
             <label className="block text-sm">담당 프로젝트 멤버
               <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}
                 disabled={!membersLoaded} className="mt-1 w-full rounded border p-2">
@@ -204,6 +211,9 @@ export default function ProjectTasksPage() {
                       <textarea value={editObjective} onChange={(e) => setEditObjective(e.target.value)}
                         className="mt-1 w-full rounded border p-2" rows={3} />
                     </label>
+                    <label className="block text-sm">완료 기준 (한 줄에 하나씩, 최대 20개)
+                      <textarea value={editCriteriaText} onChange={(e) => setEditCriteriaText(e.target.value)} rows={3} className="mt-1 w-full rounded border p-2" />
+                    </label>
                     <label className="block text-sm">담당 프로젝트 멤버
                       <select value={editAssigneeId} disabled={!membersLoaded}
                         onChange={(e) => setEditAssigneeId(e.target.value)}
@@ -219,6 +229,7 @@ export default function ProjectTasksPage() {
                   <>
                     <h3 className="font-semibold">{task.title}</h3>
                     {task.objective && <p className="mt-2 whitespace-pre-wrap text-sm">{task.objective}</p>}
+                    {task.acceptanceCriteria.length > 0 && <ul className="mt-2 list-disc pl-5 text-sm" aria-label="업무 완료 기준">{task.acceptanceCriteria.map((v, i) => <li key={i}>{v}</li>)}</ul>}
                     <p className="mt-1 text-xs text-gray-500">담당: {assigneeLabel(task.assigneeId)}</p>
                   </>
                 )}
