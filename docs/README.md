@@ -87,3 +87,6 @@
 - 2026-10-19 / v2.1: 최초 전문 AI 후보 비교·수용 기준 문서 연결; 기존 [Draft PR #1](https://github.com/happysuyeun-rgb/plan_os/pull/1) 문서 브랜치에서 일원화.
 
 - 2026-10-19 / v2.2: 첫 전문 AI 교차 감사와 P1-2 계약·비용 정책안 연결. 문서 기준은 계속 Draft PR #1.
+
+## 구현 인계 상세 기준 (2026-10-20)
+- [PlanOS 3.0 × AI 인력사무소 MVP 개발용 상세 명세 v1.0](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md): 화면/상태/API/DB/AI 실행/QA 수용 기준, 미승인 운영 결정 분리.
