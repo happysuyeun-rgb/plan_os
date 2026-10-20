@@ -22,13 +22,13 @@ create index if not exists project_tasks_active_idx
   on public.project_tasks (project_id, updated_at desc) where deleted_at is null;
 alter table public.project_tasks enable row level security;
 create or replace function public.is_valid_task_assignee(p_project_id uuid, p_user_id uuid)
-returns boolean language sql stable security definer set search_path = public as $
+returns boolean language sql stable security definer set search_path = public as $$
   select p_user_id is null or exists (
     select 1 from public.projects p where p.id = p_project_id and p.deleted_at is null and p.user_id = p_user_id
   ) or exists (
     select 1 from public.project_members pm where pm.project_id = p_project_id and pm.user_id = p_user_id and pm.status = 'active'
   );
-$;
+$$;
 revoke all on function public.is_valid_task_assignee(uuid, uuid) from public;
 grant execute on function public.is_valid_task_assignee(uuid, uuid) to authenticated;
 
