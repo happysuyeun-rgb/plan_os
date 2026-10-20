@@ -1,6 +1,6 @@
-# PlanOS 3.0 × AI 인력사무소 — 구현 인계 상세 명세 v1.0
+# PlanOS 3.0 × AI 인력사무소 — 구현 인계 상세 명세 v1.1 — 교차 정합성 보완
 
-**2026-10-20 · 성격:** 실제 소스/기존 설계/감사 결과를 대조한 **MVP 개발 기준선**. 이 문서의 기본 선택은 개발을 위한 잠정 결정이며 상용 가격·외부 모델·운영 배포 승인을 뜻하지 않는다. 코드/테스트/운영 적용 전에는 완료가 아니다.
+**2026-10-20 · 교차검토 보완:** 실제 소스/기존 설계/감사 결과를 대조한 **MVP 개발 기준선**. 이 문서의 기본 선택은 개발을 위한 잠정 결정이며 상용 가격·외부 모델·운영 배포 승인을 뜻하지 않는다. 코드/테스트/운영 적용 전에는 완료가 아니다.
 
 ## 0. 제품 정의와 완료 정의
 
@@ -48,7 +48,7 @@ S1은 이전 Phase 0의 데이터 유실 결함과 **별도 브랜치에서 병�
 
 **plan.status:** `draft -> awaiting_approval -> approved/rejected/expired`; 승인 후 수정은 새 버전이며 기존 승인 재사용 불가.
 
-**run.status:** `queued -> running -> validating -> succeeded`; `queued/running -> cancel_requested -> cancelled`; `queued/running/validating -> failed` 또는 `blocked_reconciliation`. 실패 재시도는 같은 idempotency 의도와 별도 attempt 이력 기록; provider 불명확시 재호출 금지.
+**run.status (DB 표준):** `queued -> running -> validating -> succeeded`; UX의 `verifying`은 `validating`, `awaiting_acceptance`는 성공한 run과 수락 대기 artifact를 합성한 화면 상태로만 사용한다. `queued/running -> cancel_requested -> cancelled`; `queued/running/validating -> failed` 또는 `blocked_reconciliation`. 실패 재시도는 같은 idempotency 의도와 별도 attempt 이력 기록; provider 불명확시 재호출 금지.
 
 **artifact.acceptance:** `pending -> accepted/rejected/changes_requested`는 정확한 artifact_version+digest의 사람 사건; 모델 또는 validator가 accepted로 변경 불가.
 
@@ -133,3 +133,38 @@ S1은 이전 Phase 0의 데이터 유실 결함과 **별도 브랜치에서 병�
 **다음 코드 인계 순서:** ① 현재 DB migration/권한 구조에 맞춘 S1 tasks migration+RLS+API/화면+테스트 ② S2 manifest 고정 ③ S3/S4 동의·사람 PM 계획 ④ S5 mock 워커/원장 ⑤ S6 기획 검수 보고서 ⑥ 실제 모델 승인·연결 ⑦ 파일럿. 각 슬라이스 종료 시 commit/PR·CI 링크·실제 사용 시나리오 PASS 증빙으로만 상태 변경.
 
 **근거:** `FIRST_SPECIALIST_AI_MVP_2026-10-19.md`, `MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md`, `UX_FLOWS.md`, `AI_EXECUTION_ADR_002_2026-10-20.md`, `AI_API_DB_CONTRACT_P1_5_2026-10-20.md`, `PHASE1_P5_REAUDIT_2026-10-20.md`. 기존 초안의 P5-08 서버 승인 생성 분리, 최초 POST와 If-Match 모순, 모델 계획 job/원가 범위의 불일치를 이 구현 기준에서 해소했다.
+
+## 9. 2026-10-20 교차 감사 — 누락/불일치 수정 결정 및 개발 전 차단 게이트
+
+**대조:** `DATA_MODEL.md`, `PERMISSIONS_POLICY.md`, `SCREEN_SPEC.md`, `UX_FLOWS.md`, `AI_API_DB_CONTRACT_P1_5_2026-10-20.md`, `PHASE1_P5_REAUDIT_2026-10-20.md`, `ARCHITECTURE.md`. 이 섹션은 **설계상 규칙을 확정하는 내용이지 SQL/운영 안전 검증 PASS가 아니다.**
+
+| ID | 심각도 | 발견 | 정리한 구현 규칙 / 남은 검증 |
+|---|---|---|---|
+| C-01 | P0 | `SCREEN_SPEC`에는 `verifying/awaiting_acceptance/accepted` 단일 AI 화면 상태, 새 명세에는 `validating/succeeded` 실행 상태. 그대로 구현하면 상태 API가 갈라짐 | DB `run.status`는 `validating/succeeded`, `artifact.acceptance`는 별도. UI에서만 `validating→verifying`, `succeeded + pending→awaiting_acceptance`, `succeeded + accepted→accepted` 합성. 중복 상태 컬럼 생성 금지 |
+| C-02 | P0 | task 명칭 `tasks`(기존 목표 DATA_MODEL)와 `project_tasks`(신규 구현 명세) 혼재 | 실제 신규 SQL 이름은 `project_tasks`로 기준화. 기존 CURRENT `generation_runs`와 신규 `ai_runs`는 변경/병합하지 않음. 다른 명세의 `tasks`는 논리 엔터티 별칭으로만 해석 |
+| C-03 | P0 | 사전 승인 비용 상한 숫자가 미결정인데 `POST runs`와 비용 예약이 당장 가능한 듯 기술됨 | S1/S2/S4 무과금 모의 개발만 가능. S5 mock run의 cost는 외부 공급자 청구 0으로 간주하지 않고 `provider_mode=mock`, `billable=false`, ledger에 실청구 엔트리 없음. **유료 provider 연결과 고객 실제 문서 전송은 공급자/상한/약관·보존 승인 전 차단** |
+| C-04 | P0 | owner/role 검사는 API에 있으나 서비스 권한이 우회하는 service_role과 RLS의 책임 중복 | 브라우저는 JWT/RLS; 서버 BFF는 JWT 검증, membership, contract/scope, request digest, cost gate를 **service_role 조회 전** 검사. Worker는 별도 scoped job/프로젝트 검사. RLS + 서비스 정책 모두 실제 JWT/DB 테스트 필수 |
+| C-05 | P0 | 서버 문서 해시만 고정하면 문서가 편집·삭제된 뒤 AI에 읽힌 본문이 무엇인지 입증할 수 없음 | `audit_drafts.source_manifest`에는 문서 ID+type+digest+고정 revision(가능한 경우). 승인 시 고정 스냅샷 읽기 가능성 확인. 실행 직전 digest 재확인; 변경 시 `409 STALE_SOURCE`로 실행 중단·재선택/재승인. 불변 본문 스냅샷이 없으면 과거 본문을 임의 복원하지 않음 |
+| C-06 | P0 | 승인 생성 경로 P5-08이 공개 API처럼 표기되어 악의적 요청 가능 | 승인 요청은 내부 정책 서비스가 생성, 브라우저에서 POST 직접 호출 금지. owner 결정 API는 서버에서 기존 요청의 `actor/project/targetDigest/version` 재검증. 관리자 키 브라우저 제공 금지 |
+| C-07 | P0 | 첫 생성 POST에 `If-Match` 일괄 강제하면 기존 버전이 없어 API 불가능 | 최초 생성 POST는 idempotency key + payload digest, 기존 자원 PATCH/결정은 expectedVersion/CAS. 같은 키+상이한 payload는 409. 승인 버전 변경은 이전 승인 재사용 금지 |
+| C-08 | P0 | provider 타임아웃에서 `failed` 재실행하면 과금/보고서 중복 위험 | 제공사 결과가 미확인된 run은 `blocked_reconciliation`. 동일 provider 요청의 실제 비용/결과 확인 전 자동 재호출 금지. 예약/관측/불명확 사용량을 합산하여 중복 부채 계상하지 않도록 reservation별 원장 식별 필요 |
+| C-09 | P1 | 개인정보/로컬 미저장 원고를 통째로 브라우저 저장하는 기존 B-04 개발 PR #19는 접근 기기 유출·저장 용량·계정변경·다중탭 덮어쓰기 검증이 미흡 | 프로젝트 AI 데이터 처리 정책과 별개로 로컬 초안 저장 정책(사용자 고지, 만료/로그아웃 처리, quota 실패 경고, 다른 탭 충돌)을 확정하고 브라우저 QA 통과 전 Phase 0 DONE 금지 |
+| C-10 | P1 | UX 목표 라우트는 기존 문서 `/projects/:projectId/:docType`와 별개지만 URL을 잘못 매칭할 여지가 있음 | React Router의 신규 `/projects/:projectId/tasks`, `/runs` 등을 고정 경로로 선언하고 기존 문서 `:docType`보다 먼저 경로/권한 분기. 특수 경로가 docType으로 해석되지 않는 실제 네비게이션 테스트 필수 |
+| C-11 | P1 | S1 task 상태에는 `blocked`가 있지만 blocked 이유·해제 권한·타임스탬프 정의가 빠짐 | 필수 `blocked_reason`(비공개 위험정보 제외), `blocked_at`, `unblocked_by`; 차단 해제 시 사유/actor 이벤트 기록. 상태 변경은 서버 CAS 및 감사 로그; 삭제 후 숨김 처리 |
+| C-12 | P1 | 입력 선택이 2개 이상이어도 두 문서가 동일 내용/유형일 때 '교차검수' 가치를 입증하기 어려움 | 기본 소스 규칙: **서로 다른 document_id 2개 이상**, PRD+IA 권장. 같은 유형 허용 여부는 UI 경고만; 문서 내용 텅 빔/읽기 불가/삭제/다른 프로젝트는 서버 거부. `findings 0`은 무결성 인증이 아님 |
+| C-13 | P1 | `project_tasks.assigneeKind="agent"`가 실제 AI 계약을 생략한 자동 실행으로 오해될 수 있음 | agent 지정은 **업무 메타데이터**에 불과. `accepted_contract_id`, `approved_plan_id`, `run_id`는 별도 승인 후 연결; task 생성만으로 AI 실행/과금 불가 |
+| C-14 | P1 | 보고서 acceptance와 task `done`이 중복 완료 신호일 수 있음 | 보고서 수락은 특정 artifact digest/version 사건만; task done은 별도 서버 전이. MVP에서는 accepted 이벤트 성공 후 같은 트랜잭션/후속 멱등 이벤트로 done 전이(실패 시 재처리), 반려는 in_review 유지. 자동 수행을 인간 승인으로 오표기 금지 |
+
+### 남은 구현 차단 질문 — 코드 작성 전부를 멈추는 사안은 아님
+
+1. **즉시 S1에 필요한 결정:** 프로젝트 role/viewer task 목록 열람 필드, 담당자 스키마, 기존 `projects`/member/문서 컬럼 정확한 타입은 실제 SQL 001~008 대조 후 DDL 확정. 특히 `project_tasks`의 차단 사유/정렬/soft-delete/버전 제약은 migration에서 코드/테스트로 확정해야 한다.
+2. **S2/S3에 필요한 결정:** immutable 본문 스냅샷 별도 저장 방식과 용량/기밀 보존, 원본 삭제/승인 철회 시 이전 snapshot 접근 차단 기준.
+3. **유료 호출 직전에만 필요한 승인:** 실제 모델/worker 호스트, 공급자 데이터 처리/학습/보존, 고객 동의 문구, 상한 금액, 환불/결제. 확정하지 않은 내용을 기본 정책으로 몰래 정하지 않는다.
+4. **운영 승인:** main 병합·운영 DB migration·실제 외부 호출/배포는 명시 승인과 회귀 PASS 전 차단.
+
+### 다음 작업을 위한 순서
+
+- S1 `project_tasks` DDL/RLS를 **실제 CURRENT migrations에 맞춰** 작성하고, permission matrix 및 CAS/soft-delete 테스트를 동시에 추가한다.
+- S1 task 페이지의 실제 API·route를 연결하여 브라우저에서 CRUD/reload/권한 차단까지 재현한다.
+- S2 문서 source manifest + hash 고정 및 stale-source 409 회귀를 다음 단계로 개발한다.
+- 별개 Phase 0 PR #19는 충돌/브라우저 리로드/다중탭/기기 저장 정책 테스트 전까지 Draft 유지한다.
