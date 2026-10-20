@@ -187,6 +187,10 @@ draft → planned → awaiting_approval → queued → running → verifying
 - 공급자 원가, 고객 청구/환불, owner 예산 상한은 별도 이벤트·ledger. 단순 네트워크 재시도는 외부 모델 과금 멱등성을 보증하지 않는다. [P1-2 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md) / [교차 감사](../quality/PHASE1_CROSS_AUDIT_2026-10-19.md).
 - 이 보정은 기술 구현/큐 공급자 결정이 아니다. DB 트랜잭션·아웃박스·키 관리·검증기·RLS·데이터 보존/전송 동의 미검증.
 
+### 2026-10-20 상세 ADR 인계
+- [ADR-002: 영속 worker·ModelGateway·비용 원장](AI_EXECUTION_ADR_002_2026-10-20.md)에서 최소 모듈 경계, PostgreSQL outbox/lease worker 권고, 유료 PM 계획 생성의 별도 예산, 공급자 사용량 지연/응답 유실·재시작·중복 처리/권한·R0/R1 책임을 구체화. **호스트/모델/외부 큐의 실제 결정 및 검증은 미완료**.
+- [P1-3 UX 재감사](../quality/PHASE1_UX_ARCH_AUDIT_2026-10-20.md) 결과를 근거로 UI 자동 retry 금지/원가 대사 후 재실행 게이트 유지.
+
 ## 13. 미결정/선행 작업
 1. 실제 워커 호스팅/큐/스케줄러 및 DB 트랜잭션 경계 선택.
 2. 첫 전문 AI 업무·실도구 1종과 자동 검증 기준 선정. **설계 제안은 [첫 전문 AI MVP](../product/FIRST_SPECIALIST_AI_MVP_2026-10-19.md)로 작성(2026-10-19): `requirements_auditor_v1`, 프로젝트 내부 문서 읽기 R0 + 비공개 QA 보고서 R1; 테스트 시나리오 12개 정의. 권한/과금/공급자·워커 실증 및 최종 승인은 미완료.**
