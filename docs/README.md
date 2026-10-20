@@ -32,6 +32,8 @@
 - [P1-4 영속 AI 실행 아키텍처 ADR-002](engineering/AI_EXECUTION_ADR_002_2026-10-20.md) — BFF·영속 outbox/lease worker·ModelGateway·예산/원가·실패 복구 설계(기술 제품 선정·실증 미완료).
 - [P1-3 UX 누락 재감사](quality/PHASE1_UX_ARCH_AUDIT_2026-10-20.md) — 재시도/권한/승인/PM job 등 UXA-01~10 교차 점검 및 미완료 게이트.
 
+- [P1-5 API·DB 상세 계약 v0.1](engineering/AI_API_DB_CONTRACT_P1_5_2026-10-20.md) — 신규 보강 API 16건, 상태·트랜잭션·DB/RLS 제약, 12개 검증 케이스(정의만), 구현·승인 미완료.
+
 ## 교차 문서 품질 점검
 - [2026-10-16 통합 문서 감사](quality/DOCUMENT_REVIEW_2026-10-16.md) — 12개 문서별 누락·충돌, P0~P2 결함, 완료·미완료·다음 수정 우선순위. **기획/보안/개발 검증 통과가 아니라 문서 품질 점검 결과**.
 - [2026-10-19 첫 전문 AI 교차 감사](quality/PHASE1_CROSS_AUDIT_2026-10-19.md) — 불일치·누락 AUD-01~12, 문서 정정 범위와 **미해결 API/DB·승인·보안·실제 테스트** 확인.
