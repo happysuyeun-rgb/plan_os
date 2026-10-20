@@ -190,3 +190,12 @@
 - [ ] DRAFT의 SECURITY DEFINER 접근권한·search_path·역할 확인과 migration 순서 실제 DB 검증.
 - [ ] CI 실행 결과/격리 DB 테스트 및 브라우저 회귀 실증 미확인; PR #24 main 병합·운영 DB 적용 금지.
 - **다음 G1-B-08:** 기존 DB 함수·RLS/GRANT 전체 인벤토리 → 독립 개발 DB에서 트리거·권한·다중 클라이언트 충돌 실증 → PR #15/#19 통합.
+
+## 2026-10-21 G1-B-08 — DB 함수·RLS 점검 및 격리 QA 매트릭스
+- [x] Migration 001(문서 RLS), 009(멤버 RLS 재귀 조정), 012(채팅 문서 SECURITY DEFINER RPC), 013 DRAFT(Revision CAS) 소스 직접 검토.
+- [x] Draft PR #24에 `docs/quality/G1_ISOLATED_DB_TEST_MATRIX_2026-10-21.md` 작성: 12개 격리 DB 수락 테스트(동시쓰기, 재생성/채팅/복원, 역할별 권한, 재시도, 장문 등).
+- [x] 정적 매트릭스 점검 테스트와 CI 실행 명령 추가 (커밋 `4923c5d`).
+- [ ] CI 실제 성공 확인: GitHub workflow run 미조회; 테스트 작성만 완료.
+- [ ] 기존 전체 migration 경로·RLS/GRANT/SECURITY DEFINER 전수조사 미완료. 문서 복원 SQL 경로 및 기존 직접쓰기 권한 별도 확인 필요.
+- [ ] 격리 DB 생성·마이그레이션·12개 역할/동시성 테스트 실제 실행 **미실행**.
+- [ ] 운영 DB 및 main 기능 브랜치 병합 금지. 다음 G1-B-09: DB 테스트 재현 스크립트와 전 writer 수정 계약 구체화.
