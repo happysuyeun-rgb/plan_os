@@ -52,7 +52,7 @@ export default function ProjectTasksPage() {
 
   const activeProject = currentProject?.id === projectId && currentProject.deleted_at === null
   const currentMembership = membersLoaded ? members.find((member) => member.project_id === projectId && member.user_id === userId && member.status === 'active') : undefined
-  const canEdit = activeProject && (currentProject.user_id === userId || currentMembership?.role === 'owner' || currentMembership?.role === 'editor')
+  const canEdit = activeProject && (currentProject?.user_id === userId || currentMembership?.role === 'owner' || currentMembership?.role === 'editor')
   const activeMembers = membersLoaded ? members.filter((member) => member.project_id === projectId && member.status === 'active' && member.user_id) : []
   const assignee = (id: string) => activeMembers.find((member) => member.user_id === id)
   const assigneeLabel = (id: string | null) => id ? (assignee(id)?.name || assignee(id)?.email || '접근 불가/제외된 멤버') : '미지정'
