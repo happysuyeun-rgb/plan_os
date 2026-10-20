@@ -54,6 +54,9 @@ begin
     end if;
     return new;
   end if;
+  if old.deleted_at is not null and new.deleted_at is null and public.get_project_role(old.project_id) <> 'owner' then
+    raise exception 'ONLY_OWNER_MAY_RESTORE_TASK' using errcode = '42501';
+  end if;
   if new.project_id is distinct from old.project_id
       or new.created_by is distinct from old.created_by
       or new.created_at is distinct from old.created_at then
@@ -61,6 +64,9 @@ begin
   end if;
   if old.deleted_at is not null and (new.deleted_at is not null or new.deleted_at <> old.deleted_at) then
     raise exception 'TASK_DELETED_REQUIRES_RESTORE' using errcode = '23514';
+  end if;
+  if old.deleted_at is null and new.deleted_at is not null and public.get_project_role(old.project_id) <> 'owner' then
+    raise exception 'ONLY_OWNER_MAY_DELETE_TASK' using errcode = '42501';
   end if;
   if new.version <> old.version + 1 then
     raise exception 'TASK_VERSION_CONFLICT' using errcode = '40001';
@@ -82,3 +88,54 @@ before insert or update on public.project_tasks
 for each row execute function public.validate_project_task_change();
 -- Client version compare-and-swap maps empty UPDATE result to a conflict.
 -- This migration still requires isolated DB and RLS tests before application.
+
+-- Append-only audit log. No client INSERT/UPDATE/DELETE privileges are granted.
+create table public.project_task_events (
+  id bigint generated always as identity primary key,
+  project_id uuid not null references public.projects(id) on delete cascade,
+  task_id uuid not null references public.project_tasks(id) on delete cascade,
+  actor_id uuid references auth.users(id) on delete set null,
+  event_type text not null check (event_type in ('created','updated','status_changed','deleted','restored')),
+  previous_status text,
+  next_status text,
+  version bigint not null,
+  happened_at timestamptz not null default now()
+);
+create index project_task_events_task_idx on public.project_task_events (task_id, happened_at desc);
+alter table public.project_task_events enable row level security;
+create policy "task_events_project_read" on public.project_task_events
+  for select to authenticated using (public.can_access_project(project_id));
+revoke insert, update, delete on public.project_task_events from anon, authenticated;
+grant select on public.project_task_events to authenticated;
+
+create or replace function public.record_project_task_event()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare v_event text;
+begin
+  if tg_op = 'INSERT' then
+    v_event := 'created';
+  elsif old.deleted_at is null and new.deleted_at is not null then
+    v_event := 'deleted';
+  elsif old.deleted_at is not null and new.deleted_at is null then
+    v_event := 'restored';
+  elsif old.status is distinct from new.status then
+    v_event := 'status_changed';
+  else
+    v_event := 'updated';
+  end if;
+  insert into public.project_task_events
+    (project_id, task_id, actor_id, event_type, previous_status, next_status, version)
+  values (
+    new.project_id, new.id, auth.uid(), v_event,
+    case when tg_op = 'INSERT' then null else old.status end,
+    new.status, new.version
+  );
+  return new;
+end;
+$$;
+create trigger project_task_record_event
+after insert or update on public.project_tasks
+for each row execute function public.record_project_task_event();
+
+-- RLS is row-scoped, not column-scoped: do not allow direct client changes to audit event data.
+-- Test with a fresh isolated PostgreSQL database before merging or applying anywhere.
