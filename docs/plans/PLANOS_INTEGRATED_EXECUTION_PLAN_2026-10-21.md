@@ -181,3 +181,12 @@
 - [ ] P0: 기존 blind UPDATE/upsert는 트리거만으로 동시편집 덮어쓰기 차단 불가. 모든 writer의 조건부 저장 또는 권한 제한 필요.
 - [ ] P0: 저장 RPC/RLS/격리 DB 동시성·권한 검증, 복원/채팅 SQL 본문 완전 조사, PR #15/#19/#23 통합 충돌 해결.
 - [ ] PR #24 기능 병합 및 운영 DB 적용 보류. 다음 G1-B-07에서 writer별 서버 조건부 변경과 migration 안전성 확보.
+
+## 2026-10-21 G1-B-07 — 조건부 쓰기 및 권한 우회 검수
+- [x] PR #24의 DRAFT CAS RPC에 활성 프로젝트 검사·편집 권한 함수 `can_edit_project_content` 검증 추가. 커밋 `98f3daa`.
+- [x] 정적 계약 테스트를 신규 검증 계약에 맞게 갱신. 커밋 `760565c`.
+- [x] Writer 감사표에 기존 테이블 UPDATE/upsert의 CAS 우회 위험, 단계별 권한 컷오버 절차·차단 조건 보강. 커밋 `3d984c1`.
+- [ ] **차단 P0:** trigger만으로 기존 무조건 쓰기는 차단할 수 없음. 모든 writer를 조건부 API로 전환하고 직접 UPDATE 권한을 통합 조정해야 함.
+- [ ] DRAFT의 SECURITY DEFINER 접근권한·search_path·역할 확인과 migration 순서 실제 DB 검증.
+- [ ] CI 실행 결과/격리 DB 테스트 및 브라우저 회귀 실증 미확인; PR #24 main 병합·운영 DB 적용 금지.
+- **다음 G1-B-08:** 기존 DB 함수·RLS/GRANT 전체 인벤토리 → 독립 개발 DB에서 트리거·권한·다중 클라이언트 충돌 실증 → PR #15/#19 통합.
