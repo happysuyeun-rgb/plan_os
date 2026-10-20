@@ -100,6 +100,10 @@
 - **비용 원장:** AI PM 계획 생성 예산/공급자 원가와 전문 AI 실행 예약/원가를 모두 포함하고 고객 청구/환불은 별도. 공급자 응답 유실·실제 과금 지연 시 pending으로 보존, 동일 provider_ref 중복 집계 금지. 정확한 원가·상한 SQL 수식/국외 전송·retention은 미정.
 - **인간 수락:** ai_artifact_verifications의 machine PASS != ai_acceptances의 owner accepted. 비위임 editor/viewer는 신규 최종 수락/검증 행 위조 불가. [P1-2 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md).
 
+### 2026-10-20 P1-5 상세 DB 계약 참조
+- [P1-5 API·DB 상세 계약](AI_API_DB_CONTRACT_P1_5_2026-10-20.md)에서 audit draft, 비동기 plan generation, run/outbox+예산예약 원자성, 복합 프로젝트 FK·상태 CAS·idempotency, providerRef 원가 대사/비공개 artifact 검증·사람 수락을 정의.
+- 원본 모델의 ai_runs/plan generation 중복 선언은 통합/분리 **미결정**이며 실제 DDL 스키마·이력 보존·SQL/RLS 실증 전 새 migration 작성/실행 없음.
+
 ## 8. 미결정·검증 체크
 - [x] CURRENT 실제 SQL 기반 테이블/컬럼 구분
 - [x] TARGET 신규 엔터티·관계·불변성·원장 개념 정의
