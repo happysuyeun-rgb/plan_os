@@ -9,8 +9,10 @@ test('draft CAS compares compact server revision, not document body',()=>{
  assert.match(sql,/p_content\s+text/i)
  assert.doesNotMatch(sql,/content\s*=\s*p_expected_content/i)
 })
-test('draft rejects anonymous calls and uses invoker role',()=>{
- assert.match(sql,/security invoker/i)
+test('draft checks authenticated caller and explicit project edit permission',()=>{
+ assert.match(sql,/security definer/i)
+ assert.match(sql,/public\.can_edit_project_content\(v_project_id\)/i)
+ assert.match(sql,/p\.deleted_at is null/i)
  assert.match(sql,/auth\.uid\(\) is null/i)
 })
 test('draft is explicitly gated against deployment',()=>{
@@ -24,4 +26,9 @@ test('every content update bumps revision once in a before update trigger',()=>{
  assert.match(sql,/new\.content_revision\s*:=\s*old\.content_revision\s*\+\s*1/i)
  const cas = sql.slice(sql.indexOf('create or replace function public.save_document_content_cas'),sql.indexOf('revoke all on function'))
  assert.doesNotMatch(cas,/set content\s*=\s*p_content\s*,\s*content_revision/i)
+})
+
+test('draft documents remaining bypass rather than claiming total protection',()=>{
+ assert.match(sql,/Direct client UPDATE remains a stale-write bypass/i)
+ assert.match(sql,/changing legacy clients could cause outages/i)
 })
