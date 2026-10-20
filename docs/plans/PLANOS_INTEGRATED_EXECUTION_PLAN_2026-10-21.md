@@ -162,3 +162,12 @@
 - [ ] 중요한 설계 결함: 본문 `.eq('content', baseline)`은 문서 본문 크기에 따라 PostgREST 요청 URL 길이/인코딩 제한을 초과할 수 있으므로 장문 문서에 실사용 부적합할 수 있음. **서버 버전 번호 또는 문서 digest + 원자적 DB 함수/RPC** 방식 검토/전환 필요.
 - [ ] PR #23 현재 PR #19 미병합 선행변경을 포함하여 main과 충돌; PR #15 저장 경로와의 통합·권한/브라우저/격리 DB E2E 미검증.
 - [ ] 따라서 운영 DB 변경 및 main 병합 금지. 다음 작업은 **G1-B-05: 경량 version/digest 기반 RPC 계약 및 실제 E2E 테스트 기준선**.
+
+## 2026-10-21 G1-B-05 장문용 서버 revision CAS 설계
+- [x] 장문 원문을 URL 필터로 보내지 않는 revision 기반 조건부 저장 초안 설계.
+- [x] Draft PR #24 작성: `supabase/migrations/013_document_revision_cas_DRAFT.sql` (실행 금지), `docs/engineering/G1_DOCUMENT_REVISION_CAS_CONTRACT_2026-10-21.md`, 정적 계약 테스트·CI 파일.
+- [ ] CI 결과 미확인: PR #24 head의 workflow run 조회 결과 없음. 테스트 PASS로 표시하지 않는다.
+- [ ] P0: 모든 기존 문서 변경 경로(직접 저장, 채팅, 복원, 재생성, upsert) revision 증가 강제 및 사용자 임의 revision 조작 차단.
+- [ ] P0: 격리 DB에서 RLS/원자성/동시성 검증과 클라이언트 저장 흐름 통합. DB 적용·main 기능 병합 금지.
+- [ ] 다음 G1-B-06: 전체 writer 인벤토리·DB 트리거/업데이트 권한 계약 확정 후 안전 SQL 리팩터링.
+[PR #24](https://github.com/happysuyeun-rgb/plan_os/pull/24)
