@@ -19,3 +19,15 @@ test('task changes require version, owner-gated soft delete and immutable tenant
   assert.match(sql, /ONLY_OWNER_MAY_DELETE_TASK/)
   assert.match(sql, /new\.project_id is distinct from old\.project_id/)
 })
+
+test('S2 manifests use immutable owner-only RPC and idempotency guard', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/012_audit_source_manifests.sql', import.meta.url), 'utf8')
+  assert.match(migration, /enable row level security/)
+  assert.match(migration, /request_key uuid not null/)
+  assert.match(migration, /unique index audit_manifest_request_unique/)
+  assert.match(migration, /REQUEST_KEY_CONFLICT/)
+  assert.match(migration, /public\.get_project_role\(p_project_id\)/)
+  assert.match(migration, /is_audit_source_manifest_current/)
+  assert.doesNotMatch(migration, /as \$\s*\n/)
+  assert.equal((migration.match(/\$\$/g) ?? []).length % 2, 0)
+})
