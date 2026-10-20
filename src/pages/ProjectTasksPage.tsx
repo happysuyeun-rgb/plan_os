@@ -50,7 +50,7 @@ export default function ProjectTasksPage() {
     return () => { mounted = false }
   }, [projectId, userId, setCurrentProject, fetchMembers])
 
-  const activeProject = currentProject?.id === projectId && currentProject.deleted_at === null
+  const activeProject = currentProject?.id === projectId && currentProject?.deleted_at === null
   const currentMembership = membersLoaded ? members.find((member) => member.project_id === projectId && member.user_id === userId && member.status === 'active') : undefined
   const canEdit = activeProject && (currentProject?.user_id === userId || currentMembership?.role === 'owner' || currentMembership?.role === 'editor')
   const activeMembers = membersLoaded ? members.filter((member) => member.project_id === projectId && member.status === 'active' && member.user_id) : []
