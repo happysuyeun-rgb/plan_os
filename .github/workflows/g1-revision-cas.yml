@@ -6,6 +6,8 @@ on:
       - 'tests/g1-revision-cas-contract.test.mjs'
       - 'docs/engineering/G1_DOCUMENT_REVISION_CAS_CONTRACT_2026-10-21.md'
       - 'docs/engineering/G1_DOCUMENT_WRITER_AUDIT_2026-10-21.md'
+      - 'docs/quality/G1_ISOLATED_DB_TEST_MATRIX_2026-10-21.md'
+      - 'tests/g1-isolated-db-matrix.test.mjs'
       - '.github/workflows/g1-revision-cas.yml'
   workflow_dispatch:
 jobs:
@@ -16,4 +18,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/g1-revision-cas-contract.test.mjs
+      - run: node --test tests/g1-revision-cas-contract.test.mjs tests/g1-isolated-db-matrix.test.mjs
