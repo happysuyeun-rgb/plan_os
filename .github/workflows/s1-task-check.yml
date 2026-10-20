@@ -11,6 +11,7 @@ on:
       - 'tests/task-sql-contract.test.mjs'
       - 'tests/audit-source-selection.test.mjs'
       - 'src/lib/auditSourceSelection.ts'
+      - 'src/lib/auditManifestContract.ts'
       - 'src/pages/AuditSourceSelectionPage.tsx'
       - 'package.json'
       - '.github/workflows/s1-task-check.yml'
@@ -30,7 +31,7 @@ jobs:
       - run: node --test tests/audit-source-selection.test.mjs
       - run: npm run build
       - name: Lint S1 changed code
-        run: npx eslint src/pages/AuditSourceSelectionPage.tsx src/lib/auditSourceSelection.ts src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
+        run: npx eslint src/lib/auditManifestContract.ts src/pages/AuditSourceSelectionPage.tsx src/lib/auditSourceSelection.ts src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
       - name: Existing repository lint baseline (non-blocking)
         run: npm run lint
         continue-on-error: true
