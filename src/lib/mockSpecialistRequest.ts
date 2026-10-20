@@ -54,3 +54,27 @@ export function previewMockContract(request: MockRequest, readNotice: boolean): 
     billingAllowed: false,
   }
 }
+
+/** F-303 display-only budget gate. Unknown prices MUST NOT be represented as ₩0. */
+export type MockBudgetReview = {
+  status: 'pricing_unavailable'
+  estimatedCost: null
+  currency: null
+  maximumCharge: null
+  actualExecutionAllowed: false
+  reason: string
+}
+
+export function getMockBudgetReview(review: MockContractReview): MockBudgetReview {
+  if (review.status !== 'review_only' || review.actualExecutionAllowed !== false) {
+    throw new Error('먼저 모의 계약 검토를 완료해야 합니다.')
+  }
+  return {
+    status: 'pricing_unavailable',
+    estimatedCost: null,
+    currency: null,
+    maximumCharge: null,
+    actualExecutionAllowed: false,
+    reason: '모델 제공사·요금·예산 상한이 승인되지 않아 실제 실행이나 결제를 진행할 수 없습니다.',
+  }
+}
