@@ -4,6 +4,8 @@ on:
     paths:
       - 'src/lib/taskPrototype.ts'
       - 'src/lib/api/projectTasks.ts'
+      - 'src/lib/api/auditManifests.ts'
+      - 'supabase/migrations/012_audit_source_manifests.sql'
       - 'supabase/migrations/011_project_tasks.sql'
       - 'src/pages/ProjectTasksPage.tsx'
       - 'src/App.tsx'
@@ -31,7 +33,7 @@ jobs:
       - run: node --test tests/audit-source-selection.test.mjs
       - run: npm run build
       - name: Lint S1 changed code
-        run: npx eslint src/lib/auditManifestContract.ts src/pages/AuditSourceSelectionPage.tsx src/lib/auditSourceSelection.ts src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
+        run: npx eslint src/lib/api/auditManifests.ts src/lib/auditManifestContract.ts src/pages/AuditSourceSelectionPage.tsx src/lib/auditSourceSelection.ts src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
       - name: Existing repository lint baseline (non-blocking)
         run: npm run lint
         continue-on-error: true
