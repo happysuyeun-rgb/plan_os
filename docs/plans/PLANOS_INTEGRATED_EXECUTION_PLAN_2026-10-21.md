@@ -266,3 +266,14 @@
 - [ ] **브라우저 E2E 미실행:** 실제 Playwright/Chromium에서 owner/editor/viewer, 세션 변경, URL 변경, 새로고침·뒤로가기를 검증해야 함. 정적 계약 테스트를 브라우저 검증으로 표기 금지.
 - [ ] F-301 전체/실제 계약 F-302/예산 F-303 기능 미완료. PR #25는 Draft 유지, main 기능 반영하지 않음.
 - [ ] 다음: 재현 가능한 Mock 브라우저 E2E 환경/로그인 시드 구축 후 실제 브라우저 검증 → 결함 조정 → F-302 다음 범위 확인.
+
+## 2026-10-21 S3 Mock Chromium 브라우저 E2E 실제 실행 결과
+- [x] 작업 전 최신 실행계획서 및 현행 `localDevAuth.ts`, `projectStore.ts`, 보호 라우트 정책 검토.
+- [x] PR #25에 개발 전용 `VITE_S3_E2E_FIXTURE=true` 프로젝트 fixture 추가. `import.meta.env.DEV` 검사로 production build에서 fixture가 활성화되지 않도록 제한 (commit `67d9959`).
+- [x] Playwright Chromium 실행형 `tests/s3-browser-e2e.mjs` 및 CI `.github/workflows/s3-browser-e2e.yml` 작성.
+- [x] GitHub Actions [#39503620671](https://github.com/happysuyeun-rgb/plan_os/actions/runs/39503620671) **SUCCESS**, 실제 Chromium에서 owner 요청·입력 오류·확인 후 Mock 계약 리뷰·초안 취소·새로고침·비소유자·삭제·미존재·비로그인 9종 사용자 흐름 확인.
+- [x] 동 커밋의 다른 CI #39503620497 / #39503620692 SUCCESS.
+- [ ] **브라우저 테스트의 권한 한계:** fixture는 프로젝트 소유 ID만 구별한다. 실제 editor/viewer 역할·Supabase JWT/RLS 보안 검증은 별도 격리 DB에서 실행해야 함.
+- [ ] 세션 전환·뒤로가기·네트워크 장애·탭 동시 열기 전체 E2E 미실행. F-301·F-302·F-303 전체 완료가 아님.
+- [ ] PR #25 Draft 유지, main 기능 병합·운영 DB·운영 배포 미실행.
+- [ ] **다음 작업:** S3 UX 누락/불일치 검수(비소유자 권한 메시지·현재 사용자 세션 전환), Mock F-302/F-303 기능 정의서 대조 → 다음 수직 개발 단위 확정.
