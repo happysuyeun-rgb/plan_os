@@ -28,6 +28,12 @@
 - [ ] **후속 P1-3/4/5/6/7:** UX_FLOWS, worker/queue/ModelGateway ADR, 승인 요청 생성/비동기 계획 GET/원장 API+SQL, 위협 모델/실행 QA/운영 런북, 전수 추적·승인. Phase 0의 B-04/C-07/동시성/RLS 및 Phase 2 구현은 여전히 별개 미완료.
 - **브랜치:** [docs/planos-v3-readiness-20261014](https://github.com/happysuyeun-rgb/plan_os/tree/docs/planos-v3-readiness-20261014/docs) / [Draft PR #1](https://github.com/happysuyeun-rgb/plan_os/pull/1) OPEN; main 병합/운영 DB·배포/유료 API 호출 없음.
 
+### 2026-10-20 Phase 1 P1-3 UX 문서 진행 (최신)
+- [x] **P1-3A UX 설계 초안:** [UX_FLOWS.md](ux/UX_FLOWS.md) — 첫 AI 감사 업무에 대해 C05/N01/N05/N17/N19/N20/N08/N09/N11/N12/N03/N14 동선, 계약과 유료 계획 생성 선후, 승인/수락 중복 방지, 네트워크·권한·비용·stale 예외 및 UX-01~12 시나리오 설계.
+- [x] **누락 점검:** 기존 문서 딥링크 유지, 보고서 사람 수락 위치 N11 단일화, N09/N12 계획 승인 동일 이벤트, Phase 3 내부 계약 vs Phase 5 고객용 화면, 모델 비용/데이터 동의 이전 실행 금지 반영.
+- [ ] **P1-3B 최종 검증:** 와이어프레임 시안·모바일/키보드/스크린리더 실제 테스트, API/SQL 화면 동작 연결, 정책·사용자 최종 승인 및 UX-01~12 실제 실행 미완료.
+- [ ] **다음:** P1-4 영속 worker/queue/ModelGateway/원가 사용량 ADR, P1-5 서버 API/DB, P1-6 QA/보안/출시. Phase 0 안전성 문제와 main/운영 승인 미완료.
+
 ## 전체 로드맵
 | 단계 | 진행 상태 | 완료한 것 | 미완료·다음 확인 |
 |---|---|---|---|
