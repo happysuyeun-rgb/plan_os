@@ -10,15 +10,15 @@
 | 문서 | 역할 |
 |------|------|
 | **이 문서** (`TECH_SPEC.md`) | 개발 명세 — 구현 시 참조하는 기준 |
-| [`DEV_GUIDE.md`](./DEV_GUIDE.md) | 개발 가이드 — 역할 분담, Phase 체크리스트, 진행 순서 |
-| [`MOCK_GAP_REVIEW.md`](./MOCK_GAP_REVIEW.md) | 갭 검토서 — 명세 대비 구현 현황·누락·우선순위 |
-| [`HISTORY_AND_EXPORT_DESIGN.md`](./HISTORY_AND_EXPORT_DESIGN.md) | 히스토리·파일보내기 상세 설계 |
-| [`EXPORT_FORMATS_DESIGN.md`](./EXPORT_FORMATS_DESIGN.md) | 보내기 형식 확장 (HTML·JSON·PDF·DOCX 등) |
-| [`MEMBER_PERMISSIONS_DESIGN.md`](./MEMBER_PERMISSIONS_DESIGN.md) | 멤버 권한 체계·역할 변경 정책 |
-| [`MEMBER_COMMENTS_DESIGN.md`](./MEMBER_COMMENTS_DESIGN.md) | 화면별 멤버 코멘트·리뷰 협업 |
-| [`PROJECT_TRASH_DESIGN.md`](./PROJECT_TRASH_DESIGN.md) | 프로젝트 휴지통·복원·영구삭제 |
-| [`DASHBOARD_NOTIFICATIONS_DESIGN.md`](./DASHBOARD_NOTIFICATIONS_DESIGN.md) | 대시보드·GNB 알림 (채팅·댓글) |
-| [`DOC_LAYOUT_DESIGN.md`](./DOC_LAYOUT_DESIGN.md) | DOC-001 레이아웃 v2.1 (헤더 1행·채팅 항상 표시·인라인 제목) |
+| [`DEV_GUIDE.md`](../../DEV_GUIDE.md) | 개발 가이드 — 역할 분담, Phase 체크리스트, 진행 순서 |
+| [`MOCK_GAP_REVIEW.md`](../../MOCK_GAP_REVIEW.md) | 갭 검토서 — 명세 대비 구현 현황·누락·우선순위 |
+| [`HISTORY_AND_EXPORT_DESIGN.md`](../../HISTORY_AND_EXPORT_DESIGN.md) | 히스토리·파일보내기 상세 설계 |
+| [`EXPORT_FORMATS_DESIGN.md`](../../EXPORT_FORMATS_DESIGN.md) | 보내기 형식 확장 (HTML·JSON·PDF·DOCX 등) |
+| [`MEMBER_PERMISSIONS_DESIGN.md`](../../MEMBER_PERMISSIONS_DESIGN.md) | 멤버 권한 체계·역할 변경 정책 |
+| [`MEMBER_COMMENTS_DESIGN.md`](../../MEMBER_COMMENTS_DESIGN.md) | 화면별 멤버 코멘트·리뷰 협업 |
+| [`PROJECT_TRASH_DESIGN.md`](../../PROJECT_TRASH_DESIGN.md) | 프로젝트 휴지통·복원·영구삭제 |
+| [`DASHBOARD_NOTIFICATIONS_DESIGN.md`](../../DASHBOARD_NOTIFICATIONS_DESIGN.md) | 대시보드·GNB 알림 (채팅·댓글) |
+| [`DOC_LAYOUT_DESIGN.md`](../../DOC_LAYOUT_DESIGN.md) | DOC-001 레이아웃 v2.1 (헤더 1행·채팅 항상 표시·인라인 제목) |
 
 ## 1. 전체 화면 목록 및 라우팅 구조
 
@@ -83,7 +83,7 @@ DocumentLayout (DOC-001 전용, GNB 없음)
 └── CommentSidebar (300px) + DocumentRightPanel (11px) — 댓글 토글
 ```
 
-> v1 `DocumentSidebar`(180px 세로 탭)는 v2에서 제거. 상세: [`DOC_LAYOUT_DESIGN.md`](./DOC_LAYOUT_DESIGN.md)
+> v1 `DocumentSidebar`(180px 세로 탭)는 v2에서 제거. 상세: [`DOC_LAYOUT_DESIGN.md`](../../DOC_LAYOUT_DESIGN.md)
 
 ### 1.5 핵심 플로우별 라우팅
 
@@ -746,8 +746,8 @@ Phase 0 (인프라)
 ### 6.4 V2 이후 확장 포인트 (참고)
 
 - `CodeMirror` 에디터, `Mermaid.js` 유저 플로우
-- 멤버 초대 수락·소유권 이전 (Mock은 owner/editor/viewer만) — [`MEMBER_PERMISSIONS_DESIGN.md`](./MEMBER_PERMISSIONS_DESIGN.md)
-- PDF보내기 (Markdown/ZIP은 E1~E3 완료, PDF는 V2) — [`HISTORY_AND_EXPORT_DESIGN.md`](./HISTORY_AND_EXPORT_DESIGN.md)
+- 멤버 초대 수락·소유권 이전 (Mock은 owner/editor/viewer만) — [`MEMBER_PERMISSIONS_DESIGN.md`](../../MEMBER_PERMISSIONS_DESIGN.md)
+- PDF보내기 (Markdown/ZIP은 E1~E3 완료, PDF는 V2) — [`HISTORY_AND_EXPORT_DESIGN.md`](../../HISTORY_AND_EXPORT_DESIGN.md)
 - 반응형 레이아웃
 - 결제 연동 (Pro 9,900원 / Team 29,000원)
 
