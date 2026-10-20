@@ -6,6 +6,8 @@ create table public.project_tasks (
   assignee_user_id uuid references auth.users(id) on delete set null,
   title text not null check (char_length(trim(title)) between 1 and 120),
   objective text not null default '',
+  acceptance_criteria jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(acceptance_criteria) = 'array' and jsonb_array_length(acceptance_criteria) <= 20),
   status text not null default 'todo'
     check (status in ('todo','in_progress','in_review','blocked','done')),
   blocked_reason text,
@@ -73,7 +75,7 @@ begin
   end if;
   if old.deleted_at is not null and new.deleted_at is null and (
     new.status is distinct from old.status or new.title is distinct from old.title
-    or new.objective is distinct from old.objective or new.assignee_user_id is distinct from old.assignee_user_id
+    or new.objective is distinct from old.objective or new.acceptance_criteria is distinct from old.acceptance_criteria or new.assignee_user_id is distinct from old.assignee_user_id
   ) then
     raise exception 'RESTORE_ONLY_NO_CONTENT_CHANGE' using errcode = '23514';
   end if;
