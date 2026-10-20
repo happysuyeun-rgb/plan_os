@@ -32,3 +32,25 @@ export function createMockDraft(input: Omit<MockRequest, 'status'>): MockRequest
   if (error) throw new Error(error)
   return { ...input, task: input.task.trim(), acceptanceCriteria: input.acceptanceCriteria.trim(), status: 'draft' }
 }
+
+/** Preview acknowledgement is NOT a legally valid contract or execution approval. */
+export interface MockContractReview {
+  request: MockRequest
+  status: 'review_only'
+  actualExecutionAllowed: false
+  externalTransferAllowed: false
+  billingAllowed: false
+}
+
+export function previewMockContract(request: MockRequest, readNotice: boolean): MockContractReview {
+  if (request.status !== 'draft' || !readNotice) {
+    throw new Error('실행 제한 안내를 확인해야 검토 화면으로 이동할 수 있습니다.')
+  }
+  return {
+    request,
+    status: 'review_only',
+    actualExecutionAllowed: false,
+    externalTransferAllowed: false,
+    billingAllowed: false,
+  }
+}
