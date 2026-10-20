@@ -158,6 +158,7 @@ export default function ProjectTasksPage() {
         className="text-sm text-gray-500 hover:underline">← 프로젝트 문서</Link>
       <header>
         <h1 className="text-2xl font-bold text-gray-900">프로젝트 업무 관리</h1>
+        {projectId && <Link to={`/projects/${projectId}/specialists/request`} className="mt-3 inline-block rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-800">AI 전문가 업무 요청 Mock →</Link>}
         <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900" role="note">
           {useServerTasks ? '개발 DB 테스트 모드: 업무를 서버에 저장합니다. 운영 환경에서는 사용하지 마세요.' : 'S1 개발 시안: 이 화면의 업무는 현재 브라우저에만 저장됩니다.'}
           실제 운영용 업무 관리·권한 통합은 아직 검증되지 않았습니다.
