@@ -35,8 +35,6 @@ export default function ProjectTasksPage() {
 
   useEffect(() => {
     let mounted = true
-    setReady(false)
-    setMembersLoaded(false)
     if (!projectId || !userId) return
     void setCurrentProject(projectId).then(() => {
       if (!mounted) return
