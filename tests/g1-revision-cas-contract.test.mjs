@@ -17,3 +17,11 @@ test('draft is explicitly gated against deployment',()=>{
  assert.match(sql,/NOT applied to any database/i)
  assert.match(sql,/ALL writers revision-aware/i)
 })
+
+test('every content update bumps revision once in a before update trigger',()=>{
+ assert.match(sql,/before update on public\.documents/i)
+ assert.match(sql,/new\.content is distinct from old\.content/i)
+ assert.match(sql,/new\.content_revision\s*:=\s*old\.content_revision\s*\+\s*1/i)
+ const cas = sql.slice(sql.indexOf('create or replace function public.save_document_content_cas'),sql.indexOf('revoke all on function'))
+ assert.doesNotMatch(cas,/set content\s*=\s*p_content\s*,\s*content_revision/i)
+})
