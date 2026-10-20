@@ -77,7 +77,8 @@ export function createDocumentAutosave<T>({
         const updated = await persist(documentId, content)
         task.savedRevision = revision
         task.failedRevision = null
-        if (task.revision === revision) onSaved(documentId, content, updated)
+        // Even if the editor has newer text, advance its acknowledged server baseline.
+        onSaved(documentId, content, updated)
       } catch {
         if (task.revision === revision) {
           task.failedRevision = revision
@@ -119,8 +120,9 @@ export function createDocumentAutosave<T>({
         // A failed draft must never be discarded by a replacement operation.
         if (pendingRevision > task.savedRevision) {
           try {
-            await persist(documentId, pendingContent)
+            const saved = await persist(documentId, pendingContent)
             task.savedRevision = pendingRevision
+            onSaved(documentId, pendingContent, saved)
           } catch (error) {
             throw new Error(
               'Unsaved document changes must be retried before overwrite',
@@ -136,9 +138,10 @@ export function createDocumentAutosave<T>({
         pendingDraftHandled = true
         const content = await overwrite()
         task.savedRevision = revision
+        // The server changed even if newer local edits arrived meanwhile.
+        onReplaced(documentId, content)
         if (task.revision === revision) {
           task.content = content
-          onReplaced(documentId, content)
         }
         return content
       } catch (error) {
