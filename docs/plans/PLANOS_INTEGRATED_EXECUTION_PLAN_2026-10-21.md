@@ -152,3 +152,13 @@
 - [ ] **다음 작업 G1-B-04:** PR #15 저장 엔진의 기준 버전·동시쓰기 흐름과 PR #19 복구 경로를 공통 브랜치에서 조정하고, 문서별 마지막 서버 확인값을 통해 CAS로 저장하도록 실제 연결.
 - [ ] 원격 서버·실제 DB의 멀티클라이언트 동시성/RLS 및 복구 E2E는 미검증. 위 mock 테스트로 G1-B 완료 선언 금지.
 - [ ] PR #15/#19/#22 Draft 유지; 사용자 데이터 보존 테스트 통과 전 main 기능 병합 금지.
+
+## 2026-10-21 G1-B-04 — 초안 복구 + 문서별 자동저장 + CAS 통합 (Draft)
+- [x] PR #19 기반 격리 브랜치 `fix/planos-g1-autosave-cas-integration-20261021` 생성, [Draft PR #23](https://github.com/happysuyeun-rgb/plan_os/pull/23) 작성.
+- [x] `src/lib/api/documents.ts`에 조건부 문서 저장 API 추가. `documentStore.ts`의 서버 확인 본문 baseline을 별도 관리하여, 로컬 초안을 그대로 기준값으로 쓰지 않도록 수정.
+- [x] `documentAutosave.ts`에서 이전 저장 응답 뒤에도 최신 baseline을 갱신하고, 명시적 복원 후 후속 초안이 있으면 로컬 화면 덮어쓰기를 회피하도록 콜백 분리.
+- [x] CAS stale/일련 저장 응답/복원 중 후속 초안의 단위 테스트 3건 작성 및 PR CI 워크플로 추가.
+- [ ] CI 실행 결과 확인: 신규 PR #23의 GitHub workflow run이 **아직 조회되지 않음**. 코드 작성만 완료이며 테스트 PASS로 기록하지 않음.
+- [ ] 중요한 설계 결함: 본문 `.eq('content', baseline)`은 문서 본문 크기에 따라 PostgREST 요청 URL 길이/인코딩 제한을 초과할 수 있으므로 장문 문서에 실사용 부적합할 수 있음. **서버 버전 번호 또는 문서 digest + 원자적 DB 함수/RPC** 방식 검토/전환 필요.
+- [ ] PR #23 현재 PR #19 미병합 선행변경을 포함하여 main과 충돌; PR #15 저장 경로와의 통합·권한/브라우저/격리 DB E2E 미검증.
+- [ ] 따라서 운영 DB 변경 및 main 병합 금지. 다음 작업은 **G1-B-05: 경량 version/digest 기반 RPC 계약 및 실제 E2E 테스트 기준선**.
