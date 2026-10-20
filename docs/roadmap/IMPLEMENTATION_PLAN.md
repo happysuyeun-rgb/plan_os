@@ -98,6 +98,11 @@
 - [ ] 워커/호스트·provider 실제 선정/서비스 조건·실증·최종 기술 승인, P1-3B 모바일/접근성/실제 UI 검증.
 - **다음 설계:** P1-5 async API/원장 SQL/RLS → P1-6 위협 모델·테스트·릴리스 런북. 기존 Phase 0 데이터 손실/권한 누락 닫기 전 신규 코드·운영 투입 금지.
 
+## 2026-10-20 P1-5 상세 API/DB 계약 초안
+- [x] [P1-5 API/DB 설계](../engineering/AI_API_DB_CONTRACT_P1_5_2026-10-20.md): 보완 API P5-01~16, 프로젝트별 FK/멱등/상태 CAS/승인·원가 원장 및 P5T-01~12 테스트 시나리오. **설계만 완료**.
+- [ ] 실제 OpenAPI validation, SQL DDL/RLS/worker/비용 대사 구현, 통합·E2E QA와 승인. Phase 0 데이터 안전성 선행 게이트 유지.
+- **다음:** P1-6 Threat Model·TEST_PLAN·RELEASE_RUNBOOK → P1-7 전체 FR/TF/UX/API/DB/test 대조.
+
 ## 구현 전 필수 결정 및 누락 사항 (기존 준비도 문서 통합)
 | ID | 결정할 사항 | 통과 기준 |
 |---|---|---|
