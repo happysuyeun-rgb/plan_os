@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Document, DocumentType } from '../types'
 import {
   fetchDocuments as apiFetchDocuments,
-  saveDocumentContent as apiSaveDocumentContent,
+  saveDocumentContentIfUnchanged,
 } from '../lib/api/documents'
 import {
   CASCADE_STEPS,
@@ -36,10 +36,18 @@ interface DocumentState {
   setReadOnly: (readOnly: boolean) => void
 }
 
+// Last server-acknowledged baseline per document. Never use the local editor buffer as a CAS baseline.
+const acknowledgedContent = new Map<string, string>()
+
 // The callbacks are invoked only after the store is initialized and edits occur.
 const autosave = createDocumentAutosave<Document>({
-  persist: apiSaveDocumentContent,
+  persist: async (documentId, content) => {
+    const expected = acknowledgedContent.get(documentId)
+    if (expected === undefined) throw new Error('Missing server baseline: reload the document before saving')
+    return saveDocumentContentIfUnchanged(documentId, expected, content)
+  },
   onSaved: (documentId, savedContent, updated) => {
+    acknowledgedContent.set(documentId, savedContent)
     const userId = useAuthStore.getState().user?.id
     if (userId) acknowledgeSavedDraft(userId, documentId, savedContent)
     useDocumentStore.setState((state) => {
@@ -56,6 +64,7 @@ const autosave = createDocumentAutosave<Document>({
     })
   },
   onReplaced: (documentId, content) => {
+    acknowledgedContent.set(documentId, content)
     useDocumentStore.setState((state) => {
       const entry = Object.entries(state.documents).find(([, doc]) => doc?.id === documentId)
       if (!entry) return state
@@ -100,6 +109,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const userId = useAuthStore.getState().user?.id
       const recoveryConflicts: Record<string, string> = {}
       for (const doc of docs) {
+        // Avoid rebasing an in-flight draft onto a different server revision.
+        if (autosave.getStatus(doc.id) === 'saved' || !acknowledgedContent.has(doc.id)) {
+          acknowledgedContent.set(doc.id, doc.content)
+        }
         const cached = get().documents[doc.type]
         if (cached?.id === doc.id && autosave.getStatus(doc.id) !== 'saved') {
           map[doc.type] = { ...doc, content: cached.content }
