@@ -2,6 +2,7 @@
 
 프로젝트·문서·업무를 관리하고, 승인된 범위에서 AI 전문 역할에 업무를 위임하는 통합 서비스 개발 저장소입니다. 현재는 개발·검증 단계이며 모든 기능이 출시된 것은 아닙니다.
 
+- **[저장소 폴더·문서 사용 가이드](docs/REPOSITORY_GUIDE.md)** — 폴더 구조, 파일 위치, 작업별 찾는 법
 - **[최신 문서 안내](docs/README.md)** — 현재 기준 문서와 구문서 구분
 - [통합 기능정의서](docs/product/FUNCTIONAL_SPEC_V1_2026-10-20.md)
 - [2026-10-21 통합 실행계획서](docs/plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md)
