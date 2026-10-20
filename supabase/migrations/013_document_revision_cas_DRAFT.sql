@@ -5,12 +5,20 @@ alter table public.documents add column if not exists content_revision bigint no
 create or replace function public.save_document_content_cas(
   p_document_id uuid, p_expected_revision bigint, p_content text
 ) returns public.documents
-language plpgsql security invoker set search_path = pg_catalog, public
+language plpgsql security definer set search_path = pg_catalog, public
 as $$
-declare v_row public.documents%rowtype;
+declare
+  v_row public.documents%rowtype;
+  v_project_id uuid;
 begin
   if auth.uid() is null then
     raise exception 'authentication required' using errcode='42501';
+  end if;
+  select d.project_id into v_project_id from public.documents d
+    join public.projects p on p.id = d.project_id
+    where d.id = p_document_id and p.deleted_at is null;
+  if v_project_id is null or not public.can_edit_project_content(v_project_id) then
+    raise exception 'document unavailable or not editable' using errcode='42501';
   end if;
   update public.documents
     set content = p_content
@@ -50,3 +58,6 @@ before update on public.documents
 for each row execute function public.bump_document_content_revision();
 
 -- CAS UPDATE itself must not increment revision a second time: trigger does it.
+-- SECURITY DEFINER is only acceptable after independent role/RLS and search_path review.
+-- Direct client UPDATE remains a stale-write bypass and MUST be disabled on rollout.
+-- No grant/revoke to tables in this DRAFT: changing legacy clients could cause outages.
