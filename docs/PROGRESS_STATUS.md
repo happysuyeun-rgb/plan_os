@@ -47,6 +47,13 @@
 - [ ] **P1-5B 구현/검증/최종 승인:** OpenAPI 기계 스키마/실제 DDL·RLS/worker·API 테스트, 모델 공급자 비용/데이터 정책 미확정. P5T 12건 실제 테스트 0건.
 - [ ] **다음 P1-6:** 위협모델·QA 계획·운영 출시/롤백 런북. P1-7 전체 추적 감사. Phase 0 미완·main/운영 DB/배포 미수행.
 
+### 2026-10-20 P1-5 재감사 + P1-6 보안·QA·운영 문서 (최신)
+- [x] **P1-5 재감사:** [P5A-01~13](quality/PHASE1_P5_REAUDIT_2026-10-20.md). 최초 생성 vs 기존 리소스 If-Match 요구 충돌, 서버 전용 승인 생성 라우트 노출, 중복 예산 차감, PM 생성 run 구조, project composite FK·R1 Storage partial write·공급자 재호출/비용 등 13건 기록. [P1-5 명세](engineering/AI_API_DB_CONTRACT_P1_5_2026-10-20.md)에 중요한 규칙 보정.
+- [x] **P1-6A 설계 산출물:** [위협 모델](quality/THREAT_MODEL_2026-10-20.md)(TM-01~12), [QA 계획](quality/TEST_PLAN_2026-10-20.md)(QA-A~I), [런북](operations/RELEASE_RUNBOOK_2026-10-20.md)(릴리스 차단·feature flag/worker pause·rollback/backup·복구 조건) 작성.
+- [ ] **P1-5B/P1-6B 실제 검증:** 구현된 SQL/RLS·OpenAPI/worker·예산 원장, 4역할/재시도/비용/데이터 손실 CI/E2E/보안 재현, backup/restore 리허설·운영 승인 **미완료**. 위 문서 작성으로 P1/Phase 0 종료 불가.
+- [ ] **P1-7:** FR/TF↔화면↔API↔DB↔QA/보안 전수 추적·설계 정책 미결정/누락 정리, 최종 승인 게이트.
+- **안전:** 문서 Draft PR #1, main/운영 DB/배포/유료 모델 실행 미실행.
+
 ## 전체 로드맵
 | 단계 | 진행 상태 | 완료한 것 | 미완료·다음 확인 |
 |---|---|---|---|
