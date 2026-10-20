@@ -1,6 +1,6 @@
 # PlanOS 문서 인벤토리·이동 대장 — 2026-10-21
 
-**범위 제한:** GitHub main에서 직접 조회한 주요 문서 16개. 도구상 전체 디렉터리 열거가 불가능해 전수조사 완료로 간주하지 않는다. Cursor 로컬 `git ls-files docs`로 확인 예정.
+**범위 제한:** GitHub main에서 직접 조회한 주요 문서 16개 + 연관 구문서 9개. 도구상 전체 디렉터리 열거가 불가능해 전수조사 완료로 간주하지 않는다. Cursor 로컬 `git ls-files docs`로 확인 예정.
 
 | 파일 | 분류 | 처리 |
 |---|---|---|
@@ -27,3 +27,21 @@
 - [ ] 저장소 전체 문서 목록 확보 및 구문서 전체 분류
 - [ ] Markdown 상대링크·코드/CI 경로 실제 검사
 - [ ] 문서정리 PR 검토 및 병합
+
+## 2026-10-21 추가 참조 조사 — 이전 V1 기술명세가 참조하는 구문서
+
+다음 9개 파일은 실제 GitHub 경로 존재를 확인했지만 **현재 기능/테스트에서의 사용 여부를 전수 확인하지 못했기 때문에 REVIEW로 유지하고 이동하지 않음**.
+
+| 파일 | 상태 | 이동 결정 |
+|---|---|---|
+| `docs/DEV_GUIDE.md` | REVIEW | 사용자 개발환경/스크립트 참조 확인 후 |
+| `docs/MOCK_GAP_REVIEW.md` | REVIEW | 현행 결함 대장 중복 확인 후 |
+| `docs/HISTORY_AND_EXPORT_DESIGN.md` | REVIEW | 현행 기능과 대체 문서 확인 후 |
+| `docs/EXPORT_FORMATS_DESIGN.md` | REVIEW | 코드/문서 인용 확인 후 |
+| `docs/MEMBER_PERMISSIONS_DESIGN.md` | REVIEW | 현재 RLS/멤버 설계와 중복 확인 후 |
+| `docs/MEMBER_COMMENTS_DESIGN.md` | REVIEW | PR #15 연관성 확인 후 |
+| `docs/PROJECT_TRASH_DESIGN.md` | REVIEW | 기존 휴지통 QA 근거 확인 후 |
+| `docs/DASHBOARD_NOTIFICATIONS_DESIGN.md` | REVIEW | 알림 구현 참조 확인 후 |
+| `docs/DOC_LAYOUT_DESIGN.md` | REVIEW | 화면/복원 설계 참조 확인 후 |
+
+**링크 검수:** `archive/legacy-v1/TECH_SPEC.md`에 있는 기존 상대링크 9개 목적지를 현재 브랜치에서 직접 조회해 **9/9 존재 확인**. 전체 Markdown·CI·기타 코드 참조의 전수 검증은 별도 미완료로 유지.
