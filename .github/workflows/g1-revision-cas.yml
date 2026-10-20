@@ -1,0 +1,18 @@
+name: G1 revision CAS draft checks
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/013_document_revision_cas_DRAFT.sql'
+      - 'tests/g1-revision-cas-contract.test.mjs'
+      - 'docs/engineering/G1_DOCUMENT_REVISION_CAS_CONTRACT_2026-10-21.md'
+      - '.github/workflows/g1-revision-cas.yml'
+  workflow_dispatch:
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/g1-revision-cas-contract.test.mjs
