@@ -31,6 +31,7 @@ export default function ProjectTasksPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -49,12 +50,15 @@ export default function ProjectTasksPage() {
     return () => { mounted = false }
   }, [projectId, userId, setCurrentProject, fetchMembers])
 
-  const activeProject = currentProject?.id === projectId
+  const activeProject = currentProject?.id === projectId && currentProject.deleted_at === null
+  const currentMembership = membersLoaded ? members.find((member) => member.project_id === projectId && member.user_id === userId && member.status === 'active') : undefined
+  const canEdit = activeProject && (currentProject.user_id === userId || currentMembership?.role === 'owner' || currentMembership?.role === 'editor')
   const activeMembers = membersLoaded ? members.filter((member) => member.project_id === projectId && member.status === 'active' && member.user_id) : []
   const assignee = (id: string) => activeMembers.find((member) => member.user_id === id)
   const assigneeLabel = (id: string | null) => id ? (assignee(id)?.name || assignee(id)?.email || '접근 불가/제외된 멤버') : '미지정'
   async function save(next: PrototypeTask[]): Promise<boolean> {
-    if (!projectId || !userId || !activeProject) return false
+    if (!projectId || !userId || !canEdit || saving) return false
+    setSaving(true)
     try {
       await prototypeTaskRepository.replace(userId, projectId, next)
       setTasks(next)
@@ -63,10 +67,12 @@ export default function ProjectTasksPage() {
     } catch {
       setError('업무 저장에 실패했습니다. 변경사항을 다시 확인하세요.')
       return false
+    } finally {
+      setSaving(false)
     }
   }
   async function createTask() {
-    if (!projectId || !activeProject || !title.trim()) return
+    if (!projectId || !canEdit || !title.trim()) return
     const now = new Date().toISOString()
     const selected = assigneeId ? assignee(assigneeId) : undefined
     if (assigneeId && !selected) { setError('유효한 프로젝트 멤버를 지정하세요.'); return }
@@ -77,6 +83,7 @@ export default function ProjectTasksPage() {
     if (saved) { setTitle(''); setObjective(''); setAssigneeId('') }
   }
   function changeStatus(task: PrototypeTask, status: TaskStatus) {
+    if (!canEdit || saving) return
     if (!permittedTransition(task.status, status)) {
       setError('허용되지 않은 업무 상태 변경입니다.')
       return
@@ -97,6 +104,7 @@ export default function ProjectTasksPage() {
     setEditAssigneeId(task.assigneeId ?? '')
   }
   async function saveEdit(task: PrototypeTask) {
+    if (!canEdit || saving) return
     if (!editTitle.trim()) { setError('업무 제목을 입력하세요.'); return }
     const selected = editAssigneeId ? assignee(editAssigneeId) : undefined
     if (editAssigneeId && !selected) { setError('유효한 프로젝트 멤버를 지정하세요.'); return }
@@ -108,6 +116,7 @@ export default function ProjectTasksPage() {
     if (ok) setEditingId(null)
   }
   function setDeleted(task: PrototypeTask, deleted: boolean) {
+    if (!canEdit || saving) return
     void save(tasks.map((item) => item.id === task.id ? {
       ...item, deletedAt: deleted ? new Date().toISOString() : null,
       updatedAt: new Date().toISOString(),
@@ -130,7 +139,7 @@ export default function ProjectTasksPage() {
         <p role="alert">프로젝트 접근을 확인할 수 없습니다.</p>
       ) : (
         <>
-          <section className="space-y-3 rounded-xl border border-gray-200 p-5">
+          {canEdit && <section className="space-y-3 rounded-xl border border-gray-200 p-5">
             <h2 className="font-semibold">새 업무 등록</h2>
             <label className="block text-sm">업무 제목
               <input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)}
@@ -147,9 +156,10 @@ export default function ProjectTasksPage() {
                 {activeMembers.map((member) => <option key={member.id} value={member.user_id ?? ''}>{member.name || member.email}</option>)}
               </select>
             </label>
-            <button type="button" onClick={() => { void createTask() }} disabled={!title.trim()}
+            <button type="button" onClick={() => { void createTask() }} disabled={!title.trim() || saving}
               className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40">업무 추가</button>
-          </section>
+          </section>}
+          {!canEdit && <p className="text-sm text-gray-600">읽기 전용입니다. 업무를 수정하려면 프로젝트 편집 권한이 필요합니다.</p>}
           <section className="space-y-3" aria-label="프로젝트 업무">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold">{showDeleted ? '삭제한 업무' : '업무 목록'} ({visibleTasks.length})</h2>
@@ -159,7 +169,7 @@ export default function ProjectTasksPage() {
             {visibleTasks.length === 0 && <p className="text-sm text-gray-500">등록된 업무가 없습니다.</p>}
             {visibleTasks.map((task) => (
               <article key={task.id} className="rounded-xl border border-gray-200 p-4">
-                {editingId === task.id ? (
+                {canEdit && editingId === task.id ? (
                   <div className="space-y-2">
                     <label className="block text-sm">업무 제목
                       <input value={editTitle} maxLength={120} onChange={(e) => setEditTitle(e.target.value)}
@@ -188,7 +198,7 @@ export default function ProjectTasksPage() {
                   </>
                 )}
                 {task.blockedReason && <p className="mt-2 text-sm text-red-700">차단 사유: {task.blockedReason}</p>}
-                {!showDeleted && <label className="mt-3 block text-sm">상태
+                {canEdit && !showDeleted && <label className="mt-3 block text-sm">상태
                   <select value={task.status} onChange={(e) => changeStatus(task, e.target.value as TaskStatus)}
                     className="ml-3 rounded border p-2">
                     {allStatuses.map((status) => (
@@ -198,7 +208,7 @@ export default function ProjectTasksPage() {
                     ))}
                   </select>
                 </label>}
-                <div className="mt-3 flex gap-2">
+                {canEdit && <div className="mt-3 flex gap-2">
                   {showDeleted ? (
                     <button type="button" onClick={() => setDeleted(task, false)} className="rounded border px-3 py-1 text-sm">복원</button>
                   ) : (
@@ -207,7 +217,7 @@ export default function ProjectTasksPage() {
                       <button type="button" onClick={() => setDeleted(task, true)} className="rounded border px-3 py-1 text-sm text-red-700">삭제</button>
                     </>
                   )}
-                </div>
+                </div>}
               </article>
             ))}
           </section>
