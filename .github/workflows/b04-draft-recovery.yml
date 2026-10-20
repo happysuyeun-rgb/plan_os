@@ -1,0 +1,23 @@
+name: B04 draft recovery
+on:
+  pull_request:
+    paths:
+      - 'src/lib/unsavedDraft.ts'
+      - 'src/store/documentStore.ts'
+      - 'src/pages/DocumentPage.tsx'
+      - 'tests/unsaved-draft.test.mjs'
+      - '.github/workflows/b04-draft-recovery.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/unsaved-draft.test.mjs
+      - run: npm run build
+      - run: npx eslint src/lib/unsavedDraft.ts src/store/documentStore.ts src/pages/DocumentPage.tsx
