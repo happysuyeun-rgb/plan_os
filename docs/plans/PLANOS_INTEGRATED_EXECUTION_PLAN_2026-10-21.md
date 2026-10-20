@@ -92,3 +92,14 @@
 - **PR #19 (3개 파일):** `src/lib/unsavedDraft.ts`, `src/pages/DocumentPage.tsx`, `src/store/documentStore.ts`. **PR #15와 `DocumentPage.tsx` 직접 중복 수정**이 확인됨. 병합 가능 표시와 무관하게 초안·복원 정책 통합 검토 필요.
 - **확정된 처리 순서:** G1-B에서 버전/초안 보존 계약 및 실패 테스트 확보 → PR #15 저장/채팅/RLS 핵심 변경을 현 main에 단계별 재적용·충돌 수정 → PR #19의 중복 `DocumentPage` 변경 수동 병합·테스트 → G1-C로 권한/회귀 검증.
 - **잔여 조사:** PR별 구체 코드 hunk·Issue #10/#12/#16와 테스트 매칭, RLS migration 009/010 적용 조건, 실패 경로 재현. 따라서 G1-A는 **조사 진행 중**으로 유지.
+
+## 2026-10-21 문서 정리 D-01~D-05 (G1 개발 전 보조 게이트)
+- [x] D-01: main에서 존재 확인한 핵심 16개 파일 + 연관 구문서 9개 인벤토리. **전체 디렉터리 전수 확인 미완료**.
+- [x] D-02: CURRENT/REFERENCE/ARCHIVE/REVIEW 분류 초안. 미확인 구문서 9개는 이동 보류.
+- [x] D-03: `docs/archive/legacy-v1/TECH_SPEC.md`로 원문 보존, 기존 `docs/TECH_SPEC.md` 안내문, 최상위 및 docs README 정리.
+- [x] D-04 부분 검수: 이전 V1 명세에서 참조한 9개 파일 존재 확인, 문서 이동 범위 전용 상대링크 CI 성공 (GitHub Actions `39494283233`).
+- [ ] D-04 잔여: `git ls-files docs` 전수 목록·모든 Markdown/CI/코드 경로 확인 및 변경 누락 검증.
+- [x] D-05 PR 생성: [문서 정리 Draft PR #21](https://github.com/happysuyeun-rgb/plan_os/pull/21).
+- [ ] D-05 병합: 전수 검수 및 리뷰 완료 뒤 판단. **현재 main 미반영**.
+
+**G1 복귀 조건:** 위 D-04 잔여 검수를 마친 뒤 G1-A PR #15/#19 충돌 분석을 재개한다. 문서 정리 자체로 기존 데이터 보호·RLS 문제가 해결된 것은 아니다.
