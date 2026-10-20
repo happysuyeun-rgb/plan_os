@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
 import { Input } from '../common/Input'
@@ -16,15 +16,14 @@ export function RenameProjectModal({
   onClose,
   onConfirm,
 }: RenameProjectModalProps) {
+  if (!isOpen) return null
+
+  return <RenameProjectModalContent key={currentTitle} currentTitle={currentTitle} onClose={onClose} onConfirm={onConfirm} />
+}
+
+function RenameProjectModalContent({ currentTitle, onClose, onConfirm }: Omit<RenameProjectModalProps, 'isOpen'>) {
   const [title, setTitle] = useState(currentTitle)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (isOpen) {
-      setTitle(currentTitle)
-      setError('')
-    }
-  }, [isOpen, currentTitle])
 
   const handleConfirm = () => {
     if (title.length < 2) {
@@ -39,7 +38,7 @@ export function RenameProjectModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="프로젝트 이름 변경">
+    <Modal isOpen onClose={onClose} title="프로젝트 이름 변경">
       <Input
         label="프로젝트명"
         value={title}

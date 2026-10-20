@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import type {
   WireframeComponent,
@@ -42,7 +42,9 @@ export function WireframeSlideView({ content, onChange, readOnly }: WireframeSli
   const [activeId, setActiveId] = useState<string | null>(() => slides[0]?.id ?? null)
   const [dragId, setDragId] = useState<string | null>(null)
 
-  useEffect(() => {
+  const [previousContent, setPreviousContent] = useState(content)
+  if (previousContent !== content) {
+    setPreviousContent(content)
     const parsed = parseWireframeContent(content)
     if (parsed) {
       setSlides(parsed)
@@ -50,7 +52,7 @@ export function WireframeSlideView({ content, onChange, readOnly }: WireframeSli
         parsed.some((s) => s.id === prev) ? prev : (parsed[0]?.id ?? null),
       )
     }
-  }, [content])
+  }
 
   const persist = useCallback(
     (next: WireframeSlide[]) => {
