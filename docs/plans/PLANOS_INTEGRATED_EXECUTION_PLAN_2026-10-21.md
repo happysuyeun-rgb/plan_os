@@ -171,3 +171,13 @@
 - [ ] P0: 격리 DB에서 RLS/원자성/동시성 검증과 클라이언트 저장 흐름 통합. DB 적용·main 기능 병합 금지.
 - [ ] 다음 G1-B-06: 전체 writer 인벤토리·DB 트리거/업데이트 권한 계약 확정 후 안전 SQL 리팩터링.
 [PR #24](https://github.com/happysuyeun-rgb/plan_os/pull/24)
+
+## 2026-10-21 G1-B-06 — 문서 writer 감사 및 revision 강제 정책 초안
+- [x] 클라이언트 코드에서 자동저장, 최초 생성/upsert, 재생성/연쇄 재생성, 채팅 RPC, 버전 복원 경로 1차 조사.
+- [x] Draft PR #24에 writer 감사표 작성: `docs/engineering/G1_DOCUMENT_WRITER_AUDIT_2026-10-21.md`.
+- [x] SQL 초안 013에 모든 문서 콘텐츠 변경의 revision을 한 번 증가시키는 BEFORE UPDATE 트리거 추가; CAS RPC의 중복 증가 제거.
+- [x] 정적 테스트에서 revision 트리거 및 중복 증가 방지 계약 추가.
+- [ ] GitHub Actions 실제 PASS 미확인: 커밋 `1f81369`에서 workflow runs 조회되지 않음.
+- [ ] P0: 기존 blind UPDATE/upsert는 트리거만으로 동시편집 덮어쓰기 차단 불가. 모든 writer의 조건부 저장 또는 권한 제한 필요.
+- [ ] P0: 저장 RPC/RLS/격리 DB 동시성·권한 검증, 복원/채팅 SQL 본문 완전 조사, PR #15/#19/#23 통합 충돌 해결.
+- [ ] PR #24 기능 병합 및 운영 DB 적용 보류. 다음 G1-B-07에서 writer별 서버 조건부 변경과 migration 안전성 확보.
