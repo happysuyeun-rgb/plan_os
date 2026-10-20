@@ -236,3 +236,14 @@
 - [x] 최상위 README 및 docs/README 진입 링크 연결.
 - [ ] 전체 소스 트리 모든 파일 단위 목록은 미작성. 이 문서는 검증한 대표 경로를 보여주는 구조 가이드.
 - [ ] CI 검사 결과 미확인; 문서 최신성은 기능 추가 시 지속 갱신.
+
+## 2026-10-21 신규 기능 레인: S3 F-301 업무요청 Mock 첫 수직 슬라이스
+- [x] 작업 전 현행 기능정의서 F-301~303, App 라우팅, S1 프로젝트 업무 UI, 실행계획서 확인.
+- [x] 새 격리 브랜치 `feat/planos-s3-role-request-mock-20261021` 및 [Draft PR #25](https://github.com/happysuyeun-rgb/plan_os/pull/25) 생성.
+- [x] 소유자 전용 Mock 화면 `/projects/:projectId/specialists/request`: 검수 전문가 1종 설명, 업무/완료기준 입력, 유효성 검사, 초안 미리보기, 취소·초기화, 접근오류 안내 구현. 업무 화면에서 바로가기 추가.
+- [x] 실제 실행/데이터 전송/DB 저장/계약/유료 호출은 연결하지 않음. Mock 초안은 메모리에서만 유지.
+- [x] Mock 요청 계약 4개 단위 테스트와 Vite/TS 빌드·변경 코드 린트 GitHub Actions [#39500890039](https://github.com/happysuyeun-rgb/plan_os/actions/runs/39500890039) **SUCCESS**.
+- [x] 검수 중 lint 오류 `react-hooks/set-state-in-effect`를 발견해 수정 후 CI 재통과 (commit `3c4be80`).
+- [ ] 실제 브라우저 접근/owner·editor·viewer 경로, 세션 만료 및 뒤로가기 E2E 미검증.
+- [ ] F-301 전체/계약 F-302/예산 F-303·PM 승인 기능 미구현. PR #25는 Draft, `main` 미병합.
+- [ ] 다음 기능: Mock 역할 카드/요청 초안의 독립적인 UX 수용 테스트 → F-302 계약·승인 전 단계 Mock 구현. 실제 AI 실행·과금은 계속 금지.
