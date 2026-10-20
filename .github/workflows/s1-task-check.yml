@@ -9,6 +9,8 @@ on:
       - 'src/App.tsx'
       - 'tests/task-prototype.test.mjs'
       - 'tests/task-sql-contract.test.mjs'
+      - 'tests/audit-source-selection.test.mjs'
+      - 'src/lib/auditSourceSelection.ts'
       - 'package.json'
       - '.github/workflows/s1-task-check.yml'
   workflow_dispatch:
@@ -24,9 +26,10 @@ jobs:
       - run: npm ci
       - run: npm run test:s1
       - run: node --test tests/task-sql-contract.test.mjs
+      - run: node --test tests/audit-source-selection.test.mjs
       - run: npm run build
       - name: Lint S1 changed code
-        run: npx eslint src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
+        run: npx eslint src/lib/auditSourceSelection.ts src/lib/taskPrototype.ts src/lib/api/projectTasks.ts src/pages/ProjectTasksPage.tsx src/App.tsx
       - name: Existing repository lint baseline (non-blocking)
         run: npm run lint
         continue-on-error: true
