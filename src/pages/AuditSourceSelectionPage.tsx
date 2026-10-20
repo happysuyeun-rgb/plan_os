@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchDocuments } from '../lib/api/documents'
 import { createAuditManifest, isAuditManifestCurrent } from '../lib/api/auditManifests'
@@ -37,6 +37,7 @@ export default function AuditSourceSelectionPage() {
   const [checked, setChecked] = useState(false)
   const [manifestId, setManifestId] = useState('')
   const [persisting, setPersisting] = useState(false)
+  const requestKey = useRef<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -51,6 +52,7 @@ export default function AuditSourceSelectionPage() {
   const toggle = (id: string) => {
     setChecked(false)
     setManifestId('')
+    requestKey.current = null
     setCandidates([])
     setSelected((current) => current.includes(id) ? current.filter((v) => v !== id) : [...current, id])
   }
@@ -59,6 +61,7 @@ export default function AuditSourceSelectionPage() {
     if (!projectId || !accessible) return
     setChecked(false)
     setManifestId('')
+    requestKey.current = null
     setError('')
     try {
       // Always re-read server data before local preflight. This is not a server-side
@@ -93,7 +96,8 @@ export default function AuditSourceSelectionPage() {
     setPersisting(true)
     setError('')
     try {
-      const id = await createAuditManifest(projectId, candidates.map((d) => d.id))
+      requestKey.current ??= crypto.randomUUID()
+      const id = await createAuditManifest(projectId, candidates.map((d) => d.id), requestKey.current)
       const current = await isAuditManifestCurrent(id)
       if (!current) { setError('문서가 변경되었습니다. 다시 검증해 주세요.'); setChecked(false); return }
       setManifestId(id)
