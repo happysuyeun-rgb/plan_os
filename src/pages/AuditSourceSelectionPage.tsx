@@ -43,7 +43,7 @@ export default function AuditSourceSelectionPage() {
     return () => { active = false }
   }, [projectId, userId, setCurrentProject])
 
-  const accessible = currentProject?.id === projectId && currentProject.deleted_at === null
+  const accessible = currentProject?.id === projectId && currentProject?.deleted_at === null
   const toggle = (id: string) => {
     setChecked(false)
     setCandidates([])
