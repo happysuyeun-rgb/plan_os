@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import {
-  readPrototypeTasks, writePrototypeTasks, permittedTransition,
+  prototypeTaskRepository, permittedTransition,
   type PrototypeTask, type TaskStatus,
 } from '../lib/taskPrototype'
 
@@ -19,6 +19,12 @@ export default function ProjectTasksPage() {
   const [tasks, setTasks] = useState<PrototypeTask[]>([])
   const [title, setTitle] = useState('')
   const [objective, setObjective] = useState('')
+  const [assigneeName, setAssigneeName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editObjective, setEditObjective] = useState('')
+  const [editAssignee, setEditAssignee] = useState('')
+  const [showDeleted, setShowDeleted] = useState(false)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
 
@@ -28,30 +34,35 @@ export default function ProjectTasksPage() {
     if (!projectId || !userId) return
     void setCurrentProject(projectId).then(() => {
       if (!mounted) return
-      setTasks(readPrototypeTasks(userId, projectId))
-      setReady(true)
+      void prototypeTaskRepository.list(userId, projectId).then((items) => {
+        if (!mounted) return
+        setTasks(items)
+        setReady(true)
+      }).catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
     }).catch(() => { if (mounted) setError('프로젝트를 확인할 수 없습니다.') })
     return () => { mounted = false }
   }, [projectId, userId, setCurrentProject])
 
   const activeProject = currentProject?.id === projectId
-  function save(next: PrototypeTask[]) {
-    if (!projectId || !userId || !activeProject) return
-    if (!writePrototypeTasks(userId, projectId, next)) {
-      setError('기기 저장에 실패했습니다. 변경사항을 다시 확인하세요.')
-      return
+  async function save(next: PrototypeTask[]): Promise<boolean> {
+    if (!projectId || !userId || !activeProject) return false
+    try {
+      await prototypeTaskRepository.replace(userId, projectId, next)
+      setTasks(next)
+      setError('')
+      return true
+    } catch {
+      setError('업무 저장에 실패했습니다. 변경사항을 다시 확인하세요.')
+      return false
     }
-    setTasks(next)
-    setError('')
   }
-  function createTask() {
+  async function createTask() {
     if (!projectId || !activeProject || !title.trim()) return
     const now = new Date().toISOString()
-    save([{ id: crypto.randomUUID(), projectId, title: title.trim(),
-      objective: objective.trim(), status: 'todo', blockedReason: null,
-      createdAt: now, updatedAt: now }, ...tasks])
-    setTitle('')
-    setObjective('')
+    const saved = await save([{ id: crypto.randomUUID(), projectId, title: title.trim(),
+      objective: objective.trim(), assigneeName: assigneeName.trim() || null, deletedAt: null,
+      status: 'todo', blockedReason: null, createdAt: now, updatedAt: now }, ...tasks])
+    if (saved) { setTitle(''); setObjective(''); setAssigneeName('') }
   }
   function changeStatus(task: PrototypeTask, status: TaskStatus) {
     if (!permittedTransition(task.status, status)) {
@@ -63,10 +74,31 @@ export default function ProjectTasksPage() {
       reason = window.prompt('차단 사유를 입력하세요')?.trim() ?? ''
       if (!reason) { setError('차단 사유가 필요합니다.'); return }
     }
-    save(tasks.map((t) => t.id === task.id ? {
+    void save(tasks.map((t) => t.id === task.id ? {
       ...t, status, blockedReason: reason, updatedAt: new Date().toISOString(),
     } : t))
   }
+  function beginEdit(task: PrototypeTask) {
+    setEditingId(task.id)
+    setEditTitle(task.title)
+    setEditObjective(task.objective)
+    setEditAssignee(task.assigneeName ?? '')
+  }
+  async function saveEdit(task: PrototypeTask) {
+    if (!editTitle.trim()) { setError('업무 제목을 입력하세요.'); return }
+    const ok = await save(tasks.map((item) => item.id === task.id ? {
+      ...item, title: editTitle.trim(), objective: editObjective.trim(),
+      assigneeName: editAssignee.trim() || null, updatedAt: new Date().toISOString(),
+    } : item))
+    if (ok) setEditingId(null)
+  }
+  function setDeleted(task: PrototypeTask, deleted: boolean) {
+    void save(tasks.map((item) => item.id === task.id ? {
+      ...item, deletedAt: deleted ? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString(),
+    } : item))
+  }
+  const visibleTasks = tasks.filter((task) => showDeleted ? task.deletedAt !== null : task.deletedAt === null)
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-6 py-10">
       <Link to={projectId ? `/projects/${projectId}` : '/projects'}
@@ -93,18 +125,48 @@ export default function ProjectTasksPage() {
               <textarea value={objective} onChange={(e) => setObjective(e.target.value)}
                 className="mt-1 w-full rounded border p-2" rows={3} />
             </label>
-            <button type="button" onClick={createTask} disabled={!title.trim()}
+            <label className="block text-sm">담당자 이름 (개발 시안, 실제 팀 멤버와 미연동)
+              <input value={assigneeName} maxLength={80} onChange={(e) => setAssigneeName(e.target.value)}
+                className="mt-1 w-full rounded border p-2" />
+            </label>
+            <button type="button" onClick={() => { void createTask() }} disabled={!title.trim()}
               className="rounded bg-gray-900 px-4 py-2 text-white disabled:opacity-40">업무 추가</button>
           </section>
           <section className="space-y-3" aria-label="프로젝트 업무">
-            <h2 className="font-semibold">업무 목록 ({tasks.length})</h2>
-            {tasks.length === 0 && <p className="text-sm text-gray-500">등록된 업무가 없습니다.</p>}
-            {tasks.map((task) => (
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">{showDeleted ? '삭제한 업무' : '업무 목록'} ({visibleTasks.length})</h2>
+              <button type="button" onClick={() => setShowDeleted((value) => !value)}
+                className="rounded border px-3 py-1 text-sm">{showDeleted ? '활성 업무 보기' : '삭제한 업무 보기'}</button>
+            </div>
+            {visibleTasks.length === 0 && <p className="text-sm text-gray-500">등록된 업무가 없습니다.</p>}
+            {visibleTasks.map((task) => (
               <article key={task.id} className="rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold">{task.title}</h3>
-                {task.objective && <p className="mt-2 whitespace-pre-wrap text-sm">{task.objective}</p>}
+                {editingId === task.id ? (
+                  <div className="space-y-2">
+                    <label className="block text-sm">업무 제목
+                      <input value={editTitle} maxLength={120} onChange={(e) => setEditTitle(e.target.value)}
+                        className="mt-1 w-full rounded border p-2" />
+                    </label>
+                    <label className="block text-sm">목표 / 완료 기준
+                      <textarea value={editObjective} onChange={(e) => setEditObjective(e.target.value)}
+                        className="mt-1 w-full rounded border p-2" rows={3} />
+                    </label>
+                    <label className="block text-sm">담당자 이름 (개발 시안)
+                      <input value={editAssignee} maxLength={80} onChange={(e) => setEditAssignee(e.target.value)}
+                        className="mt-1 w-full rounded border p-2" />
+                    </label>
+                    <button type="button" onClick={() => { void saveEdit(task) }} className="mr-2 rounded bg-gray-900 px-3 py-2 text-white">변경 저장</button>
+                    <button type="button" onClick={() => setEditingId(null)} className="rounded border px-3 py-2">취소</button>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-semibold">{task.title}</h3>
+                    {task.objective && <p className="mt-2 whitespace-pre-wrap text-sm">{task.objective}</p>}
+                    <p className="mt-1 text-xs text-gray-500">담당: {task.assigneeName || '미지정'}</p>
+                  </>
+                )}
                 {task.blockedReason && <p className="mt-2 text-sm text-red-700">차단 사유: {task.blockedReason}</p>}
-                <label className="mt-3 block text-sm">상태
+                {!showDeleted && <label className="mt-3 block text-sm">상태
                   <select value={task.status} onChange={(e) => changeStatus(task, e.target.value as TaskStatus)}
                     className="ml-3 rounded border p-2">
                     {allStatuses.map((status) => (
@@ -113,7 +175,17 @@ export default function ProjectTasksPage() {
                       </option>
                     ))}
                   </select>
-                </label>
+                </label>}
+                <div className="mt-3 flex gap-2">
+                  {showDeleted ? (
+                    <button type="button" onClick={() => setDeleted(task, false)} className="rounded border px-3 py-1 text-sm">복원</button>
+                  ) : (
+                    <>
+                      {editingId !== task.id && <button type="button" onClick={() => beginEdit(task)} className="rounded border px-3 py-1 text-sm">수정</button>}
+                      <button type="button" onClick={() => setDeleted(task, true)} className="rounded border px-3 py-1 text-sm text-red-700">삭제</button>
+                    </>
+                  )}
+                </div>
               </article>
             ))}
           </section>
