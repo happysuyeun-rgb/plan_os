@@ -1,0 +1,18 @@
+# Document revision CAS — G1-B-05 (2026-10-21)
+
+Status: DRAFT. No database migration executed. No production deployment.
+
+## Contract
+- A document has a short numeric content_revision.
+- The write request sends the full document as a POST body and expected revision as a small parameter.
+- One atomic database update changes content and increments revision only if expected revision matches.
+- A stale request must return an error and preserve the user's device-local draft.
+- Access checks must match editor and owner permissions. Real RLS checks are required.
+
+## Unresolved blockers
+- Direct document edits, regenerate, chat, version restore and upsert must advance the same revision.
+- Ensure the revision cannot be manipulated by clients.
+- Test two editors, stale writes, access revocation, long documents, failed retries and browser restoration in a disposable DB.
+- Integrate with the existing autosave and recovery branches only after these checks.
+
+The SQL file 013_document_revision_cas_DRAFT.sql illustrates the contract but is NOT a ready-to-run migration. Do not apply it until cross-writer protection and isolated tests are complete.
