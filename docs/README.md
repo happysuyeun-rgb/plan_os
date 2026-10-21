@@ -16,6 +16,14 @@
 - [직무·성격(F/T)·GPT/Claude 모델·정식 PM 채용 기획](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)
 - [고객 경력 공개 동의·검증 경력일수·초중고 승급·채용 가격](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) — 개별 프로젝트의 공개/익명/비공개, 경력 사용 동의, 고용주 후기·등급/가격 정책 초안; **실제 개발/운영 승인 아님**.
 
+## 2026-10-21 서비스기획 v2.0 교차검수 및 설계 명세(보정)
+
+- [**서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 보존, **문서 본문은 v2.0으로 전면 개정**.
+- [**서비스기획 v2.0 누락·불일치 교차감사**](quality/PLANOS_V2_DESIGN_CROSS_AUDIT_2026-10-21.md) — V2-01~18, 문서 보정·설계 미결정·실제 구현/검증을 구분.
+- [직원 유형·성격·모델·PM 상세설계](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md) / [경력 동의·승급·가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md).
+- [IA N24~32](ux/IA.md) · [화면명세](ux/SCREEN_SPEC.md) · [TF-S01~12](product/TASK_FLOWS.md) · [DATA_MODEL](engineering/DATA_MODEL.md) · [API STAFF-API-01~14](engineering/API_CONTRACTS.md) · [구현명세 H1~H7](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md).
+- 위 신규 구조는 **Draft PR #28의 설계 목표**이며 실제 Supabase migration/프런트/API/GPT·Claude 모델 연동 또는 운영 QA PASS 아님.
+
 ## 폴더별 문서 정책
 - `product/`: 현재 제품 정의/요구사항
 - `ux/`: UX·IA·화면 흐름
