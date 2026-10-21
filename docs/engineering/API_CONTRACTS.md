@@ -216,3 +216,30 @@ Content-Type: application/json
 **모든 쓰기 공통 규칙:** bearer auth, owner/editor 권한 분리, 작업/문서 snapshot 검증, idempotency UUID, `If-Match`/version CAS, 구조화된 403/409/412/429/503 및 회복 안내, 감사 이벤트. 실제 공급자 모델/원가·개인정보 전송 허가 없는 실행은 0회. 경력 적립 동의로 고객 파일을 모델 컨텍스트/학습에 재사용하면 안 된다.
 
 **테스트 우선순위:** 채용·배정 IDOR/RLS → 무동의 경력 누출 0 → 익명 재식별/필드 allowlist → revoked 동의 후 재계산 → 직원 경력 동일 날짜 dedupe → 승급 가격 계약 스냅샷 → 공급자 변경 재승인.
+
+## 11. 제품 v2.0 AI 직원 경력/채용/PM API 확장 초안 (미구현)
+
+> 기존 API-01~23 **삭제/재번호 금지**. 아래 식별자 `STAFF-API-01~14`는 버전 `/api/v1` 아래 **추가 TARGET 계약**이며 실제 URL·OpenAPI 스키마는 UI/G1 마이그레이션 감사 후 확정. 계약/권한 저장은 기존 `agent_contracts`의 authoritative path와 통합하고 중복 상태·요금 원장 생성 금지.
+
+| ID | 제안 HTTP 동작 | 요청/결과 핵심 | 서버 권한/오류 |
+|---|---|---|---|
+| STAFF-API-01 | GET /api/v1/staff?role=&persona=&tier=&model= | 공개 가능한 역할·모델·스타일·실제 검증 등급/가격 | 검증 없는 평점/경력 허위 표시 금지 |
+| STAFF-API-02 | GET /api/v1/staff/:staffId | 직원의 공개 허용 이력서·평점 표본/평가·가상 설정 | project/customer source 데이터 누출 금지 |
+| STAFF-API-03 | POST /api/v1/staff/:staffId/preview | 같은 업무의 F/T 시연·지원 기능 안내 | 개발 Mock와 실제 모델 실행 구분, 비용/데이터 전송 별도 허가 |
+| STAFF-API-04 | POST /api/v1/staff/engagements | 계약 종류 one_off/project/pm_multi, staff_id, 모델·등급·가격 스냅샷, 조건/예산, 명시 project IDs | owner 계약 시작, 한 번의 원자 검증/Idempotency-Key; 미승인 외부 호출 금지 |
+| STAFF-API-05 | GET/PATCH /api/v1/staff/engagements/:hireId/assignments | 배정 프로젝트/범위·상태·비용, 변경 미리보기/확정 | owner+각 프로젝트 멤버십 검사, `If-Match` CAS, 미선택 C/미래 프로젝트 자동 포함 금지 |
+| STAFF-API-06 | POST /api/v1/staff/engagements/:hireId/replace-or-revoke | 직원 교체·해임, 진행 중 작업/정산/승인 영향 확인·기록 | owner, idempotent, 이후 새 run 차단. 실제 RLS와 작업 인수인계 검증 |
+| STAFF-API-07 | POST /api/v1/staff/engagements/:hireId/consents | 직원×프로젝트별 경력 적립 허용, 공개/익명/비공개, 후기·포트폴리오·랭킹·모델 학습 각 목적 | 기본 거부, owner/조직 권리 확인, 계약 동의와 독립. 최신 버전/서명 감시 |
+| STAFF-API-08 | GET/PATCH /api/v1/staff/experience-consents/:consentId | 목적별 변경/철회, 공개·승급 재계산 상태 | owner, `If-Match`, 공개 색인/캐시 제거 큐·회계 감사 별도 |
+| STAFF-API-09 | GET /api/v1/staff/engagements/:hireId/experience-preview | 검증된 작업일 후보, 프로젝트별 동의, 사용 가능한 승인/후기 정보 | 해당 고객/프로젝트만 조회. 공개 배지·타 고용주 상세 비노출 |
+| STAFF-API-10 | POST /api/v1/staff/engagements/:hireId/reviews | 고객 평가·별점/후기/공개 범위, 수락 artifact 참조 | 검증된 실제 참여, 완료 후, 중복/허위 리뷰 방지·정정 경로 |
+| STAFF-API-11 | GET /api/v1/staff/:staffId/tier-history | 직원 공개 허용 승급 상태/근거 수준, 규칙 버전 | 동의·개별 프로젝트 기밀 필터, 검증 전/평가 부족 표시 |
+| STAFF-API-12 | GET /api/v1/staff/:staffId/price-quote?model=&type= | 같은 직무/패키지 조건의 초·중·고 단가·예상 사용량·가격 유효기간 | 확정 전 quote 아님/Mock 표시, 기존 계약 가격 불변 |
+| STAFF-API-13 | GET /api/v1/pm/engagements/:hireId/projects | 배정된 A/B 진행·작업·승인·장애·근거 기반 운영 브리핑 | 서버에서 각 project 권한+assignment 재검사, C 존재도 누출 금지 |
+| STAFF-API-14 | POST /api/v1/pm/engagements/:hireId/plans | 다중 프로젝트별 계획/업무 배정 **초안 및 승인 요청** | 예산·툴·자료 revision/digest·계약·고객 승인. 실제 실행은 기존 `runs/approvals` 계약 사용 |
+
+**서버 내부 전용:** 작업 검증 이벤트→`experience_ledger` 조건부 적립, 같은 날 중복 합산 방지, 완료·수락/동의 철회 후 승급 재평가, 사용 원가/가격 결정 및 공개 reference 파생 뷰. 브라우저에서 직원 경험일/등급/모델 실행 결과를 직접 WRITE 금지.
+
+**HTTP 규약:** 모든 신규 POST는 `Idempotency-Key`+payload hash, PATCH는 `If-Match: version`; 타 고객/타 프로젝트는 404/403 마스킹, stale 계약·문서·동의는 409/412, 공급자 원가 미확정은 안전 중지. 계약 accept/실행/비용·사람 수락은 별도 API/감사 이벤트; 'PM 채용'만으로 실행 허가 금지.
+
+**미결정/검증:** 고객 동의 법적 UI·철회 마감/캐시, 승인 가능한 조직 사용자, multi-project query의 원가·페이징/최소 권한, 실제 GPT/Claude 공급자 모델/지원 도구와 개인정보 전송, 가격·평가 조작 방지. `ST-01~15` + `EX-01~14` 격리 JWT/RLS/E2E 전 미구현·출시 금지.
