@@ -35,6 +35,15 @@
 - [IA N24~32](ux/IA.md) · [화면명세](ux/SCREEN_SPEC.md) · [TF-S01~12](product/TASK_FLOWS.md) · [DATA_MODEL](engineering/DATA_MODEL.md) · [API STAFF-API-01~14](engineering/API_CONTRACTS.md) · [구현명세 H1~H7](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md).
 - 위 신규 구조는 **Draft PR #28의 설계 목표**이며 실제 Supabase migration/프런트/API/GPT·Claude 모델 연동 또는 운영 QA PASS 아님.
 
+### AI 직원 채용/경력 설계 — 이번 교차검수 결과
+
+- [**전 문서 재감사 v3 + 추가 V3-19~23 결함**](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md): 53개 docs 파일 중복·불일치/결함 및 실DB 검증 경계.
+- [**화면별 상세 스토리보드 v1**](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md): 기존 AI 기획→인력 탐색·프로필/고용·경력 동의→PM A/B 배정→검수/승급/철회.
+- [**데이터·권한·API 단일 계약 v1**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md): 현재 SQL 테이블 vs TARGET, staff engagement/agent contracts, STAFF-API-01~15 owner 채용 최종 수락, DATAUTH tests.
+- [**미결정 설계 16개 문제와 제안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_2026-10-21.md): 실제 유료 PM 차별화·가격/경력/공개/모델/직원 인수인계 등 권고.
+- **개발 정본 식별자:** TF-01~46, N01~32, STAFF-API-01~15. 옛 TF-S/ST-UI/P-ID·/v1/hirings API는 대응표에만 기록하고 중복 개발하지 않음.
+
+
 ## 폴더별 문서 정책
 - `product/`: 현재 제품 정의/요구사항
 - `ux/`: UX·IA·화면 흐름
