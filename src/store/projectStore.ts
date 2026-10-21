@@ -147,6 +147,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   setCurrentProject: async (id) => {
+    // Synthetic Playwright fixture for isolated F401 browser QA; never production.
+    // Kept separate from S3 fixture flags and disabled in production builds.
+    if (import.meta.env.DEV && import.meta.env.VITE_F401_E2E_FIXTURE === 'true') {
+      const viewer = id === 'f401-fixture-viewer'
+      const project = id.startsWith('f401-fixture-') && id !== 'f401-fixture-missing' ? {
+        id,
+        user_id: viewer ? 'synthetic-different-owner' : 'local-dev-user',
+        title: 'F401 isolated browser fixture',
+        description: '',
+        service_type: 'mock',
+        target_user: '',
+        memory_summary: '',
+        chat_title: '',
+        interview_answers: {},
+        deleted_at: id === 'f401-fixture-deleted' ? new Date(0).toISOString() : null,
+        deleted_by: null,
+        created_at: new Date(0).toISOString(),
+        updated_at: new Date(0).toISOString(),
+      } : null
+      set({ currentProject: project })
+      return
+    }
     const project = await apiFetchProject(id)
     set({ currentProject: project })
   },
