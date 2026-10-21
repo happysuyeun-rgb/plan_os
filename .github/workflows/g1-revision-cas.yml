@@ -2,7 +2,7 @@ name: G1 revision CAS draft checks
 on:
   pull_request:
     paths:
-      - 'supabase/migrations/017_document_revision_cas_DRAFT.sql'
+      - 'supabase/drafts/017_document_revision_cas_DRAFT.sql'
       - 'tests/g1-revision-cas-contract.test.mjs'
       - 'docs/engineering/G1_DOCUMENT_REVISION_CAS_CONTRACT_2026-10-21.md'
       - 'docs/engineering/G1_DOCUMENT_WRITER_AUDIT_2026-10-21.md'

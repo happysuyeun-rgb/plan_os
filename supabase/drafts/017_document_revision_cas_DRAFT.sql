@@ -1,4 +1,7 @@
 -- G1-B-05 experimental server version CAS. NOT applied to any database.
+-- This file lives in supabase/drafts/ on purpose: it is NOT a migration and
+-- must never be picked up by `supabase db push` or migration globs. The
+-- verified production version is supabase/migrations/018_document_revision_cas.sql.
 -- Prerequisite: all other document writers (regenerate, chat, restore, upsert)
 -- must advance the same revision, or stale edit detection is not comprehensive.
 alter table public.documents add column if not exists content_revision bigint not null default 0;

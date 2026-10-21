@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 
-const sql=readFileSync(new URL('../supabase/migrations/017_document_revision_cas_DRAFT.sql',import.meta.url),'utf8')
+const sql=readFileSync(new URL('../supabase/drafts/017_document_revision_cas_DRAFT.sql',import.meta.url),'utf8')
 test('draft CAS compares compact server revision, not document body',()=>{
  assert.match(sql,/content_revision\s*=\s*p_expected_revision/i)
  assert.match(sql,/content_revision\s*=\s*content_revision\s*\+\s*1/i)

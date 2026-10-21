@@ -19,9 +19,11 @@ const variables=Object.fromEntries(raw.split('\n').flatMap(line=>{
   return match?[[match[1],match[2].replace(/^["']|["']$/g,'')]]:[]
 }))
 assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
-assert(!variables.API_URL || /^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(variables.API_URL))
-
-const api='http://127.0.0.1:54321'
+// Defaults match CI; local runs may override when 54321/54322 are taken.
+const api=process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
+const dbPort=process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
+assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
+assert(!variables.API_URL || variables.API_URL===api, 'Unexpected nonlocal API URL')
 const site='http://127.0.0.1:5173'
 const loginEmail='browser-smoke@example.test'
 const loginPassword='Synthetic-browser-smoke-password-123!'
@@ -48,7 +50,7 @@ execFileSync('psql',[
   '-X','-v','ON_ERROR_STOP=1','-v','user_id='+created.id,
   '-f',process.cwd()+'/tests/e2e/seed_browser.sql',
 ],{
-  env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+  env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
     PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
   stdio:['ignore','pipe','pipe'],timeout:30000,
 })
@@ -228,7 +230,7 @@ try{
     '-X','-v','ON_ERROR_STOP=1',
     '-f',process.cwd()+'/tests/e2e/inject_restore_update_failure.sql',
   ],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
       PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
     stdio:['ignore','pipe','pipe'],timeout:30000,
   })
@@ -276,7 +278,7 @@ try{
     '-X','-v','ON_ERROR_STOP=1',
     '-c','drop trigger qa_reject_document_restore on public.documents',
   ],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
       PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
     stdio:['ignore','pipe','pipe'],timeout:30000,
   })
@@ -468,8 +470,9 @@ try{
   const slowSaveStarted=new Promise(resolve=>{startSlowSave=resolve})
   const slowSaveGate=new Promise(resolve=>{releaseSlowSave=resolve})
   let slowSaveIntercepted=false
-  await page.route('**/rest/v1/documents?*',async route=>{
-    if(route.request().method()==='PATCH' && !slowSaveIntercepted){
+  // Autosave writes through the Revision CAS RPC since C-02; intercept it.
+  await page.route('**/rest/v1/rpc/save_document_content_cas*',async route=>{
+    if(route.request().method()==='POST' && !slowSaveIntercepted){
       slowSaveIntercepted=true
       startSlowSave()
       await slowSaveGate
@@ -481,7 +484,7 @@ try{
   await mainEditor.fill(b03Prd)
   await Promise.race([
     slowSaveStarted,
-    page.waitForTimeout(14000).then(()=>{throw Error('B-03 PRD PATCH never started')}),
+    page.waitForTimeout(14000).then(()=>{throw Error('B-03 PRD CAS save never started')}),
   ])
   await page.getByRole('navigation',{name:'산출물 탭'})
     .getByRole('button',{name:/기능명세서/}).click()
@@ -500,11 +503,11 @@ try{
   assert.equal(await mainEditor.inputValue(),b03Prd,'B-03 delayed PRD save did not persist')
   console.log('PASS B-03: slow PRD save finished after IA switch without cross-document corruption')
 
-  // B-04: A failed document PATCH shows an error and retains the user's draft
+  // B-04: A failed CAS save shows an error and retains the user's draft
   // after tab switch; a new edit following network recovery persists it.
   let failedSaveInjected=0
-  await page.route('**/rest/v1/documents?*',async route=>{
-    if(route.request().method()==='PATCH' && failedSaveInjected===0){
+  await page.route('**/rest/v1/rpc/save_document_content_cas*',async route=>{
+    if(route.request().method()==='POST' && failedSaveInjected===0){
       failedSaveInjected++
       await route.fulfill({
         status:503,contentType:'application/json',
@@ -515,7 +518,7 @@ try{
   const b04Draft=b03Prd+'\nB04-UNSAVED-ON-503'
   await mainEditor.fill(b04Draft)
   await page.getByText('저장 실패',{exact:true}).waitFor({state:'visible',timeout:22000})
-  assert.equal(failedSaveInjected,1,'B-04 did not inject PATCH failure')
+  assert.equal(failedSaveInjected,1,'B-04 did not inject CAS failure')
   await page.unrouteAll({behavior:'wait'})
   await page.getByRole('navigation',{name:'산출물 탭'})
     .getByRole('button',{name:/기능명세서/}).click()
@@ -634,7 +637,7 @@ try{
   const c10BeforeOps=await c10Read('document_chat_operations','id',c10OpsQuery)
   execFileSync('psql',['-X','-v','ON_ERROR_STOP=1',
     '-f',process.cwd()+'/tests/e2e/inject_chat_update_failure.sql'],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
       PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
     stdio:['ignore','pipe','pipe'],timeout:30000,
   })
@@ -660,7 +663,7 @@ try{
 
   execFileSync('psql',['-X','-v','ON_ERROR_STOP=1',
     '-c','drop trigger qa_fail_chat_document_update on public.documents'],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:'54322',
+    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
       PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
     stdio:['ignore','pipe','pipe'],timeout:30000,
   })

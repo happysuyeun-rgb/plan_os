@@ -60,7 +60,7 @@ jobs:
             exit 1
           fi
           echo "Disposable local Supabase Auth and REST services started"
-      - name: Apply actual migrations 001..010 to LOCAL PostgreSQL ONLY
+      - name: Apply actual migrations (017 DRAFT lives in supabase/drafts, excluded) to LOCAL PostgreSQL ONLY
         env:
           PGHOST: 127.0.0.1
           PGPORT: 54322
@@ -74,9 +74,11 @@ jobs:
             echo "Local ONLY migration $(basename "$migration")"
             psql -X -v ON_ERROR_STOP=1 -f "$migration" > /tmp/planos-migration.log
           done
-          echo "Applied repository migrations 001..010 in isolated local DB"
+          echo "Applied repository migrations in isolated local DB (017 DRAFT excluded by location)"
       - name: Test genuine Auth password login JWT, REST and RLS role isolation
         run: node tests/rls/test_local_supabase_content.mjs
+      - name: Test Revision CAS RPC through JWT and PostgREST (C-03)
+        run: node tests/rls/test_local_supabase_cas.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |

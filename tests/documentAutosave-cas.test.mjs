@@ -41,12 +41,12 @@ test('revision conflict keeps the draft and exposes a distinct conflict status',
   assert.equal(save.getStatus('doc-A'), 'saved')
 })
 
-test('SQLSTATE 40001 from the server is also classified as a conflict', async () => {
+test('SQLSTATE P4001 from the server is also classified as a conflict', async () => {
   const conflicts = []
   const save = createDocumentAutosave({
     persist: async () => {
       const error = new Error('document revision conflict')
-      error.code = '40001'
+      error.code = 'P4001'
       throw error
     },
     onSaved: () => {},

@@ -57,7 +57,7 @@ do $t$ declare v_id uuid := '33333333-3333-3333-3333-333333333333'; begin
   begin
     perform public.save_document_content_cas(v_id, 0, 'stale overwrite attempt');
     raise exception 'stale CAS unexpectedly succeeded';
-  exception when sqlstate '40001' then null;
+  exception when sqlstate 'P4001' then null;
   end;
   if (select content from public.documents where id=v_id) <> 'cas-v1'
      or (select content_revision from public.documents where id=v_id) <> 1 then
@@ -89,7 +89,7 @@ begin
   begin
     perform public.save_document_content_cas(v_id, 5, 'skip ahead');
     raise exception 'skip-ahead CAS unexpectedly succeeded';
-  exception when sqlstate '40001' then null;
+  exception when sqlstate 'P4001' then null;
   end;
 end $t$;
 rollback;
@@ -154,7 +154,7 @@ begin
   begin
     perform public.save_document_content_cas(v_id, 1, 'autosave from before restore');
     raise exception 'pre-restore baseline CAS unexpectedly succeeded';
-  exception when sqlstate '40001' then null;
+  exception when sqlstate 'P4001' then null;
   end;
 end $t$;
 rollback;
@@ -179,7 +179,7 @@ begin
   begin
     perform public.save_document_content_cas(v_id, 0, 'stale cas after direct update');
     raise exception 'CAS after direct update unexpectedly succeeded';
-  exception when sqlstate '40001' then null;
+  exception when sqlstate 'P4001' then null;
   end;
 end $t$;
 rollback;

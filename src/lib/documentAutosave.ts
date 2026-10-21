@@ -46,7 +46,7 @@ interface DocumentAutosaveOptions<T> {
 function isRevisionConflict(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
   const candidate = error as { name?: string; code?: string }
-  return candidate.name === 'DocumentWriteConflictError' || candidate.code === '40001'
+  return candidate.name === 'DocumentWriteConflictError' || candidate.code === 'P4001'
 }
 
 export function createDocumentAutosave<T>({

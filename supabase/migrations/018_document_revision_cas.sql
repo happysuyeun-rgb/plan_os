@@ -8,8 +8,11 @@
 --   actual content change, for EVERY writer (autosave RPC, restore/chat
 --   RPCs, generation upserts, direct UPDATE) via the trigger below.
 -- * save_document_content_cas only writes when the caller's expected
---   revision equals the stored revision. A mismatch raises SQLSTATE 40001
---   (DOCUMENT_REVISION_CONFLICT) and changes nothing.
+--   revision equals the stored revision. A mismatch raises the dedicated
+--   SQLSTATE P4001 (DOCUMENT_REVISION_CONFLICT) and changes nothing.
+--   It must NOT use 40001: PostgREST retries transactions that fail with
+--   serialization_failure, which turned a conflict response into a 60s
+--   hang through Kong (proven in C-03 local Supabase verification).
 -- * Retry safety: re-sending the same (expected_revision, content) after a
 --   lost response succeeds as a no-op when the document already holds that
 --   exact content at expected_revision + 1. A different content at a stale
@@ -106,7 +109,7 @@ begin
   end if;
 
   raise exception 'document revision conflict'
-    using errcode = '40001',
+    using errcode = 'P4001',
           detail = 'expected revision does not match the stored revision';
 end;
 $$;

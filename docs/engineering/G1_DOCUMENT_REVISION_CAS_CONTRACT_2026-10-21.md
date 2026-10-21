@@ -15,7 +15,7 @@ Status: DRAFT. No database migration executed. No production deployment.
 - Test two editors, stale writes, access revocation, long documents, failed retries and browser restoration in a disposable DB.
 - Integrate with the existing autosave and recovery branches only after these checks.
 
-The SQL file 017_document_revision_cas_DRAFT.sql (renumbered from PR 013) illustrates the contract but is NOT a ready-to-run migration. Do not apply it until cross-writer protection and isolated tests are complete.
+The SQL file 017_document_revision_cas_DRAFT.sql (renumbered from PR 013) illustrates the contract but is NOT a ready-to-run migration. Do not apply it until cross-writer protection and isolated tests are complete. (2026-10-21 C-03: the file now lives in `supabase/drafts/`, outside every migration runner; the verified implementation is `supabase/migrations/018_document_revision_cas.sql`.)
 
 ## G1-B-06 addendum
 - DRAFT 013 now illustrates a BEFORE UPDATE trigger deriving revision on every content change. The CAS RPC does not increment again.

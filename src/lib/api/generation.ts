@@ -1,7 +1,7 @@
 import type { DocumentType } from '../../types'
 import { DOCUMENT_TYPE_ORDER } from '../documentTypes'
 import { buildGeneratedContent } from '../generation/placeholderContent'
-import { fetchDocument, upsertDocument } from './documents'
+import { fetchDocument, saveDocumentContentCas, upsertDocument } from './documents'
 import { updateProject } from './projects'
 
 export type GenerationStep = DocumentType
@@ -46,11 +46,7 @@ export async function* runGenerationPipeline(
     }
 
     if (input.projectId !== 'guest-preview') {
-      await upsertDocument({
-        project_id: input.projectId,
-        type: step,
-        content: accumulated,
-      })
+      await writeGeneratedDocument(input.projectId, step, accumulated)
     }
 
     yield { step, chunk: '', done: true }
@@ -72,6 +68,26 @@ export const CASCADE_STEPS: Record<DocumentType, DocumentType[]> = {
   cursor_prompt: ['cursor_prompt'],
 }
 
+/**
+ * Generated content lands through Revision CAS whenever the document
+ * already exists, so generation/regeneration can never silently overwrite
+ * a concurrent edit with an unconditional UPDATE. The plain insert remains
+ * only for first creation. Callers run this inside the per-document
+ * replace lane, which serializes it against local autosaves.
+ */
+export async function writeGeneratedDocument(
+  projectId: string,
+  type: DocumentType,
+  content: string,
+): Promise<void> {
+  const existing = await fetchDocument(projectId, type)
+  if (existing) {
+    await saveDocumentContentCas(existing.id, existing.content_revision, content)
+  } else {
+    await upsertDocument({ project_id: projectId, type, content })
+  }
+}
+
 export async function regenerateDocument(
   projectId: string,
   type: DocumentType,
@@ -79,13 +95,7 @@ export async function regenerateDocument(
   targetUser: string,
 ): Promise<string> {
   const content = buildGeneratedContent(type, { title, targetUser })
-  const existing = await fetchDocument(projectId, type)
-  await upsertDocument({
-    id: existing?.id,
-    project_id: projectId,
-    type,
-    content,
-  })
+  await writeGeneratedDocument(projectId, type, content)
   return content
 }
 

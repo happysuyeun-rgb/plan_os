@@ -681,3 +681,60 @@ C02-05(타 프로젝트 접근 차단)를 실행하자 editor-e(다른 프로젝
 **단계 C-02 판정: 격리 DB 범위에서 완료.** 서버 Revision CAS 구현, 클라이언트 연동, 쓰기 경로 통합, 동시성·권한·멱등 실증, 기존 회귀 통과를 모두 마쳤고 검증 중 발견한 권한 우회 결함(P0)도 019로 수정·재검증했다. 다만 실제 Supabase Auth/PostgREST 실증이 남아 있어 **단계 C 전체 완료로는 표시하지 않는다.**
 
 **다음 개발 작업 1개:** 로컬 Supabase 스택(또는 동등한 PostgREST 환경)에서 018·019와 클라이언트 CAS를 실제 JWT로 재검증하는 단계 C-03. 그 결과로 B01-D3를 닫을 수 있을 때 단계 C 완료를 판정한다. 운영 DB·main 병합·배포는 하지 않는다.
+
+---
+
+## 실행 기록 — 단계 C-03 (Cursor 지시서 03, 2026-10-21)
+
+### C03-1. P0-01 — 017 DRAFT 격리
+
+- `017_document_revision_cas_DRAFT.sql`을 `supabase/migrations/`에서 `supabase/drafts/`로 이동했다(`git mv`). `supabase db push`와 모든 마이그레이션 글롭(`rls-auth-integration.yml`, `phase0-browser-smoke.yml`)은 migrations 폴더만 보므로 이제 어떤 자동 실행에도 017이 포함되지 않는다. 계약 테스트 2개와 워크플로 감시 경로를 새 위치로 고쳤고, 격리 DB에 정식 마이그레이션만(001~016, 018, 019) 적용해 C-02 매트릭스가 그대로 통과함을 재확인했다.
+
+### C03-2. P0-02 — 실제 Supabase 경로에서 찾은 P0: 충돌 코드 40001은 PostgREST에서 행(hang)이 된다
+
+일회용 로컬 Supabase(CLI 2.84.2, CI와 동일 버전; 포트 충돌을 피해 55321/55322)에서 GoTrue 실제 로그인 JWT → Kong → PostgREST → RPC로 검증하던 중, 오래된 revision 저장(충돌)이 30초 타임아웃에 걸렸다. 실측: 성공 CAS는 10ms에 200, 충돌 CAS는 **60.9초 후 Kong 504**. 원인은 PostgREST가 SQLSTATE `40001`(serialization_failure) 실패 트랜잭션을 재시도하기 때문이다. psql 직접 호출에서는 즉시 에러가 반환돼 C-02에서는 잡을 수 없던 종류의 결함이다.
+
+조치: 충돌 전용 SQLSTATE를 `40001`에서 `P4001`로 교체했다(018 RPC, 클라이언트 판정, 관련 테스트 전부). 업무 버전 충돌(011)도 같은 `40001`을 쓰고 있어 같은 위험이 있으나 이번 범위 밖이라 잔여 항목으로 등록한다.
+
+이후 `tests/rls/test_local_supabase_cas.mjs`(CI 워크플로에 연결됨)로 전 시나리오 PASS를 확인했다: owner/editor 정상 저장, viewer·타 프로젝트·outsider·anon 42501 거부, 오래된 revision P4001 거부와 원본 보존, 동일 revision 동시 저장 하나만 성공, 응답 유실 재시도 멱등, 180,020자 긴 문서 저장, 복원·채팅의 revision 일관성과 권한 거부, 직접 UPDATE의 revision 전진 탐지. **B01-D3(실제 Supabase Auth/PostgREST 미검증)는 이로써 닫는다.**
+
+### C03-3. P0-03 — 직접 UPDATE 우회 경로와 단계별 전환안
+
+앱 내 documents 쓰기는 `upsertDocument` 하나로 수렴함을 전수 확인했다. 전환안:
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| 1단계 | 모든 앱 쓰기를 CAS/RPC로 통일하고, 직접 UPDATE는 트리거 revision 전진으로 탐지 | 완료 (C-02) |
+| 2단계 | 생성 파이프라인·재생성의 기존 문서 UPDATE를 CAS로 교체 (`writeGeneratedDocument`). `upsertDocument`는 최초 INSERT 전용으로 축소 | **완료 (이번 작업)** |
+| 3단계 | `documents_update_editor` 정책을 제거하는 컷오버 | draft + 격리 리허설 완료, **정식 채택은 별도 승인 필요** |
+
+컷오버는 `supabase/drafts/020_cutover_deny_direct_document_update_DRAFT.sql`로 준비하고 `tests/rls/test_local_supabase_cutover.mjs`로 리허설했다: 정책 제거 후 editor 직접 PATCH는 0행으로 차단되고 CAS·복원·채팅·최초 INSERT는 전부 정상 동작했다. 정식 마이그레이션으로 승격하지 않은 이유: 구버전 클라이언트가 같은 DB에 직접 UPDATE를 보내는 환경이 있는지를 운영 측에서 확인해야 하며, 그 확인 전 차단은 기능 파손 위험이 있다. **이 항목은 완료로 표시하지 않는다.**
+
+### C03-4. P0-04 — Chromium E2E (Playwright, 로컬 스택 + 실제 Vite 앱)
+
+`tests/e2e/browser_smoke.mjs` 전체 31개 시나리오 PASS: 실제 로그인, 대시보드·문서 표시·새로고침, 탭 전환 독립 자동저장(B-01), 연속 편집 최종본 저장(B-02), 채팅+편집 병합(C-01), 복원·스냅샷(B-05), 복원 실패 주입 시 롤백과 재시도(FAULT-01), 재시도 멱등(IDEMPOTENCY-01), viewer/anon 복원 거부(AUTHZ-01), 동시 복원 직렬화(CONC-01), 느린 CAS 저장의 문서 간 비오염(B-03), 저장 실패 시 초안 보존과 복구(B-04), 채팅 격리(C-03), 채팅 원자성·재시도·권한(C-10). 실행 중 스모크가 구 방식의 `PATCH` 감시를 전제해 B-03/B-04가 실패했는데, 이는 앱 회귀가 아니라 CAS 전환을 따라가지 못한 테스트 전제라 감시 대상을 CAS RPC로 교체했다(검증 본질 유지).
+
+**NOT RUN으로 남기는 항목:** 두 개의 독립 브라우저가 같은 문서를 동시에 편집할 때 충돌 배너가 뜨는 시나리오는 단일 브라우저 스모크 범위 밖이라 실행하지 않았다. 서버 동시성은 RPC 수준(P0-02)과 클라이언트 단위 테스트로 대체 검증돼 있다.
+
+### C03-5. 회귀 결과
+
+| 검사 | 결과 |
+|---|---|
+| `npm run test:unit` | 53/53 pass |
+| `npm run test:s1` | 6/6 pass |
+| `npm run build` | 성공 |
+| `npm run lint` | 0 errors / 1 warning (기존 경고만) |
+| 격리 PostgreSQL C-02 매트릭스 (P4001 교체 후) | C02-01~12 재통과 |
+| 로컬 Supabase content 스위트 (기존 CI 테스트) | 전부 pass |
+| Chromium 스모크 | 31개 시나리오 전부 pass |
+
+### C03-6. 잔여 항목
+
+- P1: 컷오버(직접 UPDATE 정책 제거) 정식 채택 — 구버전 클라이언트 확인 후 별도 승인으로 진행.
+- P1: 업무 버전 충돌(011)의 SQLSTATE `40001`도 PostgREST 재시도 위험이 있다. 업무 CAS 호출 경로를 확인할 때 함께 교체 검토.
+- P2: 두 브라우저 동시 편집 충돌 배너 E2E 미실행 (위 C03-4 참조).
+- P2: SonarCloud 품질 게이트는 기존 PR들에서도 동일하게 실패하는 저장소 기존 상태.
+
+### C03-7. 단계 C-03 판정과 병합 준비 상태
+
+**단계 C 판정: 완료.** 서버 CAS의 실제 Supabase 경로 검증(B01-D3 해소), 017 위험 제거, 직접 UPDATE 전환안과 리허설, 브라우저 E2E까지 지시서 범위를 마쳤다. PR #30은 main 병합 후보로 제출한다. 병합 자체와 운영 DB 마이그레이션 적용(013~019 순서 적용)은 별도 승인 없이는 하지 않는다.

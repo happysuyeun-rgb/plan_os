@@ -36,9 +36,10 @@ export async function fetchDocumentById(id: string): Promise<Document | null> {
   return data
 }
 
-// Server-side Revision CAS conflict (SQLSTATE 40001 from
-// save_document_content_cas, migration 018). The editor draft is preserved
-// locally; the user reloads the latest document before saving again.
+// Server-side Revision CAS conflict (dedicated SQLSTATE P4001 from
+// save_document_content_cas, migration 018; never 40001, which PostgREST
+// retries). The editor draft is preserved locally; the user reloads the
+// latest document before saving again.
 export class DocumentWriteConflictError extends Error {
   constructor() {
     super('문서가 다른 곳에서 변경되었습니다. 입력 내용은 보존되며, 최신 문서를 확인한 뒤 다시 저장하세요.')
@@ -50,7 +51,7 @@ export class DocumentWriteConflictError extends Error {
  * The only autosave write path. The server (migration 018) verifies the
  * authenticated caller, an active project, and editor/owner permission,
  * then writes only when the stored content_revision equals
- * `expectedRevision`. A mismatch raises SQLSTATE 40001 and changes nothing,
+ * `expectedRevision`. A mismatch raises SQLSTATE P4001 and changes nothing,
  * so a stale save can never overwrite a newer document. Retrying the same
  * (expectedRevision, content) after a lost response is a safe no-op.
  *
@@ -69,7 +70,7 @@ export async function saveDocumentContentCas(
       p_content: nextContent,
     })
     .single()
-  if (error && (error as { code?: string }).code === '40001') {
+  if (error && (error as { code?: string }).code === 'P4001') {
     throw new DocumentWriteConflictError()
   }
   return unwrap(data as Document | null, error)

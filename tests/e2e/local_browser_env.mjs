@@ -16,10 +16,13 @@ const env = Object.fromEntries(raw.split('\n').flatMap(line => {
   return m ? [[m[1],m[2].replace(/^["']|["']$/g,'')]] : []
 }))
 assert(env.ANON_KEY && env.SERVICE_ROLE_KEY, 'Local Supabase keys were not returned')
-assert(!env.API_URL || /^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(env.API_URL),
+// Defaults match CI; local runs may override when 54321 is already taken.
+const apiUrl = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
+assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(apiUrl), 'Local API URL must be loopback')
+assert(!env.API_URL || env.API_URL === apiUrl,
   'Remote Supabase address unexpectedly configured')
 writeFileSync('.env.local',
-  'VITE_SUPABASE_URL=http://127.0.0.1:54321\n'+
+  'VITE_SUPABASE_URL='+apiUrl+'\n'+
   'VITE_SUPABASE_ANON_KEY='+env.ANON_KEY+'\n'+
   'VITE_ENABLE_DEV_LOGIN=true\n',
   {mode:0o600},

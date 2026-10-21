@@ -6,7 +6,7 @@ Status: SQL review and test planning only. No isolated database was created or c
 - 001_initial_schema.sql defines documents with RLS and a documents_all_own policy, without content_revision.
 - 013_fix_project_members_select_recursion.sql changes a member SELECT policy; verify migration dependency order and actual roles.
 - 016_atomic_chat_document_edit.sql uses a SECURITY DEFINER function that directly updates documents. A revision trigger would increment this write but would NOT block a stale, blind client UPDATE.
-- 017_document_revision_cas_DRAFT.sql is an incomplete candidate: the CAS function relies on can_edit_project_content and table-level grants/RLS must be reviewed before use.
+- 017_document_revision_cas_DRAFT.sql is an incomplete candidate: the CAS function relies on can_edit_project_content and table-level grants/RLS must be reviewed before use. (2026-10-21 C-03: moved to `supabase/drafts/` so no migration runner picks it up; the verified CAS is migration 018.)
 - Existing direct upsert, regeneration and document restores require a coordinated revision contract; the restore SQL file/path must be located and audited before tests.
 
 ## Required isolated test scenarios

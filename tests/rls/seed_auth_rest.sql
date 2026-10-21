@@ -2,6 +2,12 @@
 -- Actual auth users (and public.users via migration 001 trigger) have already
 -- been created by the local GoTrue admin API and signed in with real JWTs.
 -- Parameters are trusted UUIDs returned from local Auth in this CI run.
+-- Re-runnable: every suite importing the Auth module creates fresh users, so
+-- clear the previous fixture projects first (children cascade from projects).
+delete from public.projects
+ where id in ('11111111-1111-1111-1111-111111111111',
+              '22222222-2222-2222-2222-222222222222');
+
 insert into public.projects(id,user_id,title) values
  ('11111111-1111-1111-1111-111111111111', :'owner_id'::uuid, 'Local Project One'),
  ('22222222-2222-2222-2222-222222222222', :'other_owner_id'::uuid, 'Local Project Two');

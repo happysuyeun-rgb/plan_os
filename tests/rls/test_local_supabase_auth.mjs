@@ -4,8 +4,10 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
-const API_URL = 'http://127.0.0.1:54321'
-const DB_PORT = '54322'
+// Defaults match CI. Local runs may override both when port 54321/54322 are
+// already taken by another disposable stack; the values must stay loopback.
+const API_URL = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
+const DB_PORT = process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
 const TEST_PASSWORD = 'Test-only-password-123!'
 const repository = process.cwd()
 const localStackDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
@@ -26,7 +28,8 @@ const variables = Object.fromEntries(
 const anonKey = variables.ANON_KEY
 const serviceKey = variables.SERVICE_ROLE_KEY
 assert(anonKey && serviceKey, 'Local Supabase API keys were not returned')
-assert(!variables.API_URL || /^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(variables.API_URL), 'Unexpected nonlocal API URL')
+assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(API_URL), 'API URL must be loopback: ' + API_URL)
+assert(!variables.API_URL || variables.API_URL === API_URL, 'Unexpected nonlocal API URL')
 
 function db(sqlFile, vars = []) {
   return execFileSync('psql', [
