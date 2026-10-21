@@ -191,3 +191,28 @@ Content-Type: application/json
 |---|---|---|---|
 | 2026-10-16 | v0.1 | TARGET API 23개, 공통 규칙, 실행/승인/수락 요청·오류·내부 워커 계약 정의 | 검토 전 |
 | 2026-10-16 | v0.2 | 계획·계약·승인·실행 상태·수락·비용 조회 누락과 비동기/멱등성 보완 요구사항 표기 | 검토 전 |
+
+
+## 2026-10-21 직원·다중 PM·경력·가격 TARGET API 확장 (미구현)
+
+[서비스기획서 v2](../product/SERVICE_PLAN_V1_2026-10-20.md) 및 [경력·동의 명세](../product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) 기준의 **후보 API**. 아래 경로는 기존 API-01~N번과 겹치지 않도록 개발 전 최종 중복 검사. 서버/DB에 존재한다는 뜻 아님.
+
+| API 후보 | HTTP | 역할/응답 | 선행 검증·예외 |
+|---|---|---|---|
+| `/v1/staff` | GET | 로그인 사용자에게 직무·성격·경력 등급·지원 모델/검증 정보를 필터링 | 실제 공개 허용된 필드만 |
+| `/v1/staff/{staffId}` | GET | 직원 프로필·허용 레퍼런스·평가 표본·지원 모델 | 고객명·비공개 이력 노출 금지 |
+| `/v1/staff/{staffId}/quote` | POST | job_type/grade/model package별 계약 단가·상한·공급자 설명 | 가격 미확정이면 상용 결제 불가 |
+| `/v1/hirings` | POST | owner 단발/프로젝트 전담/정식 PM 채용안 생성 | idempotency, budget/contract versions |
+| `/v1/hirings/{hireId}/assignments` | PUT | 명시적 프로젝트 ID 집합·프로젝트별 scope | 모든 프로젝트 owner 권한, 미래 프로젝트 자동 포함 없음 |
+| `/v1/hirings/{hireId}/experience-consents` | POST/PATCH | 직원×프로젝트별 적립 허용/거부·public/anonymous/private·목적별 공개 | 목적별 기본 OFF, consent version/CAS, 미동의 공개 0 |
+| `/v1/hirings/{hireId}/experience-consents/revoke` | POST | 공개/적립 철회 → 캐시·집계 재계산 job | 권한/동의 범위·idempotency |
+| `/v1/hirings/{hireId}/terminate` | POST | PM/직원 계약 해임/종료 | 새 run 차단, 진행 작업/비용 재정산 |
+| `/v1/pm/overview` | GET | PM이 **배정된** 복수 프로젝트 진척/우선순위/차단 요약 | 각 project_id별 RLS, 문서 원문 넘김 금지 |
+| `/v1/hirings/{hireId}/reviews` | POST | 검증 가능한 고객 평가/후기, 공개 범위 | 실제 고용주·작업 결과 수락 검증, 중복·사칭 방어 |
+| `/v1/staff/{staffId}/experience` | GET | 허용된 경력일수·프로젝트 실적·승급 이력 | public 필드 allowlist, private 집계 별도 |
+| `/internal/staff-experience/recalculate` | job | 확인된 work event + consent → ledger/tier 재산정 | 서버 전용; 검증 인과관계·동시성/멱등성·감사 |
+| `/v1/hirings/{hireId}/renew` | POST | 최신 등급/현재 가격과 기존 계약 단가 비교·신규 기간 동의 | 기존 계약 자동 인상 금지 |
+
+**모든 쓰기 공통 규칙:** bearer auth, owner/editor 권한 분리, 작업/문서 snapshot 검증, idempotency UUID, `If-Match`/version CAS, 구조화된 403/409/412/429/503 및 회복 안내, 감사 이벤트. 실제 공급자 모델/원가·개인정보 전송 허가 없는 실행은 0회. 경력 적립 동의로 고객 파일을 모델 컨텍스트/학습에 재사용하면 안 된다.
+
+**테스트 우선순위:** 채용·배정 IDOR/RLS → 무동의 경력 누출 0 → 익명 재식별/필드 allowlist → revoked 동의 후 재계산 → 직원 경력 동일 날짜 dedupe → 승급 가격 계약 스냅샷 → 공급자 변경 재승인.
