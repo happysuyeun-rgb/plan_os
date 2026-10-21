@@ -1,5 +1,8 @@
 # 서아 할 일 체크리스트
 
+> **2026-10-21 최신 설계 기준:** 2026.06 작업 체크리스트의 완료 표시는 당시 사용자 할 일 기록이며 현재 PlanOS 3.0 출고 상태와 다를 수 있다. [최신 통합 개발계획](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md), [서비스기획 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md), [53개 docs 전수 감사](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md)를 우선한다. 실제 AI 직원 채용/PM 다중 운영/승급·과금은 아직 미구현/미승인.
+
+
 > 최종 갱신: 2026.06.12  
 > AI 진행 상황은 [`DEV_GUIDE.md`](./DEV_GUIDE.md) §3 참고
 
