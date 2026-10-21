@@ -3,6 +3,7 @@
 - **최종 보정일:** 2026-10-21
 - **문서 상태:** 전체 서비스 상세기획 **DRAFT** / 사용자 제품 방향 반영 / 출시·실개발·가격·약관 승인 아님
 - **범위:** 기존 PlanOS AI 기획 + 개성·직무·모델이 다른 AI 직원의 선택/채용 + 지속적인 PM 프로젝트 운영 + 고객 동의 경력·승급·평가 + 등급별 가격 + 업무 실행·검수
+- **재감사·상세 인계:** [docs 53개 전수 재감사 V3](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md), [13개 화면별 상세 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md), [단일 데이터·권한·STAFF-API 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md). TF·화면·API 중복 제안은 최신 구현 계약 대응표로 정리.
 - **기능 추적:** [통합 기능정의서](FUNCTIONAL_SPEC_V1_2026-10-20.md), [상위 PRD](PRD.md), [채용·PM 상세정책](AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md), [고객 동의·경력·승급 정책](AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md), [운영 정책](SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md)
 - **실행 추적:** [G0~G7 개발 계획](../plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md). 이 문서에서 **CURRENT(현 코드)**, **TARGET(목표)**, **MOCK(실행 미연결)**, **UNDECIDED(미결정)**를 분리한다.
 
