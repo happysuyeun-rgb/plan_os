@@ -40,6 +40,8 @@ plan_os/
 
 `src/`, `supabase/`, `tests/` 등의 표시 경로는 **실제로 확인한 대표 폴더**이며, 상기 트리는 이해를 돕기 위한 축약본이다.
 
+> **2026-10-21 DRAFT v2.0 교차검수:** [서비스기획 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md)(파일명은 구버전 링크 호환용), [제품/설계 누락·불일치 감사 V2-01~18](quality/PLANOS_V2_DESIGN_CROSS_AUDIT_2026-10-21.md), [경력동의·승급 가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md). 이 초안은 `main` 운영 완성 기준이 아니라 PR #28의 목표 문서이며, 실제 DB/권한/브라우저 검증이 필요하다.
+
 ## 2. 일을 할 때 무엇을 열까?
 
 | 질문/작업 | 가장 먼저 볼 곳 | 이어서 확인 |
