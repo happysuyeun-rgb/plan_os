@@ -137,3 +137,10 @@
 - **DB:** 기존 agent_*와 신규 직원 identity/경력/가격 중복 모델 정리, `staff_work_contributions` 원인 기록 + `staff_experience_daily` 직원×KST일 projection. `agent_contracts` 프로젝트별 실행권한/예산과 `staff_engagements` 고용 묶음/가격을 분리.
 - **권한:** owner 계약/모델 전송/계획·유료실행·결과수락·경력 공개·배정/해임, editor 문서/업무·계획 초안만. 각 프로젝트 owner 검증, PM A/B 배정 시 C 거부.
 - **완료:** 본 추가는 TARGET 요구 연결이며 SQL/실 UI/브라우저/RLS/실모델·요금·배포 PASS가 아님. [문서 전수 재감사](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) V3-01~18 후속 추적.
+
+## 2026-10-21 API-15 원자 채용 최종 수락 연결
+
+- STAFF-03/04/06/08: 직원 단발/전담/PM 복수 프로젝트 고용 초안 STAFF-API-04는 **활성 채용 아님**. 각 프로젝트 owner 권한·quote/terms/예산·모델/전송 허가를 다시 확인하는 **STAFF-API-15 owner 채용 최종 수락** 후에만 staff_engagements / agent_contracts / agent_assignments 목표 객체의 관련 active 상태가 된다.
+- 모델·도구 실행/과금, 기획/산출물 최종 승인, 직원 경력 적립/공개/후기 마케팅 동의는 별도의 행위이다. editor는 계획 초안만.
+- [데이터·권한·API 단일 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)의 메인 SQL 사실표 참조: agent_ 관련 테이블은 **현재 main migration에 없음**. 실제 DDL/RLS/JWT/브라우저 검증 전 STATUS 미구현.
+- TF 정본 **TF-01~46**. 이전 TF-S 별칭은 중복 기능 ID로 개발하지 않는다. IA 화면 정본 N01~32; 이전 ST-UI/P 화면 번호는 문서 별칭.
