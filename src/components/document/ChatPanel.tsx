@@ -15,7 +15,6 @@ interface ChatPanelProps {
   chatTitle: string
   canEditTitle?: boolean
   onChatTitleSave: (title: string) => void | Promise<void>
-  onDocumentUpdate: (content: string) => void
   onMessageSent?: () => void
   disabled?: boolean
 }
@@ -27,7 +26,6 @@ export function ChatPanel({
   chatTitle,
   canEditTitle,
   onChatTitleSave,
-  onDocumentUpdate,
   onMessageSent,
   disabled,
 }: ChatPanelProps) {
@@ -45,10 +43,13 @@ export function ChatPanel({
   } = useChatStore()
 
   const handleSend = async () => {
-    const updated = await sendMessage(projectId, documentId)
-    if (updated !== null) {
-      onMessageSent?.()
-      if (updated) onDocumentUpdate(updated)
+    try {
+      const updated = await sendMessage(projectId, documentId)
+      if (updated !== null) onMessageSent?.()
+      // The document store has already updated and scheduled the exact document.
+      // Do not enqueue the same content via the currently active editor tab.
+    } catch {
+      showToast('error', '채팅 요청을 문서에 반영하지 못했습니다. 문서 저장 상태를 확인해 주세요.')
     }
   }
 

@@ -1,0 +1,117 @@
+name: Phase 0 integrated browser smoke - disposable environment
+
+on:
+  push:
+    branches: [test/planos-phase0-integrated-20261016, fix/planos-version-restore-atomic-20261016, test/planos-c10-atomic-20261017, fix/planos-chat-atomic-c10-20261017]
+    paths:
+      - 'tests/e2e/**'
+      - '.github/workflows/phase0-browser-smoke.yml'
+  pull_request:
+    branches: [fix/planos-chat-document-write-20261016, test/planos-phase0-integrated-20261016]
+    paths:
+      - 'tests/e2e/**'
+      - '.github/workflows/phase0-browser-smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: planos-browser-smoke-\${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-real-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-browser-smoke-supabase
+    steps:
+      - name: Checkout isolated Phase 0 integration branch
+        uses: actions/checkout@v4
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install Supabase CLI (no hosted project)
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.84.2
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -qq -y postgresql-client
+          fi
+      - name: Start disposable local Supabase services
+        run: |
+          set -euo pipefail
+          for variable in SUPABASE_ACCESS_TOKEN SUPABASE_DB_URL SUPABASE_DB_PASSWORD; do
+            if [ -n "$(printenv "$variable" || true)" ]; then
+              echo "::error::Unexpected hosted Supabase configuration; refusing to run"
+              exit 1
+            fi
+          done
+          mkdir -p "$PLANOS_LOCAL_SUPABASE_DIR"
+          cd "$PLANOS_LOCAL_SUPABASE_DIR"
+          supabase init
+          if ! supabase start --exclude realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta,mailpit > /tmp/planos-browser-stack.log 2>&1; then
+            echo "::error::Disposable local Supabase stack failed"
+            grep -Ei 'error|failed|invalid|missing|unknown' /tmp/planos-browser-stack.log | head -35 || true
+            exit 1
+          fi
+      - name: Apply migrations 001 through 010 to LOCAL test DB only
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/*.sql; do
+            echo "Disposable-only migration $(basename "$migration")"
+            psql -X -v ON_ERROR_STOP=1 -f "$migration" > /tmp/planos-browser-migration.log
+          done
+      - name: Install app and configure LOCAL Supabase URL for Vite
+        run: |
+          npm ci
+          node tests/e2e/local_browser_env.mjs
+      - name: Install temporary Chromium browser test runner
+        run: |
+          npm install --no-save --package-lock=false playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Start local Vite development server
+        run: |
+          (npm run dev -- --host 127.0.0.1 > /tmp/planos-vite.log 2>&1 & echo $! > /tmp/planos-vite.pid)
+          for attempt in $(seq 1 50); do
+            if curl -fsS -o /dev/null http://127.0.0.1:5173/login; then
+              echo "Local Vite browser test service ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Vite did not start"
+          tail -n 80 /tmp/planos-vite.log || true
+          exit 1
+      - name: Browser login, dashboard and PRD route smoke
+        run: node tests/e2e/browser_smoke.mjs
+      - name: Upload failed synthetic browser screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-browser-smoke-failure
+          path: artifacts/browser-qa/smoke-failure.png
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Stop all disposable services
+        if: always()
+        run: |
+          if [ -f /tmp/planos-vite.pid ]; then
+            kill "$(cat /tmp/planos-vite.pid)" || true
+          fi
+          rm -f .env.local
+          if [ -d "$PLANOS_LOCAL_SUPABASE_DIR/supabase" ]; then
+            ( cd "$PLANOS_LOCAL_SUPABASE_DIR" && supabase stop --no-backup ) || true
+          fi

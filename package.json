@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test:s1": "node --test tests/task-prototype.test.mjs",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.mjs",
     "preview": "vite preview",
     "db:push": "node scripts/db-push.mjs",
     "dev:user": "node scripts/create-dev-user.mjs",

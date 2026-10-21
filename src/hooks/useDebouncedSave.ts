@@ -6,7 +6,9 @@ export function useDebouncedSave<T>(
 ): (next: T) => void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onSaveRef = useRef(onSave)
-  onSaveRef.current = onSave
+  useEffect(() => {
+    onSaveRef.current = onSave
+  }, [onSave])
 
   useEffect(() => {
     return () => {

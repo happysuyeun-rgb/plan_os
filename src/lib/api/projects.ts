@@ -88,7 +88,10 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
 }
 
 export async function updateProject(id: string, data: Partial<Project>): Promise<Project> {
-  const { id: _id, created_at: _created, user_id: _user, ...patch } = data
+  const patch = { ...data }
+  delete patch.id
+  delete patch.created_at
+  delete patch.user_id
   const { data: updated, error } = await supabase
     .from('projects')
     .update(patch)
@@ -111,10 +114,11 @@ export async function trashProject(id: string, userId: string): Promise<Project>
   return unwrap(data, error)
 }
 
-export async function restoreProject(id: string, _userId: string): Promise<Project> {
+export async function restoreProject(id: string, userId: string): Promise<Project> {
   const { data, error } = await supabase
     .from('projects')
     .update({ deleted_at: null, deleted_by: null })
+    .eq('user_id', userId)
     .eq('id', id)
     .select()
     .single()
