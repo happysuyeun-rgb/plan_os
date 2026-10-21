@@ -53,10 +53,12 @@ test('conflict failure preserves the local edit for a later retry', async () => 
   save.schedule('doc-a', 'my local edit')
   await save.flush('doc-a')
   // Conflict must not overwrite the server, must not mark the edit saved,
-  // and must not silently retry in a loop.
+  // and must not silently retry in a loop. Work order 06 separates the
+  // conflict status from a plain save failure; this lane has no onConflict
+  // handler, so the error callback still fires as the fallback signal.
   assert.equal(server, 'server-v2')
   assert.deepEqual(attempts, ['my local edit'])
-  assert.equal(save.getStatus('doc-a'), 'error')
+  assert.equal(save.getStatus('doc-a'), 'conflict')
   assert.deepEqual(errors, ['doc-a'])
 
   // After the user re-checks and the baseline is refreshed, the preserved

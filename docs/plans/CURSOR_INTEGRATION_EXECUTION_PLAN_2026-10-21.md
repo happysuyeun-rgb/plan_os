@@ -606,3 +606,78 @@ main 기존 번호(001~008, 011, 012)는 건드리지 않았다. PR 전용 SQL�
 **단계 C-01 판정: 완료(코드·단위 테스트 범위).** 실패 4건의 원인을 코드에서 해결했고 전체 단위 테스트와 빌드·린트를 통과했다. 다만 지시서 기준대로 **단계 C 전체 완료로 표시하지 않는다.** 서버 Revision CAS 연동과 실제 DB 검증이 남아 있기 때문이다.
 
 **다음 개발 작업 1개:** 클라이언트 자동저장을 본문 비교에서 revision CAS로 전환하는 단계 C-02. 017을 정식화하기 전에, 생성·재생성·게스트 이전까지 모든 쓰기 경로가 revision을 전진시키는 설계와 격리 DB 동시성 테스트를 먼저 확정한다. 운영 DB·main 병합·배포는 하지 않는다.
+
+---
+
+## 실행 기록 — 단계 C-02 (Cursor 지시서 06, 2026-10-21)
+
+### C02-1. 실제 서버 CAS 적용 방식
+
+- 정식 마이그레이션 `018_document_revision_cas.sql`을 새로 만들었다(017 DRAFT는 손대지 않았고 어떤 DB에도 적용하지 않았다). 구성은 `documents.content_revision bigint not null default 0` 컬럼, 본문이 실제로 바뀔 때만 `old + 1`을 강제 대입하는 BEFORE UPDATE 트리거, 그리고 RPC `save_document_content_cas(p_document_id, p_expected_revision, p_content)`다.
+- CAS 규칙: 호출자가 본 revision과 저장된 revision이 같을 때만 갱신하고, 다르면 SQLSTATE 40001을 던지며 아무것도 바꾸지 않는다. 문서 행을 `FOR UPDATE`로 잠가 동시 CAS가 직렬화되므로 같은 revision에서는 하나만 성공한다.
+- 재시도 안전성: 같은 `(expected_revision, content)` 재전송은 성공으로 인정한다. revision이 같고 내용이 같으면 no-op 성공, 응답 유실 후 재전송(revision이 `expected + 1`이고 내용이 동일)도 성공을 반환해 중복 적용되지 않는다. 건너뛴 revision이나 다른 내용의 오래된 저장은 항상 충돌이다.
+- 권한은 서버에서 다시 검증한다: 미인증 42501, 삭제된 프로젝트·타 프로젝트·viewer·outsider는 42501, anon은 함수 실행 권한 자체가 없다(authenticated만 grant).
+- 클라이언트(`src/lib/api/documents.ts`)는 본문 비교 저장 `saveDocumentContentIfUnchanged`를 제거하고 CAS RPC 호출 `saveDocumentContentCas`로 교체했다. `Document` 타입에 `content_revision`을 추가했고, 스토어는 문서별 마지막 확인 revision을 기준값으로 관리한다. 기준값이 없는 경우(채팅처럼 내용만 반환하는 경로 직후)에만 서버 문서를 한 번 다시 읽어 기준값을 확정한다.
+
+### C02-2. 격리 DB 검증 중 발견한 P0 — 권한 검사가 NULL에 뚫려 있었다 (019로 수정)
+
+C02-05(타 프로젝트 접근 차단)를 실행하자 editor-e(다른 프로젝트의 editor)의 CAS가 성공해 버렸다. 원인은 `can_edit_project_content()`가 멤버십이 없는 호출자에게 `false`가 아니라 `NULL`을 반환하고(`get_project_role()`의 NULL 전파), PL/pgSQL의 `not NULL`이 NULL이 되어 `IF`가 검사를 건너뛴 것이다. 같은 패턴을 쓰는 복원 RPC(015)와 채팅 RPC(016)도 실제로 뚫려 있음을 outsider 계정으로 재현했다 — 문서 id와 버전 id만 알면 프로젝트 멤버가 아니어도 복원·채팅 수정이 가능했다. B-01에서 viewer 복원 거부가 통과한 것은 viewer는 역할 값이 있어 `false`가 명확히 나왔기 때문이며, outsider 경로는 그때 매트릭스에 없었다.
+
+수정: 정식 마이그레이션 `019_harden_can_edit_null_check.sql`에서 `can_edit_project_content()`가 절대 NULL을 반환하지 않도록 `coalesce(..., false)`로 교체했다. RLS 정책의 NULL은 원래 거부와 같아 동작 변화가 없고, 015/016/018의 검사가 한 번에 안전해진다. 018의 조건식도 `coalesce`로 이중 방어했다. 019 적용 후 outsider·viewer의 복원·채팅·CAS가 전부 42501로 거부됨을 재검증했다(C02-09, C02-10).
+
+### C02-3. 쓰기 경로 통합 현황
+
+| 경로 | 방식 | revision 규칙 |
+|---|---|---|
+| W1 자동저장 | CAS RPC(018)만 사용 | 기대 revision 일치 시에만 저장, 성공 시에만 기준값 전진 |
+| W2 버전 복원 | 복원 RPC(015, 행 잠금 트랜잭션) + `replace` 차선 | RPC가 반환한 행의 새 revision으로 기준값 재설정 |
+| W3 문서 생성 | `upsertDocument` (신규 INSERT는 revision 0 시작) | UPDATE로 바뀌는 경우 트리거가 전진 |
+| W4 재생성 | `upsertDocument` + `replace` 차선, 완료 후 문서 재조회로 revision 확정 | 트리거 전진 + 기준값 동기화 |
+| W5 채팅 수정 | 채팅 RPC(016, 행 잠금 트랜잭션), 완료 후 문서 재조회로 revision 확정 | 트리거 전진 + 기준값 동기화 |
+| 게스트 이전 | `upsertDocument` (새 프로젝트에 INSERT) | revision 0 시작, 이후 편집은 CAS |
+| 무조건 저장 `saveDocumentContent` | **제거** (호출처 없음 확인 후 삭제, 문서 API에서 우회 불가) | — |
+| 클라이언트 직접 UPDATE | DB 정책상 editor/owner에게 여전히 가능 — **실측 기록, 이번에 차단하지 않음** | 트리거가 revision을 전진시켜 이후 CAS가 충돌로 탐지한다(C02-07에서 실측). 완전 차단은 직접 UPDATE 정책 제거 컷오버 마이그레이션으로 분리한다 |
+
+클라이언트 상태 구분: `saved`/`saving`/`conflict`/`error`를 분리했다. 충돌 시 입력은 그대로 보존되고(자동 재시도로 덮지 않음), 문서 화면에 충돌 배너와 "최신 문서 불러오기"가 표시된다. 불러오기를 누르면 서버 문서로 교체하고 기존 입력은 복구 충돌 배너에서 복사할 수 있게 남긴다.
+
+### C02-4. 격리 DB 테스트 결과 (일회용 PostgreSQL 17, 마이그레이션 001~016 + 018 + 019)
+
+`tests/rls/run_c02_local_pg.sh` + `tests/rls/test_c02_revision_cas.sql` + 동시 실행 프로브(`test_c02_concurrent.sql`)로 실행했고 컨테이너는 검증 후 제거했다.
+
+| # | 시나리오 | 결과 |
+|---|---|---|
+| C02-01 | editor CAS 저장 성공, revision 정확히 1회 전진 | PASS |
+| C02-02 | 오래된 revision + 다른 내용 거부(40001), 문서 무변경 | PASS |
+| C02-03 | 동일 요청 재전송 멱등성(응답 유실 포함), revision 건너뛰기 거부 | PASS |
+| C02-04 | viewer CAS 쓰기 차단(42501) | PASS |
+| C02-05 | 타 프로젝트 editor·outsider 차단(42501) — 019 적용 후 PASS (적용 전 실패해 C02-2 결함 발견) | PASS |
+| C02-06 | 복원 후 예전 자동저장 기준값 충돌(복원·자동저장 경합) | PASS |
+| C02-07 | 직접 UPDATE 우회 실측: editor는 성공하나 revision 전진으로 CAS가 탐지 | 실측 기록 |
+| C02-08 | anon 실행 차단 | PASS |
+| C02-09 | outsider·viewer 복원 RPC 거부(019) | PASS |
+| C02-10 | outsider·viewer 채팅 RPC 거부(019) | PASS |
+| C02-11 | 정상 editor 채팅 수정 동작 + 트리거 revision 전진 | PASS |
+| C02-12 | 실제 동시 세션 2개가 같은 revision에 CAS — 하나만 커밋, 최종 revision 1 | PASS |
+
+### C02-5. 회귀 결과
+
+| 검사 | 결과 |
+|---|---|
+| `npm run test:unit` | **53/53 pass** (기존 49건 + 신규 CAS 충돌 테스트 4건). 단, 기존 테스트 1건(`conflict failure preserves the local edit for a later retry`)의 상태 기대값을 지시서 06의 상태 구분 요구에 맞춰 `error` → `conflict`로 정합화했다. 입력 보존·재저장 가능이라는 본질 단언은 그대로 유지·통과한다 |
+| `npm run test:s1` | 6/6 pass |
+| `npm run build` | 성공 (기존 청크 크기 경고만) |
+| `npm run lint` | 0 errors / 1 warning (기존 `DocumentPage` useEffect 경고, 신규 없음) |
+
+수정 파일: `supabase/migrations/018_document_revision_cas.sql`(신규), `019_harden_can_edit_null_check.sql`(신규), `src/types/index.ts`, `src/lib/api/documents.ts`, `src/lib/documentAutosave.ts`, `src/store/documentStore.ts`, `src/components/common/SaveStatus.tsx`, `src/components/document/DocumentToolbar.tsx`, `src/pages/DocumentPage.tsx`, `tests/documentAutosave-cas.test.mjs`(신규), `tests/documentAutosave-concurrency.test.mjs`(상태 기대 정합 1곳), `tests/rls/test_c02_revision_cas.sql`(신규), `tests/rls/test_c02_concurrent.sql`(신규), `tests/rls/run_c02_local_pg.sh`(신규).
+
+### C02-6. 잔여 항목
+
+- **실제 Supabase Auth/PostgREST 미검증(B01-D3 유지):** 이번 검증은 순수 PostgreSQL + 인증 에뮬레이션이다. PostgREST 경유 시 RPC 에러 코드(40001) 전달, 실제 JWT, 역할 전환은 아직 실증하지 못했다. 지시서 기준에 따라 **단계 C 전체 완료로 표시하지 않는다.**
+- 직접 UPDATE 정책 제거 컷오버는 후속 과제다. 그 전까지 직접 UPDATE는 "차단"이 아니라 "revision 전진으로 탐지" 상태임을 명시한다.
+- 017 DRAFT와 018은 함께 적용하면 안 된다. 018이 정식이며 017은 삭제하지 않고 초안으로 보존한다(계약 테스트가 참조).
+
+### C02-7. 단계 C-02 판정
+
+**단계 C-02 판정: 격리 DB 범위에서 완료.** 서버 Revision CAS 구현, 클라이언트 연동, 쓰기 경로 통합, 동시성·권한·멱등 실증, 기존 회귀 통과를 모두 마쳤고 검증 중 발견한 권한 우회 결함(P0)도 019로 수정·재검증했다. 다만 실제 Supabase Auth/PostgREST 실증이 남아 있어 **단계 C 전체 완료로는 표시하지 않는다.**
+
+**다음 개발 작업 1개:** 로컬 Supabase 스택(또는 동등한 PostgREST 환경)에서 018·019와 클라이언트 CAS를 실제 JWT로 재검증하는 단계 C-03. 그 결과로 B01-D3를 닫을 수 있을 때 단계 C 완료를 판정한다. 운영 DB·main 병합·배포는 하지 않는다.

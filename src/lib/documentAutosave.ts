@@ -1,10 +1,18 @@
 /** Persist each document's edit snapshot independently of the active document tab. */
-export type DocumentSaveStatus = 'saved' | 'saving' | 'error'
+export type DocumentSaveStatus = 'saved' | 'saving' | 'conflict' | 'error'
+
+/** Result of an explicit overwrite (restore / regenerate / chat commit). */
+export interface DocumentReplaceResult {
+  content: string
+  /** Server content_revision after the overwrite, when the writer knows it. */
+  revision?: number
+}
 
 interface SaveTask {
   revision: number
   savedRevision: number
   failedRevision: number | null
+  conflictedRevision: number | null
   content: string
   timer: ReturnType<typeof setTimeout> | null
   tail: Promise<void>
@@ -23,9 +31,22 @@ interface DocumentAutosaveOptions<T> {
   persist: (documentId: string, content: string) => Promise<T>
   onSaved: (documentId: string, content: string, result: T) => void
   onReplaced: (documentId: string, content: string) => void
-  onCommitted?: (documentId: string, content: string) => void
+  onCommitted?: (documentId: string, content: string, revision?: number) => void
   onError: (documentId: string) => void
+  onConflict?: (documentId: string) => void
   delayMs?: number
+}
+
+/**
+ * A revision conflict is a distinct outcome from a save failure: the server
+ * holds a newer document, the local draft is preserved untouched, and the
+ * user must reload the latest document before saving again. Detected by
+ * duck-typing so this module stays free of API-layer imports.
+ */
+function isRevisionConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as { name?: string; code?: string }
+  return candidate.name === 'DocumentWriteConflictError' || candidate.code === '40001'
 }
 
 export function createDocumentAutosave<T>({
@@ -34,6 +55,7 @@ export function createDocumentAutosave<T>({
   onReplaced,
   onCommitted,
   onError,
+  onConflict,
   delayMs = 2000,
 }: DocumentAutosaveOptions<T>) {
   const tasks = new Map<string, SaveTask>()
@@ -45,6 +67,7 @@ export function createDocumentAutosave<T>({
         revision: 0,
         savedRevision: 0,
         failedRevision: null,
+        conflictedRevision: null,
         content: '',
         timer: null,
         tail: Promise.resolve(),
@@ -60,6 +83,9 @@ export function createDocumentAutosave<T>({
     if (!documentId) return 'saved'
     const task = tasks.get(documentId)
     if (!task) return 'saved'
+    // A conflict means the server document moved ahead. The draft stays
+    // untouched and unsaved until the user reloads the latest document.
+    if (task.conflictedRevision === task.revision) return 'conflict'
     // A failed explicit overwrite has no unsaved *draft*, but the failed
     // operation must still be visible as an error until user retries it.
     if (task.failedRevision === task.revision) return 'error'
@@ -70,6 +96,7 @@ export function createDocumentAutosave<T>({
     const task = getTask(documentId)
     task.revision += 1
     task.failedRevision = null
+    task.conflictedRevision = null
     task.content = content
     // An edit arriving while an older write is already on the wire makes that
     // write's success acknowledgement stale. The write itself is not
@@ -103,6 +130,7 @@ export function createDocumentAutosave<T>({
         const updated = await persist(documentId, content)
         task.savedRevision = revision
         task.failedRevision = null
+        task.conflictedRevision = null
         if (task.suppressAckRevision === revision) {
           // Newer text was scheduled while this write was in flight. Advance
           // the server baseline silently; do not report the stale snapshot
@@ -113,10 +141,19 @@ export function createDocumentAutosave<T>({
           // Even if the editor has newer text, advance its acknowledged server baseline.
           onSaved(documentId, content, updated)
         }
-      } catch {
+      } catch (error) {
         if (task.revision === revision) {
-          task.failedRevision = revision
-          onError(documentId)
+          if (isRevisionConflict(error)) {
+            // Never retry a conflicted snapshot against a stale baseline in
+            // a loop: keep the draft, surface the conflict, and wait for an
+            // explicit reload of the latest server document.
+            task.conflictedRevision = revision
+            if (onConflict) onConflict(documentId)
+            else onError(documentId)
+          } else {
+            task.failedRevision = revision
+            onError(documentId)
+          }
         }
       } finally {
         if (task.activeRevision === revision) task.activeRevision = null
@@ -133,7 +170,7 @@ export function createDocumentAutosave<T>({
    */
   function replace(
     documentId: string,
-    overwrite: () => Promise<string>,
+    overwrite: () => Promise<string | DocumentReplaceResult>,
   ): Promise<string> {
     const task = getTask(documentId)
     if (task.timer) clearTimeout(task.timer)
@@ -147,6 +184,7 @@ export function createDocumentAutosave<T>({
     const pendingContent = task.content
     const revision = ++task.revision
     task.failedRevision = null
+    task.conflictedRevision = null
 
     const operation = task.tail.then(async () => {
       let pendingDraftHandled = false
@@ -177,10 +215,12 @@ export function createDocumentAutosave<T>({
         // task.content were a newer unsaved edit (it may be just an empty
         // placeholder after a full page reload).
         pendingDraftHandled = true
-        const content = await overwrite()
+        const result = await overwrite()
+        const content = typeof result === 'string' ? result : result.content
+        const resultRevision = typeof result === 'string' ? undefined : result.revision
         task.savedRevision = revision
         // Always advance server baseline, but never clobber a newer local draft.
-        onCommitted?.(documentId, content)
+        onCommitted?.(documentId, content, resultRevision)
         if (task.revision === revision) {
           task.content = content
           onReplaced(documentId, content)
@@ -204,5 +244,23 @@ export function createDocumentAutosave<T>({
     return operation
   }
 
-  return { schedule, flush, replace, getStatus }
+  /**
+   * Adopt the latest server document after a revision conflict (or any
+   * authoritative reload): the lane's snapshot becomes the server content
+   * and is marked saved, so a later flush can never push the preserved
+   * stale draft over the newer server document. Edits scheduled afterwards
+   * start a fresh revision on top of the server baseline.
+   */
+  function adoptServerContent(documentId: string, serverContent: string): void {
+    const task = getTask(documentId)
+    if (task.timer) clearTimeout(task.timer)
+    task.timer = null
+    task.revision += 1
+    task.savedRevision = task.revision
+    task.failedRevision = null
+    task.conflictedRevision = null
+    task.content = serverContent
+  }
+
+  return { schedule, flush, replace, getStatus, adoptServerContent }
 }

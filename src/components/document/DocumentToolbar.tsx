@@ -7,12 +7,13 @@ import { ExportMenu } from './ExportMenu'
 import type { DocumentVersion } from '../../types'
 import { History, Pencil, Eye } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import type { DocumentSaveStatus } from '../../lib/documentAutosave'
 
 interface DocumentToolbarProps {
   docType: DocumentType
   versions: DocumentVersion[]
   activeVersionId: string | null
-  saveStatus: 'saved' | 'saving' | 'error'
+  saveStatus: DocumentSaveStatus
   isReadOnly: boolean
   canRegenerate: boolean
   canSaveVersion: boolean

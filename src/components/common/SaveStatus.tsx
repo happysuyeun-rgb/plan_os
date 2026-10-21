@@ -1,7 +1,8 @@
-import { Loader2, Check, AlertCircle } from 'lucide-react'
+import { Loader2, Check, AlertCircle, AlertTriangle } from 'lucide-react'
+import type { DocumentSaveStatus } from '../../lib/documentAutosave'
 
 interface SaveStatusProps {
-  status: 'saved' | 'saving' | 'error'
+  status: DocumentSaveStatus
 }
 
 export function SaveStatus({ status }: SaveStatusProps) {
@@ -9,6 +10,13 @@ export function SaveStatus({ status }: SaveStatusProps) {
     return (
       <span className="flex items-center gap-1 text-xs text-gray-400">
         <Loader2 className="h-3 w-3 animate-spin" /> 저장 중...
+      </span>
+    )
+  }
+  if (status === 'conflict') {
+    return (
+      <span className="flex items-center gap-1 text-xs text-amber-600">
+        <AlertTriangle className="h-3 w-3" /> 충돌: 최신 문서 확인 필요
       </span>
     )
   }

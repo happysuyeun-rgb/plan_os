@@ -26,36 +26,57 @@ export async function fetchDocument(
   return data
 }
 
-export async function saveDocumentContent(id: string, content: string): Promise<Document> {
+export async function fetchDocumentById(id: string): Promise<Document | null> {
   const { data, error } = await supabase
     .from('documents')
-    .update({ content })
+    .select('*')
     .eq('id', id)
-    .select()
-    .single()
-  return unwrap(data, error)
+    .maybeSingle()
+  throwIfError(error)
+  return data
 }
 
-
-// Server-side equality guard for edits derived from a previously read document.
-// A 0-row result may also mean permission was revoked; do not expose which.
+// Server-side Revision CAS conflict (SQLSTATE 40001 from
+// save_document_content_cas, migration 018). The editor draft is preserved
+// locally; the user reloads the latest document before saving again.
 export class DocumentWriteConflictError extends Error {
   constructor() {
-    super('문서가 변경되었거나 저장 권한이 없습니다. 로컬 초안을 보존하고 새로 확인하세요.')
+    super('문서가 다른 곳에서 변경되었습니다. 입력 내용은 보존되며, 최신 문서를 확인한 뒤 다시 저장하세요.')
     this.name = 'DocumentWriteConflictError'
   }
 }
 
-export async function saveDocumentContentIfUnchanged(id: string, expectedServerContent: string, nextContent: string): Promise<Document> {
-  const { data, error } = await supabase.from('documents')
-    .update({ content: nextContent }).eq('id', id).eq('content', expectedServerContent).select()
-  throwIfError(error)
-  if (!data || data.length !== 1) throw new DocumentWriteConflictError()
-  return data[0]
+/**
+ * The only autosave write path. The server (migration 018) verifies the
+ * authenticated caller, an active project, and editor/owner permission,
+ * then writes only when the stored content_revision equals
+ * `expectedRevision`. A mismatch raises SQLSTATE 40001 and changes nothing,
+ * so a stale save can never overwrite a newer document. Retrying the same
+ * (expectedRevision, content) after a lost response is a safe no-op.
+ *
+ * The previous unconditional `saveDocumentContent` update was removed: it
+ * had no remaining callers and bypassed every revision guard.
+ */
+export async function saveDocumentContentCas(
+  id: string,
+  expectedRevision: number,
+  nextContent: string,
+): Promise<Document> {
+  const { data, error } = await supabase
+    .rpc('save_document_content_cas', {
+      p_document_id: id,
+      p_expected_revision: expectedRevision,
+      p_content: nextContent,
+    })
+    .single()
+  if (error && (error as { code?: string }).code === '40001') {
+    throw new DocumentWriteConflictError()
+  }
+  return unwrap(data as Document | null, error)
 }
 
 export async function upsertDocument(
-  doc: Omit<Document, 'id' | 'created_at' | 'updated_at'> &
+  doc: Omit<Document, 'id' | 'created_at' | 'updated_at' | 'content_revision'> &
     Partial<Pick<Document, 'id' | 'created_at' | 'updated_at'>>,
 ): Promise<Document> {
   const row: Record<string, string> = {

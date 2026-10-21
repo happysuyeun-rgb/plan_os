@@ -83,6 +83,7 @@ export default function DocumentPage() {
     regenerate,
     regenerateCascade,
     setReadOnly,
+    reloadDocumentFromServer,
   } = useDocumentStore()
   const {
     versions,
@@ -580,6 +581,20 @@ export default function DocumentPage() {
 
   return (
     <>
+      {saveStatus === 'conflict' && activeDocumentId && (
+        <section role="alert" className="mx-5 my-3 rounded-lg border border-red-400 bg-red-50 p-4 text-sm text-gray-900">
+          <h2 className="font-semibold">저장 충돌이 발생했습니다</h2>
+          <p className="my-2">이 문서는 다른 곳에서 먼저 변경되어 자동저장이 중단되었습니다.
+            지금 입력한 내용은 보존됩니다. 최신 문서를 불러온 뒤 필요한 내용을 다시 반영하세요.</p>
+          <Button
+            variant="ghost"
+            className="px-3 py-1.5 text-xs"
+            onClick={() => { void reloadDocumentFromServer(activeDocumentId) }}
+          >
+            최신 문서 불러오기
+          </Button>
+        </section>
+      )}
       {conflictingDraft !== undefined && (
         <section role="alert" className="mx-5 my-3 rounded-lg border border-amber-400 bg-amber-50 p-4 text-sm text-gray-900">
           <h2 className="font-semibold">저장되지 않은 로컬 초안이 있습니다</h2>

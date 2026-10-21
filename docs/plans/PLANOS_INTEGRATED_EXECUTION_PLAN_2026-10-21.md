@@ -337,3 +337,13 @@
 - [ ] **단계 C 전체는 미완료:** 클라이언트는 여전히 본문 비교 저장을 쓰고, 서버 Revision CAS(017)는 초안이다. 생성·재생성·게스트 이전의 무조건 쓰기와 직접 UPDATE 차단이 남아 있다.
 - [ ] **다음 작업:** 단계 C-02로 클라이언트를 revision CAS로 전환한다. 전 쓰기 경로의 revision 전진 설계와 격리 DB 동시성 실증을 먼저 확정한다.
 - [ ] 운영 DB·main 병합·배포는 하지 않았다.
+## 2026-10-21 Cursor 지시서 06 — 단계 C-02 서버 Revision CAS·저장 경로 통합 기록
+
+상세는 [Cursor 통합 실행계획서 실행 기록](../plans/CURSOR_INTEGRATION_EXECUTION_PLAN_2026-10-21.md)의 C-02 절을 따른다.
+
+- [x] **서버 CAS(격리 DB 범위만):** 정식 마이그레이션 018(`content_revision` + 변경 시에만 전진하는 트리거 + `save_document_content_cas` RPC)을 새로 만들고 클라이언트 자동저장을 본문 비교에서 revision CAS로 전환했다. 무조건 저장 함수 `saveDocumentContent`는 호출처 없음을 확인하고 제거했다.
+- [x] **권한 결함 발견·수정:** 검증 중 `can_edit_project_content()`의 NULL 반환 때문에 멤버가 아닌 outsider도 복원·채팅 RPC로 문서를 바꿀 수 있는 우회를 재현했다. 019에서 헬퍼를 NULL-safe로 교체하고 018 조건도 이중 방어했으며, outsider·viewer 거부를 재검증했다.
+- [x] **격리 DB 실측:** 오래된 revision 거부, 동시 세션 하나만 성공, 타 프로젝트·viewer 차단, 복원·자동저장 경합, 중복 요청 멱등성, 직접 UPDATE의 revision 전진 탐지까지 12개 시나리오를 일회용 PostgreSQL에서 실행했다. 직접 UPDATE 자체의 정책 차단은 후속 컷오버로 남겼다.
+- [x] **회귀 실행:** 단위 테스트 53/53(신규 4건 포함; 기존 테스트 1건은 상태 구분 요구에 맞춰 기대값만 `error`→`conflict`로 정합화하고 본질 단언 유지), S1 6/6, 빌드 성공, 린트 0 errors.
+- [ ] **단계 C 전체는 미완료:** 실제 Supabase Auth/PostgREST 경유 검증(B01-D3)이 남아 있다. 다음 작업은 로컬 Supabase 스택에서 실제 JWT로 018·019와 클라이언트 CAS를 재검증하는 C-03이다.
+- [ ] 운영 DB·main 병합·배포는 하지 않았다.

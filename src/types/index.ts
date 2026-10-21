@@ -128,6 +128,8 @@ export interface Document {
   project_id: string
   type: DocumentType
   content: string
+  /** Server CAS revision (migration 018). Advances exactly once per content change. */
+  content_revision: number
   created_at: string
   updated_at: string
 }
