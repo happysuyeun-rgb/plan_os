@@ -348,3 +348,16 @@
 - [ ] **P0 코드/DB 상세검증:** 실제 `agent_*` migration 존재·FK/상태/version, multi-project atomic assignment·경력 일수/동의 ledger DDL/worker 권한, OpenAPI 타입 생성/실 QA.
 - [ ] **서비스 검증:** 사용 모델 제공자/가격·원가, 승급 임계, 고객 공개 권리·법률·철회, 구독/자동 PM 스케줄러/사용량. 운영 DB/배포/실과금/모델 API는 승인 전 금지.
 - **판정:** 모든 [x]는 **문서/설계 산출물만 완료**를 뜻한다. 실 기능/테스트/운영 적용 PASS로 계산하지 않는다.
+
+## 2026-10-21 v3 재감사·스토리보드/계약 인계 (Draft PR #28)
+
+- [x] 53개 docs Markdown 목록·내용/상태 전수 재분류 및 [V3-01~23 중복·불일치](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) 기록. 기구현·설계·모의·운영 승인별 상태 분리.
+- [x] Task Flow TF-01~46 정본 + TF-S 중복 별칭 대응표, IA N01~32 정본 + ST-UI/P-ID 대응표, `/v1/hirings` 후보를 STAFF-API-01~15로 매핑.
+- [x] [직원 채용·경력 동의·PM 복수 프로젝트 화면별 상세 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) 작성.
+- [x] [데이터·권한·API 단일 TARGET 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) 보정: main SQL 실제 migration(001~008,011,012)에는 agent_/staff_ AI 직원 테이블 없음; 서버 DB 구현 전임을 정정.
+- [x] STAFF-API-15 owner **최종 채용 수락·선택 프로젝트별 계약/배정 원자 활성화** 추가; STAFF-API-04는 draft 전용, 실제 모델/예산/경력 공개는 별도 동의.
+- [x] [해결되지 않은 제품 설계문제 DS-01~16의 권고](../product/AI_STAFF_OPEN_DESIGN_DECISIONS_2026-10-21.md) 작성. 무료/유료 PM 분리, 경력일/모델·등급/가격, 조직 공개권한, 철회/해임/작업중단, 본격 출시 게이트.
+- [ ] 현재 App.tsx 실제 route 및 009~017 Draft migration 중복·기존 PR 의존 상태 확인 → SQL/DTO/OpenAPI 작성, 격리 JWT/RLS/E2E.
+- [ ] G1 P0 autosave/restore/chat/version CAS·project_members RLS 재현/해결(신규 직원 코드/운영 승인과 분리).
+- [ ] N16/17/19/20/N27~32 실제 Mock UX/접근성 E2E, F401 브라우저 검증, PM worker/비용·공급자 모델 실제 PoC(승인 전 호출 금지).
+- **운영 안전:** 단일 브랜치 Draft 문서 설계, main 병합·운영 DB 변경·고객 데이터 외부 전송·상용 가격·배포 진행하지 않음.
