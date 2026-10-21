@@ -2,17 +2,25 @@
 
 - **기록:** 2026-10-21 / **상태:** Draft PR #28 **설계 기준안**. 설계 내에서 중복안 대신 하나의 방향을 선택했지만 실제 Supabase 스키마/코드, 법적 동의 문안, 요금/배포·상용 승인을 완료했다는 뜻은 아니다.
 - **상위:** [서비스기획 v2.0](../product/SERVICE_PLAN_V1_2026-10-20.md), [경력·공개 동의 정책](../product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md), [화면별 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md), [교차 재감사](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md).
-- **기존의 진실 원천:** `projects`, `documents`, `chat_messages`, `document_versions`, `generation_runs` 보존. 현재 DB에 실존하는지/마이그레이션은 기존 `DATA_MODEL.md`의 **정적 확인**이며 운영 적용 증명이 아니다.
-- **API 기존 경로:** API-01~23와 P1-5/기획 검수 수직 슬라이스는 보존. 아래 **STAFF-API-01~14**가 새 직원 기능의 정본; 기존 `/v1/hirings`·`/v1/staff` 목록은 **이전 제안 alias, 신규 구현 금지**(기존 실제 endpoint 존재 시 별도 호환 감사). canonical prefix `/api/v1`.
+- **실제 SQL 기준선과 TARGET 구분:** `projects`, `documents`, `chat_messages`, `document_versions`, `generation_runs`는 `main`의 001 등 기존 SQL에서 확인. `agent_*`/직원/경력 테이블은 **실제 main migration에 없음**, 신규 TARGET 설계다. 호스팅 DB에 해당 migration이 적용됐다는 증거도 아니다.
+- **API 기존 경로:** API-01~23와 P1-5/기획 검수 수직 슬라이스는 보존. 아래 **STAFF-API-01~15**가 새 직원 기능의 정본; 기존 `/v1/hirings`·`/v1/staff` 목록은 **이전 제안 alias, 신규 구현 금지**(기존 실제 endpoint 존재 시 별도 호환 감사). canonical prefix `/api/v1`.
 - **정책 기준:** owner 최종 계약·예산·실행·산출물 수락·공개 승인; editor는 허용된 문서/업무/계획 **초안 작업만**. 계약·경력 적립·외부 모델 전송과 포트폴리오 공개를 하나의 동의로 묶지 않는다.
+
+## 0. GitHub 실제 SQL 기준선 정적 검증 (2026-10-21, 추가 확인)
+
+GitHub `main` SHA `3e3fc66018067e009e95fa9b7917bad87fb38499` 의 `supabase/migrations/` **001~008, 011, 012 파일 목록과 001/011/012의 CREATE TABLE을 실제 조회**했다. 그 SQL 기준선에는 `agent_profiles`, `agent_contracts`, `agent_assignments`, `staff_engagements`, `staff_experience_daily`, `ai_runs`가 **생성되어 있지 않다**. 이 객체들은 기존 기획 `DATA_MODEL.md`의 TARGET 명칭으로, 현재 `main`에 존재하는 테이블로 표현하면 잘못이다.
+
+- **실제 SQL에 확인된 것:** 기존 `users/projects/documents/document_versions/chat_messages/project_members/project_activities/generation_runs`, 개발용 migration 011 `project_tasks/project_task_events`, migration 012 `audit_source_manifests`. 011/012는 마이그레이션 파일의 **개발/프로덕션 미적용 경고**를 따른다.
+- **설계상 네이밍 통합 권고:** 향후 테이블을 만들 때 `agent_profiles`를 직원 정체성, `agent_assignments`를 프로젝트 배정, `agent_contracts`를 프로젝트별 실행 계약의 **단일 TARGET 이름으로 선택**. 현재 물리 테이블과 재사용한다고 주장하지 않는다. `staff_engagements`는 상위 고용 묶음/가격 snapshot 신설 제안.
+- **마이그레이션 선행:** G1 기존 009/010 및 타 Draft SQL 013/017 등의 의존·번호 충돌·원자성/RLS 검증 후 **신규 migration 번호를 확정**할 것. 코드/실제 hosted DB/개발 DB에 적용한 것이 아님.
 
 ## 1. 설계 선택 로그 — 기존 중복안 중 하나를 정본으로
 
 | ID | 기존 충돌 | **이번 설계 선택** | 실제 확인·승인 대기 |
 |---|---|---|---|
-| DC-01 | `agent_profiles` vs `staff_identity` 별도 정체성 | **직원 식별자는 기존 `agent_profiles.id`를 우선 단일 `staff_id`로 사용**하고 역할/성향/검증 이력 확장 뷰/필드를 둔다. 성격 프리셋/직무와 고객별 채용 설정은 별도 | 기존 `agent_profiles` 실제 migration 적용 여부, PR25 mock 타입/참조 |
+| DC-01 | `agent_profiles` vs `staff_identity` 별도 정체성 | **직원 식별자는 신규 구축할 TARGET `agent_profiles.id`를 단일 `staff_id`로 쓰도록 제안**하고 역할/성향/검증 이력 확장 뷰/필드를 둔다. 성격 프리셋/직무와 고객별 채용 설정은 별도 | 기존 `agent_profiles` 실제 migration 적용 여부, PR25 mock 타입/참조 |
 | DC-02 | 프로젝트 단위 `agent_contracts` vs 다중 PM `staff_engagement` | `staff_engagements`는 고객의 **고용 묶음/기간/당시 가격 스냅샷** (청구 주체). `agent_contracts`는 **각 프로젝트별 독립 실행 권한/범위/예산 동의**의 단일 진실 원천. PM 계약 1건에 A/B 두 child 계약이 생김. 동일 실행의 계약 상태 이중 결정 금지 | 정확한 FK/상태/RLS와 기존 SQL 호환 |
-| DC-03 | `staff_project_assignment` vs `agent_assignments` | 기존 `agent_assignments`를 **프로젝트 배정의 단일 기준 테이블**로 확장/연결; `(engagement_id,project_id)` unique, project-scoped contract FK 필수. 새 중복 assignment 테이블 금지 | 기존 migration/권한/인덱스 매핑 검수 |
+| DC-03 | `staff_project_assignment` vs `agent_assignments` | 현재 `main`에는 없지만 기존 TARGET에서 제안한 `agent_assignments`를 **프로젝트 배정의 단일 기준 신규 테이블 명칭**으로 선택; `(engagement_id,project_id)` unique, project-scoped contract FK 필수. 새 중복 assignment 테이블 금지 | 기존 migration/권한/인덱스 매핑 검수 |
 | DC-04 | 직원 일수 1건/project vs 직원 하루 1건 | 작업/동의 근거는 `staff_work_contributions` 프로젝트별 N개로 보존. **공식 경력일수는 직원×KST날짜 별 deduplicated materialized projection**. 철회 후 남은 다른 프로젝트 근거로 재계산; raw 감사와 공개 이력 별개 | KST 서비스 기준일의 상용/글로벌 정책 검증 |
 | DC-05 | AI 실력 패키지 vs 경력 등급 혼동 | `experience_tier`(초/중/고: 검증 업무 경력) vs `model_package`/capability evaluation 분리, 직원 모델 이동 시 직무 평가 다시 | 정확한 임계/원가 미확정 |
 | DC-06 | PM이 계정 전체 프로젝트에 자동 접근 | **개별 프로젝트 owner의 명시적 opt-in A/B만**; future projects/프로젝트 C 기본 거부 | 조직 위임권 다층 정책 후속 |
@@ -120,7 +128,7 @@ public ref: withheld(default) → approved → published → withdrawal_pending 
 4. 직원 교체/해임/배정 해제 즉시 신규 작업·외부 tool claim 차단; 실행 중 불명확한 공급자 원가는 `pending reconciliation`.
 5. 직원 공개·경력 적립 동의 철회 시 빠르게 공개 읽기 차단, 비동기 materialized/cache/index 처리 상태 추적. 전 고용주 비밀 자료가 후속 고용주 prompt에 재노출되면 안 된다.
 
-## 7. API 단일 정본 — STAFF-API-01~14
+## 7. API 단일 정본 — STAFF-API-01~15
 
 **공통:** `/api/v1` prefix, Supabase JWT/owner 서버 검사, `POST`는 `Idempotency-Key`, 변경 `PATCH`는 `If-Match: "<version>"`, 응답 `{data,meta:{requestId,version?}}`와 `{error:{code,message,retryable}}`. 타 프로젝트는 404 masked, 역할 위반 403, 최신성 409, consent/approval 부족 412, 원가 부족 429, provider 503. 실제 API URL 존재 주장이 아니다.
 
@@ -140,6 +148,8 @@ public ref: withheld(default) → approved → published → withdrawal_pending 
 | STAFF-API-12 | GET `/api/v1/staff/:staffId/price-quote` | role+model package+type+duration 조건의 견적/단가; 미승인 상용 가격 비표시, snapshot |
 | STAFF-API-13 | GET `/api/v1/pm/engagements/:hireId/projects` | 개별 project 접근 필터를 통과한 **A/B만** 서버 집계, last-success/blocked/approval facts |
 | STAFF-API-14 | POST `/api/v1/pm/engagements/:hireId/plans` | owner/PM 계약 범위: project-scoped plan draft/approval request, 실제 실행은 기존 `API-14~22` 경로/별도 승인 |
+
+| STAFF-API-15 | POST `/api/v1/staff/engagements/:hireId/accept` | owner: `{expectedVersion,quoteVersion,termsDigest,projectApprovals:[{projectId,scopeDigest,providerConsentVersion}],idempotencyKey}` → active engagement + 각 프로젝트별 실행 sub-contract/assignment의 일관된 생성/활성화, 감사 event. **경력 적립/공개 동의는 이 엔드포인트의 포괄 동의가 아니며** 별도 목적별 기록 | draft/pending → active (권한·견적/총예산·모델전송/스냅샷 검증) |
 
 **API-04 성공 예시 (목표 DTO, Mock 전용):**
 ```json
@@ -179,7 +189,7 @@ public ref: withheld(default) → approved → published → withdrawal_pending 
 }
 ```
 
-**API 상세 추가 확인:** 실제 서비스 계약 **accept**·실계약 활성화는 기존 API-11의 프로젝트별 계약 동의와 연계해야 한다. multi project의 경우 기존 단일 프로젝트 API를 BFF 서버가 각 child 계약으로 일관성 있게 수행하게 한다; user API-04 호출만으로 active/실모델 run 실행을 시작하지 않는다. `STAFF-API-06`의 전후 미리보기/확정은 구현할 때 별도 GET/POST 계약으로 분리 검토. 직원 모델 변경은 범위/원가/데이터 전송 재확인, 기존 active contract mutate가 아니라 버전 갱신·재승인.
+**API 활성화 결론:** 실제 `staff_engagements` 채용 묶음의 **owner 최종 수락 정본은 STAFF-API-15**. multi-project 수락은 하나의 서버 트랜잭션에서 선택한 모든 프로젝트의 owner 권한·quote/terms/version·모델/데이터 전송 범위·프로젝트 예산을 검증하고, 프로젝트별 `agent_contracts` 하위 실행 계약을 생성/활성화한다. 기존 API-11은 최초 단발 업무/프로젝트별 실행 계약의 backward-compatible 경로로 남기되, **중복 재동의·이중 과금 금지** 및 연결된 engagement 상태 검증. API-04 draft 반환만으로 active/실모델 run 실행을 시작하지 않는다. `STAFF-API-06`의 전후 미리보기/확정은 구현할 때 별도 GET/POST 계약으로 분리 검토. 직원 모델 변경은 범위/원가/데이터 전송 재확인, 기존 active contract mutate가 아니라 버전 갱신·재승인.
 
 ## 8. DB/JWT/RLS/보안 검증 매트릭스 (실행 전 반드시 테스트)
 
