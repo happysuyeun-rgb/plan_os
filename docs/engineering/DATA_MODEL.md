@@ -144,3 +144,31 @@
 **실행 연계:** 기존 S2 snapshot `project_id/document_id/revision/digest` 및 계약 terms/version → PM 계획/직원 배정/모델 route → run/idempotency/outbox → 검증된 수행 이벤트 → 고객 수락/후기 → 경력일수/등급 업데이트. 문서 변경·권한 회수·모델 교체는 이전 승인 stale 및 실행 차단. RLS와 서버 API 필드 allowlist를 같이 검증.
 
 **격리 E2E/SQL 요구:** 동일 날 복수 프로젝트 경력일 1일 처리, 과거 고용주 원본 신규 고객으로 읽지 못함, 고객 동의 거부/철회에도 계약 수행 가능, 동의 revocation 후 집계 재계산, 초급 직원 승급 시 기존 계약 단가 유지, 중복 요청으로 이벤트/원장 증폭 불가. 실제 DB migration/RLS/권한 구현은 승인된 별도 G단계에서 수행.
+
+## 9. 서비스기획 v2.0 채용·경력·PM 복수 프로젝트 확장 데이터 계약 (TARGET, SQL 미작성)
+
+> 기존 `agent_contracts`, `ai_runs`, `project_tasks` 및 프로젝트 단위 RLS 구조를 **대체하거나 중복 생성하지 않는다**. 아래는 추가 또는 기존 테이블 확장 대상으로서 **기술 명칭 제안**. 실제 SQL/마이그레이션 번호·호환성은 G1/G2 코드·기존 스키마 조사 후 확정.
+
+| 논리 엔터티 | 필드·유일성 제안 | 관계/불변 조건 |
+|---|---|---|
+| `staff_identity` | immutable `staff_id`, display_name, role, persona_version, synthetic_profile | 공개 가상 캐릭터·실력 증빙/경력의 지속 직원 ID. 고객 계약과 분리 |
+| `staff_model_capability` | staff_id, provider, model_id, capability_id, eval_revision, limits | GPT/Claude 등 실제 모델별 평가 기록; 성향/직원 경력등급과 독립 |
+| `staff_engagement` | hire_id, staff_id, employer_id, type(one_off/project/pm_multi), contract_ref, tier_at_hire, price_snapshot, state_version | 기존 `agent_contracts`와 **1:1 연결 또는 확장 방식 선택 필수**. 중복 결제/계약 상태의 별도 source of truth 금지 |
+| `staff_project_assignment` | (hire_id,project_id) UNIQUE, permissions, assigned_at, revoked_at, state_version | 여러 프로젝트=**여러 개의 개별 프로젝트 배정**. 배정 대상·owner 권한/계약/철회 재검증, 미래 프로젝트 자동 추가 없음 |
+| `staff_experience_consent` | consent_id, staff_id, hire_id, project_id, consent_version, accrual_allowed=false, visibility=private, public_aggregate=false, references/ratings/marketing/portfolio/learning 각각 목적 플래그, recorded_by, revoked_at | 프로젝트×직원×목적 별 서명된/확인된 동의; 작업 이용 계약/모델 전송 동의와 별개. 타 고객 프로젝트 내용 열람 권한 아님 |
+| `staff_verified_work_event` | (provider_event_id,run_id,staff_id,project_id) de-dupe, verified_at, work_date, model_id, evidence_digest, acceptance_ref | 서버 생성만 허용. 동일 날 다중 작업 이벤트가 경력 일수로 다중 합산되지 않도록 단일 직원의 기준 시간대 명시 |
+| `staff_experience_ledger` | (staff_id,work_date) 경력일 중복 방지 + 적격 프로젝트 이벤트 참조 링크 테이블, consent_version, counted_at, reversal_ref | **같은 날 A·B 모두 기여했을 때 A 동의 철회해도 B 적립이 남는지 재계산 가능**. raw work_event 감사와 승급 적립을 분리 |
+| `staff_employer_review` | review_id, hire_id, staff_id, reviewer_id, accepted_artifact_ref, rating, disclosure_scope, verified, moderated_status | 고객이 실제 배정/수락한 업무만 평가, 중복·셀프 평가 방지. 외부 노출 별도 동의 |
+| `staff_tier_history` | staff_id, tier, ruleset_version, proof_digest, qualified_at, superseded_at, reason | 경력일수 AND 수락 실적 AND 직무 역량 검증으로 승급; 철회 시 재평가/감사 |
+| `staff_price_catalog` | role, experience_tier, model_package, contract_type, price_version, effective_at, cost_basis | 동등 조건 초급 가격 우대, 공급자 원가 별도; 기존 engagement 가격 스냅샷 변경 금지 |
+| `staff_public_reference` | staff_id, project_id, approved_public_fields, visibility, consent_version, published_at, withdrawn_at | 클라이언트 자유 JSON 출력 금지, 서버 필드 allowlist·익명 재식별 위험 차단 및 캐시/색인 철회 |
+
+**프로젝트 경계 제약:** 경력 원장의 직원 ID는 여러 고객에 걸쳐 지속할 수 있으나, 원본 자료/작업 컨텍스트는 `employer_id+project_id+staff_id+hire_id` 스코프 단위로 격리. 외부 직원 프로필에는 각 프로젝트 동의 버전이 허용한 데이터만 퍼블리시. `staff_project_assignment`는 중간 RLS 경계일 뿐, 서비스 키를 쓰는 워커/PM 실행은 **서버에서 owner/계약/대상 프로젝트·툴/예산/실행 승인까지 재검증**한다.
+
+**등급 원장 재계산:** 직원 경력일수는 `COUNT(DISTINCT work_date)` of eligible approved verified events와 동의 유효 범위를 맞춰 계산. 여러 프로젝트 작업·철회·프로필 공개 범위가 다르므로 단순 일수 counter UPDATE나 `COUNT(*)` 사용 금지. 보존 의무가 있는 감사 이벤트는 고객 공개가 아니며 재사용 목적의 허락으로 간주하지 않는다.
+
+**모델 변경/가격:** `model_id` 버전은 run 및 역량 검증에서 추적, 이전 고객 계약의 가격은 `price_snapshot`으로 유지. 모델 변경이 경력일수를 지우거나 검증된 능력을 자동 승계하지 않는다.
+
+**추가 설계 미결정:** `agent_contracts`에 직원 engagement를 합칠지 별도 1:1로 둘지, 조직 고객의 경력 공개 승인자, 일수 기준 시간대·부분일, consent 철회 후 등급 이력 공개, 데이터 보존/분쟁 처리/검색 색인 지연. 이 항목은 새 테이블 개발 전에 승인/기존 SQL 호환 감사 필요.
+
+**검증:** 기존 F-001~005 G1 안정화, STAFF-01~11, EX-01~14, TF-S01~12. DB/E2E 적용 전 TARGET 초안이며 migration 작성/적용 또는 RLS PASS 근거 아님.
