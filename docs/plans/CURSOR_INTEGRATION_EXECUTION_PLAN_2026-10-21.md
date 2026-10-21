@@ -458,3 +458,97 @@ main 기존 번호(001~008, 011, 012)는 건드리지 않았다. PR 전용 SQL�
 2. 단계 B의 전제로 삼을 클라이언트 저장 동작이 테스트 4건 실패 상태다. RLS만 먼저 검증하고 저장 결함을 나중에 고치면, 단계 C에서 저장 경로를 바꿀 때 RLS 검증을 다시 해야 한다.
 
 **다음 작업 1개:** 격리 검증 환경을 확정하고(환경 종류, 접속 정보 관리 방식, 테스트 계정 시드 담당), 그 환경에서 단계 B의 첫 실행인 "빈 DB에 001~017 순서 적용"까지를 수행한다. 그 전까지는 코드 병합·운영 DB·배포를 하지 않는다.
+
+---
+
+## 실행 기록 — 단계 B-01 (Cursor 지시서 04, 2026-10-21)
+
+### B01-1. 작업 기준 재확인
+
+- 통합 브랜치 `feat/planos-g1-integration-stage-a-20261021`, 로컬 기준 커밋 `c22a3e9`. 작업 트리는 시작 시점에 clean이었고, GitHub `main`은 `701841a`로 단계 A 기준과 동일함을 재확인했다.
+- 통합 실행계획서, 설계 교차검수 보고서(`docs/quality/PLANOS_DESIGN_CROSS_AUDIT_2026-10-21.md`)를 먼저 확인했다. 설계 문서의 인수 기준 중 "writer 단일 경로", "역할별 UI·RLS·API 일치", "독립 PR #25/#27을 안정화 전 main에 병합하지 않았는지"를 이번 검증의 전제로 삼았다.
+
+### B01-2. 실제 사용한 테스트 환경
+
+| 항목 | 내용 |
+|---|---|
+| 방식 | 우선순위 2안(개발 전용 Supabase 프로젝트)은 사용자 승인이 필요하므로 사용하지 않았다. 우선순위 1안의 변형으로, **일회용 PostgreSQL 17 컨테이너 + Supabase 인증 에뮬레이션**을 사용했다. |
+| 컨테이너 | `postgres:17-alpine`, 이름 `planos-g1-b01-pg`, 호스트 포트 55432, DB `planos_b01`, 비밀번호는 로컬 테스트용 임의값. 검증 후 컨테이너를 제거했다. |
+| 기존 로컬 Supabase와의 분리 | 이 PC에는 다른 작업의 로컬 Supabase 스택이 이미 실행 중이었다. 그 스택과 그 데이터는 건드리지 않았고, 별도 컨테이너·별도 포트·별도 DB로 완전히 분리했다. |
+| 운영 정보 사용 여부 | 운영 Supabase 접속 정보, 운영 환경변수, 실사용자 데이터를 일절 사용하지 않았다. 모든 계정·프로젝트·문서는 `example.test` 합성 데이터다. |
+| 인증 에뮬레이션 | `tests/rls/bootstrap_postgres.sql`이 만드는 `auth.users`와 `auth.uid()`(JWT claim `request.jwt.claim.sub` 기반)를 사용하고, `set local role authenticated/anon`으로 실제 RLS가 적용되는 세션을 만들었다. 관리자 권한으로 직접 판단하는 테스트가 아니다. |
+| 재현 스크립트 | `tests/rls/run_b01_local_pg.sh`를 추가했다. 같은 명령으로 빈 환경에서 전체를 재실행할 수 있다. |
+| 한계 | 실제 Supabase(GoTrue + PostgREST + 실제 JWT 발급) 환경이 아니다. `tests/rls/test_local_supabase_*.mjs` 같은 실제 Auth/PostgREST 통합 테스트는 이번에 실행하지 못했으며, 이 한계가 남는 한 RLS 검증을 "실제 Supabase에서 통과"로 표기하지 않는다. |
+
+### B01-3. 마이그레이션별 적용·보류 상태
+
+빈 DB에 `ON_ERROR_STOP=1`로 한 건씩 적용하고 건마다 결과를 기록했다.
+
+| 번호 | 파일 | 결과 |
+|---|---|---|
+| 001~008 | 기존 스키마 일괄 | 전부 적용 성공 |
+| 011 | `011_project_tasks.sql` | 적용 성공 |
+| 012 | `012_audit_source_manifests.sql` | 적용 성공 (`extensions` 스키마와 pgcrypto를 파일이 직접 생성) |
+| 013 | 멤버 RLS 재귀 조정 | 적용 성공. 006의 자기 참조 정책이 만드는 42P17 재귀를 SECURITY DEFINER 헬퍼 경유로 교체함을 코드로 확인 |
+| 014 | 댓글·알림·버전 강화 | 적용 성공. 적용 후 `document_versions`의 UPDATE 정책이 사라져 버전 불변성이 정책 수준에서 확인됨 |
+| 015 | 원자적 문서 복원 RPC | 적용 성공 |
+| 016 | 원자적 채팅 문서 수정 RPC | 적용 성공 |
+| 017 | Revision CAS 초안 | **적용하지 않았다.** 적용 후 `documents.content_revision` 컬럼과 CAS 함수가 없음을 조회로 확인했다. |
+
+사전 의존성 검사: 007 이후의 모든 마이그레이션은 006이 정의하는 `get_project_role`/`can_access_project`/`can_edit_project_content`에 의존하므로, 번호 순서 적용이 곧 의존성 순서와 일치한다. 중간 번호만 골라 적용하는 방식은 인정하지 않는다.
+
+적용 과정에서 찾은 환경 결함: PR이 가져온 `bootstrap_postgres.sql`에는 015/016이 호출하는 `auth.role()`이 없어, 원본 그대로는 복원 RPC 실행 시 `function auth.role() does not exist` 오류가 났다. 실제 Supabase에는 있는 함수이므로, 에뮬레이션에 `auth.role()`을 추가해 보완했다(테스트 코드 수정이며 마이그레이션 변경이 아니다).
+
+### B01-4. RLS 역할별 결과 (전부 실제 실행)
+
+시드: `tests/rls/seed_members.sql`의 합성 사용자 7명(owner/editor/viewer/pending/타 프로젝트 owner·editor/outsider)과 프로젝트 2개.
+
+| 검증 | 실행 파일 | 결과 |
+|---|---|---|
+| 멤버 조회 격리: owner·editor·viewer는 자기 프로젝트 명단만, pending은 자기 초대 행만, 타 프로젝트 사용자와 outsider·anon은 0건 | `tests/rls/test_member_select_009.sql` | **PASS** (전 항목) |
+| 문서 읽기 격리: 역할별 자기 프로젝트만, outsider·anon 0건 | `tests/rls/test_b01_role_matrix.sql` (신규) | **PASS** |
+| 문서 쓰기: editor 1건 성공, viewer·outsider 0건(차단) | 〃 | **PASS** |
+| 업무 쓰기: editor 생성 성공, viewer 차단 | 〃 | **PASS** |
+| 멤버 제거 후 즉시 차단: 제거된 editor는 `can_access_project=false`, 문서 0건 | 〃 | **PASS** |
+| 복원 RPC: viewer 호출 시 서버에서 거부(42501 계열), owner 호출 시 정상 복원 | 〃 + 수동 확인 | **PASS** |
+
+### B01-5. SECURITY DEFINER 검수 결과
+
+적용 후 public 스키마의 SECURITY DEFINER 함수 10개를 전수 조회했다.
+
+- 전부 소유자가 `postgres`이고, 복원·채팅·감사 manifest RPC는 함수 내부에서 `can_edit_project_content` 또는 owner 역할을 다시 확인한다. viewer의 복원 RPC 호출이 실제로 거부되는 것을 B01-4에서 확인했으므로, DEFINER라는 이유만으로 권한이 뚫리지는 않았다.
+- **결함 B01-D1 (P2):** `get_project_role`, `can_access_project`, `can_edit_project_content`, `handle_new_user`, `record_project_task_event`에 실행 권한 ACL이 없어 기본값인 PUBLIC execute(anon 포함) 상태다. 현재 구현은 `auth.uid()`가 없으면 null/false를 반환해 실제 누출은 확인되지 않았지만, 최소 권한 원칙상 authenticated 전용으로 좁히는 것이 맞다. 단계 B 후속 또는 단계 C에서 REVOKE/GRANT를 정리한다.
+- **결함 B01-D2 (P2):** 감사 manifest 함수 2종은 `search_path=""`로 설정되어 있다. 본문이 스키마를 명시해 동작에는 문제가 없었으나, 빈 search_path는 유지보수 중 암묵적 참조가 생기면 바로 깨지는 형태다. 정식화 시점에 `pg_catalog, public` 형태로 통일할 것을 권고한다.
+- 트리거 함수(`record_project_task_event`, `validate_project_task_change`)는 DEFINER 여부가 아니라 트리거 권한으로 동작하므로 별도 위험으로 보지 않았다.
+
+### B01-6. 기존 실패 테스트 4건 재현
+
+`npm run test:unit`을 재실행했다. **47건 중 43건 통과, 동일한 4건이 그대로 실패**했다(자동저장 직렬화, 복원 후 덮어쓰기, 기준 revision 전진, Revision CAS 계약). 테스트를 삭제하거나 기대값을 바꾸지 않았다. 이 4건은 단계 C의 착수 조건으로 유지한다.
+
+### B01-7. 추가 발견 사항
+
+| ID | 심각도 | 내용 |
+|---|---|---|
+| B01-D1 | P2 | SECURITY DEFINER 헬퍼 5종의 PUBLIC execute (B01-5) |
+| B01-D2 | P2 | 감사 manifest 함수의 빈 search_path (B01-5) |
+| B01-D3 | P1 | 실제 Supabase Auth/PostgREST 경로(실제 JWT 발급, `test_local_supabase_auth.mjs`, `test_local_supabase_content.mjs`)는 아직 실행된 적이 없다. 현재 근거는 PostgreSQL 에뮬레이션까지이며, PostgREST의 역할 전환·claim 전달이 실제와 같은지는 미확인이다. |
+| B01-D4 | P1 | 014 적용 후 댓글·알림 강화 정책이 실제로 역할별로 어떻게 동작하는지는 이번 매트릭스에 포함되지 않았다(정책 존재만 확인). 댓글·알림·버전의 역할별 실측은 단계 B 후속으로 남긴다. |
+| B01-D5 | P2 | `tests/rls/bootstrap_postgres.sql`의 주석이 "001..009" 기준으로 쓰여 있어 현재 016 범위와 맞지 않는다. 에뮬레이션 범위(015/016의 `auth.role()` 포함)를 주석에 반영해야 한다. 이번에 `auth.role()`은 추가했지만 주석 정리는 함께 수행했다. |
+
+### B01-8. 다음 수정 대상 파일 및 우선순위
+
+1. **단계 C 착수 조건:** 실패 테스트 4건이 가리키는 `src/lib/documentAutosave.ts`와 `src/store/documentStore.ts`의 직렬화·기준값 전진·복원 후 덮어쓰기 문제. 테스트를 건드리지 않고 코드를 고친다.
+2. `supabase/migrations/` 후속 번호(018 예비): B01-D1의 실행 권한 정리와 직접 UPDATE 차단을 묶은 컷오버. 모든 쓰기가 RPC로 전환된 뒤에만 적용한다.
+3. `tests/rls/test_b01_role_matrix.sql` 확장: 댓글·알림·감사 manifest의 역할별 실측(B01-D4)과 실제 Supabase 로컬 스택에서의 재실행(B01-D3).
+4. `docs/engineering/G1_DOCUMENT_WRITER_AUDIT_2026-10-21.md`의 쓰기 경로 목록에 이번에 확인한 우회 잔여(W3/W4/게스트 이전)를 그대로 유지하고, 전환 완료 시에만 상태를 바꾼다.
+
+### B01-9. 단계 B-01 완료 판정
+
+| 완료 기준 | 판정 |
+|---|---|
+| 운영과 분리된 독립 DB 환경 구축 | 충족 (일회용 PostgreSQL 컨테이너, 합성 데이터, 운영 정보 미사용) |
+| 마이그레이션 사전검증과 단계별 적용 | 충족 (001~016 전부 적용 성공, 017 보류 유지) |
+| 실제 역할/JWT 조건의 RLS 테스트 | **부분 충족.** 멤버·문서·업무·복원 RPC·멤버 제거는 실측 PASS. 단 실제 Supabase Auth/PostgREST 경로는 미실행(B01-D3)이고 댓글·알림 상세 매트릭스가 남았다(B01-D4) |
+| 실패 테스트 4건 유지 | 충족 (동일하게 재현, 삭제·우회 없음) |
+
+**단계 B-01 판정: 조건부 완료.** 격리 환경 구축과 PostgreSQL 수준의 RLS 실증이라는 목적은 달성했지만, 실제 Supabase 스택에서의 재검증이 남아 있어 단계 B 전체가 끝난 것으로 보지 않는다. 다음은 단계 C(저장 안전성 코드 수정)로 넘어가되, B의 잔여 실증(실제 Supabase 로컬 스택 기동 후 동일 매트릭스 재실행)을 단계 E 회귀 전에 반드시 채운다. 운영 DB·main 병합·배포는 하지 않았다.
