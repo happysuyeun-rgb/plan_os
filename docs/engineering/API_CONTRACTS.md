@@ -1,8 +1,8 @@
 # PlanOS 3.0 — API 계약 명세 (TARGET)
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
+**최종 수정일:** 2026-10-21  
+**문서 버전:** v0.3 (STAFF-API 정본)  
 **진행 상태:** 설계 초안 / 엔드포인트 구현·서버 테스트 전  
 **상위 문서:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [아키텍처](ARCHITECTURE.md) · [데이터 모델](DATA_MODEL.md)  
 **주의:** 모든 `/api/v1/...`는 **제안 URL**이다. 기존 React/Supabase API를 대체하거나 현재 서버에 존재한다는 의미가 아니다.
@@ -193,29 +193,24 @@ Content-Type: application/json
 | 2026-10-16 | v0.2 | 계획·계약·승인·실행 상태·수락·비용 조회 누락과 비동기/멱등성 보완 요구사항 표기 | 검토 전 |
 
 
-## 2026-10-21 직원·다중 PM·경력·가격 TARGET API 확장 (미구현)
+## 2026-10-21 과거 직원 API URL 후보 대응표 (중복 엔드포인트 개발 금지)
 
-[서비스기획서 v2](../product/SERVICE_PLAN_V1_2026-10-20.md) 및 [경력·동의 명세](../product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) 기준의 **후보 API**. 아래 경로는 기존 API-01~N번과 겹치지 않도록 개발 전 최종 중복 검사. 서버/DB에 존재한다는 뜻 아님.
+> 기존 `/v1/staff`, `/v1/hirings`, `/internal/staff-experience/recalculate` 초안은 해당 시점의 별도 제안 목록이었다. 새 개발 기준은 **STAFF-API-01~14 /api/v1**이며, 실제 동작·요청/응답 구조는 [AI 직원 데이터·권한·API 단일 계약](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)에 따른다. 아래는 신규 별도 API가 아니고 대응표이다.
 
-| API 후보 | HTTP | 역할/응답 | 선행 검증·예외 |
-|---|---|---|---|
-| `/v1/staff` | GET | 로그인 사용자에게 직무·성격·경력 등급·지원 모델/검증 정보를 필터링 | 실제 공개 허용된 필드만 |
-| `/v1/staff/{staffId}` | GET | 직원 프로필·허용 레퍼런스·평가 표본·지원 모델 | 고객명·비공개 이력 노출 금지 |
-| `/v1/staff/{staffId}/quote` | POST | job_type/grade/model package별 계약 단가·상한·공급자 설명 | 가격 미확정이면 상용 결제 불가 |
-| `/v1/hirings` | POST | owner 단발/프로젝트 전담/정식 PM 채용안 생성 | idempotency, budget/contract versions |
-| `/v1/hirings/{hireId}/assignments` | PUT | 명시적 프로젝트 ID 집합·프로젝트별 scope | 모든 프로젝트 owner 권한, 미래 프로젝트 자동 포함 없음 |
-| `/v1/hirings/{hireId}/experience-consents` | POST/PATCH | 직원×프로젝트별 적립 허용/거부·public/anonymous/private·목적별 공개 | 목적별 기본 OFF, consent version/CAS, 미동의 공개 0 |
-| `/v1/hirings/{hireId}/experience-consents/revoke` | POST | 공개/적립 철회 → 캐시·집계 재계산 job | 권한/동의 범위·idempotency |
-| `/v1/hirings/{hireId}/terminate` | POST | PM/직원 계약 해임/종료 | 새 run 차단, 진행 작업/비용 재정산 |
-| `/v1/pm/overview` | GET | PM이 **배정된** 복수 프로젝트 진척/우선순위/차단 요약 | 각 project_id별 RLS, 문서 원문 넘김 금지 |
-| `/v1/hirings/{hireId}/reviews` | POST | 검증 가능한 고객 평가/후기, 공개 범위 | 실제 고용주·작업 결과 수락 검증, 중복·사칭 방어 |
-| `/v1/staff/{staffId}/experience` | GET | 허용된 경력일수·프로젝트 실적·승급 이력 | public 필드 allowlist, private 집계 별도 |
-| `/internal/staff-experience/recalculate` | job | 확인된 work event + consent → ledger/tier 재산정 | 서버 전용; 검증 인과관계·동시성/멱등성·감사 |
-| `/v1/hirings/{hireId}/renew` | POST | 최신 등급/현재 가격과 기존 계약 단가 비교·신규 기간 동의 | 기존 계약 자동 인상 금지 |
-
-**모든 쓰기 공통 규칙:** bearer auth, owner/editor 권한 분리, 작업/문서 snapshot 검증, idempotency UUID, `If-Match`/version CAS, 구조화된 403/409/412/429/503 및 회복 안내, 감사 이벤트. 실제 공급자 모델/원가·개인정보 전송 허가 없는 실행은 0회. 경력 적립 동의로 고객 파일을 모델 컨텍스트/학습에 재사용하면 안 된다.
-
-**테스트 우선순위:** 채용·배정 IDOR/RLS → 무동의 경력 누출 0 → 익명 재식별/필드 allowlist → revoked 동의 후 재계산 → 직원 경력 동일 날짜 dedupe → 승급 가격 계약 스냅샷 → 공급자 변경 재승인.
+| 구 API 후보 | 단일 TARGET |
+|---|---|
+| `GET /v1/staff`, `GET /v1/staff/{id}` | STAFF-API-01/02 |
+| `POST /v1/staff/{id}/quote` | STAFF-API-12 |
+| `POST /v1/hirings` | STAFF-API-04 (draft 생성) |
+| `PUT /v1/hirings/{id}/assignments` | STAFF-API-05 (PATCH/If-Match, 원자 배정) |
+| `POST/PATCH /v1/hirings/{id}/experience-consents` | STAFF-API-07/08 |
+| `POST /v1/hirings/{id}/experience-consents/revoke` | STAFF-API-08 (목적별 제한/철회) |
+| `POST /v1/hirings/{id}/terminate` | STAFF-API-06 |
+| `GET /v1/pm/overview` | STAFF-API-13 (hire scope 필수) |
+| `POST /v1/hirings/{id}/reviews` | STAFF-API-10 |
+| `GET /v1/staff/{id}/experience` | STAFF-API-02/11 |
+| `POST /v1/hirings/{id}/renew` | STAFF-API-04 새 계약/견적+기존 API-11 승인으로 갱신 계약 생성. **명시적 독립 단일 endpoint 확정 전 구현 보류** |
+| `/internal/staff-experience/recalculate` | 직원별 projection/server worker 내부 이벤트. **브라우저 공개 API 금지** |
 
 ## 11. 제품 v2.0 AI 직원 경력/채용/PM API 확장 초안 (미구현)
 
@@ -243,3 +238,6 @@ Content-Type: application/json
 **HTTP 규약:** 모든 신규 POST는 `Idempotency-Key`+payload hash, PATCH는 `If-Match: version`; 타 고객/타 프로젝트는 404/403 마스킹, stale 계약·문서·동의는 409/412, 공급자 원가 미확정은 안전 중지. 계약 accept/실행/비용·사람 수락은 별도 API/감사 이벤트; 'PM 채용'만으로 실행 허가 금지.
 
 **미결정/검증:** 고객 동의 법적 UI·철회 마감/캐시, 승인 가능한 조직 사용자, multi-project query의 원가·페이징/최소 권한, 실제 GPT/Claude 공급자 모델/지원 도구와 개인정보 전송, 가격·평가 조작 방지. `ST-01~15` + `EX-01~14` 격리 JWT/RLS/E2E 전 미구현·출시 금지.
+
+
+**최신 구현 불변 계약:** [AI 인력사무소 데이터·권한·API v1.0](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) 우선. 기존 API-01~23 첫 수직 E2E와 단일 staff engagement API를 중복 청구/승인 원장으로 만들지 않는다.
