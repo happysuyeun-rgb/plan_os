@@ -118,3 +118,29 @@
 |---|---|---|---|
 | 2026-10-16 | v0.1 | CURRENT 스키마 대비 TARGET 데이터 모델·무결성·권한·단계적 변경 전략 | 검토 전 |
 | 2026-10-16 | v0.2 | DQ-06 유니크 키 불일치 정리, 승인·원장·FK 데이터 무결성 후속 검증 명시 | 검토 전 |
+
+
+## 2026-10-21 AI 인력 채용·검증 경력·등급/단가 TARGET 확장 (설계만)
+
+> [서비스기획서 v2](../product/SERVICE_PLAN_V1_2026-10-20.md)와 [경력 적립/공개 규칙](../product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md)의 논리 구조. 아래는 **제안 스키마이며 SQL migration/현 DB 테이블이라고 주장하지 않는다**. 기존 `projects`, `documents`, `document_versions`, `project_members` 등은 KEEP.
+
+| 논리 엔터티 | 주요 필드·관계 | 설계 불변식 |
+|---|---|---|
+| `staff_identity` | staff_id, archetype_id, job_role, synthetic_bio, active_status | 고객이 달라도 고유 직원 ID 유지, 인간 경력 위장 금지 |
+| `staff_capability_evaluation` | staff_id, model_id, task_type, tested_at, outcome, quality_ruleset_version | 실제 품질 검증과 가상 성격/경력 구분 |
+| `model_registry` | provider, model_id, capabilities, tools, cost_version, allowed | 선택 model/권한/가격/전송 근거 저장 |
+| `staff_engagement` | hire_id, employer_user_id, staff_id, hire_type, start/end, status, contract_version, agreed_rate_snapshot | 단발/전담/PM 다중 프로젝트 구분, 계약 중 승급 단가 유지 |
+| `staff_project_assignment` | hire_id, project_id, scope, permissions, assigned_at, revoked_at | **N:M** 관계. 미래 프로젝트 자동 포함 금지 |
+| `staff_experience_consent` | consent_id, hire_id, project_id, staff_id, accrual_allowed, visibility, allowed_public_fields, purposes, version, revoked_at | 경력 적립과 공개/후기/홍보/학습 목적별 허가 분리, 기본 거부 |
+| `staff_work_event` | event_id, staff_id, project_id, run_id, task_id, work_day, validation_status, provider/model_id, artifact_digest | 확인된 실제 작업만 |
+| `staff_experience_ledger` | staff_id, project_id, consent_id, unique_day, verified_ref, counted_at, reversed_at | **직원별 고유 활동일 1회**, 프로젝트 수는 별도 |
+| `staff_employer_review` | review_id, hire_id, rating, review_text, public_scope, moderated, verified_employer | 미공개 평점·비공개 고객정보 필터, 후기 위조 방지 |
+| `staff_tier_history` | staff_id, grade, effective_at, ruleset_version, evaluation_evidence, reason | 활동일+수락 실적+직무 시험, 동의 철회 후 재산정 |
+| `staff_rate_card` | job_role, grade, model_package, rate_version, rate, effective_from | 같은 조건 초급 단가 낮음, 기존 `engagement` 계약 단가 스냅샷 고정 |
+| `public_staff_reference` | staff_id, consent_id/version, allowlisted_fields, publication_status, cache_invalidation_state | 접근 가능한 공개 최소 필드만; 익명 재식별 방지 |
+
+**연결/보안:** `project_id + staff_id + hire_id + consent_version`이 데이터 귀속의 기준. 계약·실행 로그(감사)와 직원 경력 적립 원장(동의 기반)을 분리한다. 프로젝트 원문/코드/프롬프트·개인정보는 공개 레퍼런스 데이터로 이관 금지. Revocation 시 공개/집계/등급 캐시 재계산, 기존 업무 승인/과금 이력은 적법한 보존 목적만.
+
+**실행 연계:** 기존 S2 snapshot `project_id/document_id/revision/digest` 및 계약 terms/version → PM 계획/직원 배정/모델 route → run/idempotency/outbox → 검증된 수행 이벤트 → 고객 수락/후기 → 경력일수/등급 업데이트. 문서 변경·권한 회수·모델 교체는 이전 승인 stale 및 실행 차단. RLS와 서버 API 필드 allowlist를 같이 검증.
+
+**격리 E2E/SQL 요구:** 동일 날 복수 프로젝트 경력일 1일 처리, 과거 고용주 원본 신규 고객으로 읽지 못함, 고객 동의 거부/철회에도 계약 수행 가능, 동의 revocation 후 집계 재계산, 초급 직원 승급 시 기존 계약 단가 유지, 중복 요청으로 이벤트/원장 증폭 불가. 실제 DB migration/RLS/권한 구현은 승인된 별도 G단계에서 수행.
