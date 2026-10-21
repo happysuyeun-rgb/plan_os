@@ -70,3 +70,15 @@
 **P0 기존 저장·권한 안정화 G1 유지**. 병렬로 스토리보드·모의 직원 탐색/동의/배정 (실제 공급자 0호출) 제작, 현재 DB `agent_profiles/agent_contracts/agent_assignments`가 실존하는지 PR별 비교와 migration 번호 충돌 검토, 서버 소유권/worker 적용 범위 정규화 → 격리 SQL/RLS/브라우저 테스트.
 
 **문서 변경 승인 단계:** 이 문서의 `설계 선택`은 개발 인계용 권고안. 제품 운영상의 가격/등급 숫자·법적 공개 동의·외부 모델 공급자·실제 DB 스키마/배포·`main` 병합은 **승인/테스트 전 미확정**.
+
+## 6. 후속 재검수 및 추가 정합화 (2026-10-21)
+
+| ID | 추가 확인된 결함 | 직접 조치 | 남은 검증 |
+|---|---|---|---|
+| V3-19 (P0) | 기존 TARGET 문서가 agent_profiles/agent_contracts/agent_assignments를 이미 존재하는 DB 객체처럼 표현 | main migration 001~008/011/012 실제 정적 조회. 신규 [data/auth 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)과 [데이터 모델](../engineering/DATA_MODEL.md)에 현재 SQL 부재·TARGET 구별 | 운영 hosted DB 적용/기존 Draft SQL 중복 migration 번호, 새 DDL/FK/RLS 실제 SQL 테스트 |
+| V3-20 (P0) | STAFF-API-04 draft만 있고 여러 프로젝트 owner 최종 채용 활성화 endpoint 불명확 | **STAFF-API-15** POST engagement accept 추가, 상위 engagement+프로젝트별 하위계약/배정 all-or-nothing과 가격 snapshot 정책 명시 | 동시성·부분 실패·owner A/B 권한·중복 청구/원가 JWT/RLS/E2E |
+| V3-21 (P1) | API-06 교체 endpoint 순서/별도 /v1/hirings API 충돌 | `/api/v1/staff/engagements/:hireId/revoke-or-replace` 단일 정본, [API 계약](../engineering/API_CONTRACTS.md)의 오래된 /v1 후보는 alias 매핑 후 폐기 | 실제 App 라우트/외부 호환성 확인 |
+| V3-22 (P1) | IA ST-UI 후보 테이블과 N01~32 정본 화면이 동시에 남아 별도 URL 개발 위험 | [IA](../ux/IA.md)의 두 번째 ST-UI 표 제거, 이전 ID→N-ID 대응표만 유지 | 기존 App.tsx 실제 라우트 확인·프로토타입 접근성 |
+| V3-23 (P1) | 사용자가 요구한 실제 설계 문제의 해결 제안이 문서마다 분산 | [설계 결정 제안 DS-01~16](../product/AI_STAFF_OPEN_DESIGN_DECISIONS_2026-10-21.md) 작성: 무료/정식 PM 차별화, DB/경력/가격/철회/모델 정책 구분 | 사용자 제품 선택/법무·원가 검토, H1~H7 구현 수준 검수 |
+
+**상태:** 문서 정본 및 설계 결함 추적 보완. 실제 DB migration/브라우저/유료 AI/worker 상태를 직접 테스트하거나 main으로 병합하지 않았다.
