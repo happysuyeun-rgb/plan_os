@@ -1,0 +1,24 @@
+name: F401 human PM draft
+on:
+  pull_request:
+    paths:
+      - 'src/lib/humanPmPlanDraft.ts'
+      - 'src/pages/HumanPmPlanDraftPage.tsx'
+      - 'src/pages/ProjectTasksPage.tsx'
+      - 'src/App.tsx'
+      - 'tests/f401-human-pm-plan.test.mjs'
+      - '.github/workflows/f401-human-pm.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/f401-human-pm-plan.test.mjs
+      - run: npm run build
+      - run: npx eslint src/lib/humanPmPlanDraft.ts src/pages/HumanPmPlanDraftPage.tsx src/pages/ProjectTasksPage.tsx src/App.tsx
