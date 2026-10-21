@@ -46,15 +46,15 @@
 
 | ID | 메서드·경로 | 권한 | 요청 핵심 | 성공 응답/효과 | TF |
 |---|---|---|---|---|---|
-| API-14 | POST `/api/v1/projects/:projectId/runs` | owner/명시 위임자 | taskId,contractId,approvedPlanId,idempotencyKey | 202 Accepted, runId, queued/awaiting_approval | 16~17 |
+| API-14 | POST `/api/v1/projects/:projectId/runs` | owner (초기 MVP) | taskId,contractId,approvedPlanId,idempotencyKey | 202 Accepted, runId, queued/awaiting_approval | 16~17 |
 | API-15 | GET `/api/v1/projects/:projectId/runs` | 멤버(권한별 필터) | status,cursor | 실행 요약 목록 | 18 |
 | API-16 | GET `/api/v1/projects/:projectId/runs/:runId` | 멤버(권한별) | runId | 상태·도구/검증·비용·증빙 | 18,20~22 |
 | API-17 | POST `/api/v1/projects/:projectId/runs/:runId/cancel` | owner/허용자 | reason,expectedVersion | 202 취소 요청 상태 | 24 |
 | API-18 | POST `/api/v1/projects/:projectId/runs/:runId/retry` | owner/허용자 | expectedVersion,reason | 신규 attempt 또는 run ID | 24 |
 | API-19 | GET `/api/v1/projects/:projectId/approvals` | 멤버(권한별) | status,cursor | 승인 대기/완료 목록 | 19,23 |
-| API-20 | POST `/api/v1/projects/:projectId/approvals/:approvalId/decide` | owner/명시 위임자 | decision,expectedVersion,approvalDigest | 승인/거부/만료 판정 | 19 |
+| API-20 | POST `/api/v1/projects/:projectId/approvals/:approvalId/decide` | owner (초기 MVP) | decision,expectedVersion,approvalDigest | 승인/거부/만료 판정 | 19 |
 | API-21 | GET `/api/v1/projects/:projectId/artifacts/:artifactId` | 멤버(권한별) | artifactId | 버전·검증 결과·보안 링크 | 21~23 |
-| API-22 | POST `/api/v1/projects/:projectId/artifacts/:artifactId/accept` | owner/명시 위임자 | decision,note,expectedVersion | accepted/rejected/needs_revision | 23 |
+| API-22 | POST `/api/v1/projects/:projectId/artifacts/:artifactId/accept` | owner (초기 MVP) | decision,note,expectedVersion | accepted/rejected/needs_revision | 23 |
 | API-23 | GET `/api/v1/projects/:projectId/usage` | owner | period,cursor | estimate/reserved/actual/refund 원장 요약 | 27 |
 
 ## 5. 핵심 요청/응답 예시
@@ -193,28 +193,27 @@ Content-Type: application/json
 | 2026-10-16 | v0.2 | 계획·계약·승인·실행 상태·수락·비용 조회 누락과 비동기/멱등성 보완 요구사항 표기 | 검토 전 |
 
 
-## 2026-10-21 과거 직원 API URL 후보 대응표 (중복 엔드포인트 개발 금지)
+## 2026-10-21 이전 직원 API URL 후보 대응표 (중복 구현 금지)
 
-> 기존 `/v1/staff`, `/v1/hirings`, `/internal/staff-experience/recalculate` 초안은 해당 시점의 별도 제안 목록이었다. 새 개발 기준은 **STAFF-API-01~14 /api/v1**이며, 실제 동작·요청/응답 구조는 [AI 직원 데이터·권한·API 단일 계약](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)에 따른다. 아래는 신규 별도 API가 아니고 대응표이다.
+> **정본:** [AI 직원 데이터·권한·API v1.0](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)의 STAFF-API-01~15 (`/api/v1`). 아래 구 `/v1`은 역사적 기획 경로로 신규 서버에 구현하지 않는다. 실제 기존 앱에서 발견되면 호환 adapter/마이그레이션 계획으로 검증. 기존 프로젝트별 첫 검수 API-01~23 유지.
 
-| 구 API 후보 | 단일 TARGET |
+| 구 후보 경로/방법 | 새 API |
 |---|---|
 | `GET /v1/staff`, `GET /v1/staff/{id}` | STAFF-API-01/02 |
-| `POST /v1/staff/{id}/quote` | STAFF-API-12 |
-| `POST /v1/hirings` | STAFF-API-04 (draft 생성) |
-| `PUT /v1/hirings/{id}/assignments` | STAFF-API-05 (PATCH/If-Match, 원자 배정) |
+| `POST /v1/staff/{id}/quote` | STAFF-API-12 GET price-quote |
+| `POST /v1/hirings` | STAFF-API-04 **draft**, STAFF-API-15 **owner accept** |
+| `PUT /v1/hirings/{id}/assignments` | STAFF-API-05 GET/PATCH |
 | `POST/PATCH /v1/hirings/{id}/experience-consents` | STAFF-API-07/08 |
-| `POST /v1/hirings/{id}/experience-consents/revoke` | STAFF-API-08 (목적별 제한/철회) |
-| `POST /v1/hirings/{id}/terminate` | STAFF-API-06 |
-| `GET /v1/pm/overview` | STAFF-API-13 (hire scope 필수) |
+| `POST /v1/hirings/{id}/terminate` | STAFF-API-06 revoke-or-replace |
+| `GET /v1/pm/overview` | STAFF-API-13 |
 | `POST /v1/hirings/{id}/reviews` | STAFF-API-10 |
 | `GET /v1/staff/{id}/experience` | STAFF-API-02/11 |
-| `POST /v1/hirings/{id}/renew` | STAFF-API-04 새 계약/견적+기존 API-11 승인으로 갱신 계약 생성. **명시적 독립 단일 endpoint 확정 전 구현 보류** |
-| `/internal/staff-experience/recalculate` | 직원별 projection/server worker 내부 이벤트. **브라우저 공개 API 금지** |
+| `POST /v1/hirings/{id}/renew` | STAFF-API-12 quote + STAFF-API-15 재승인 계약 경계(상세 설계 이후) |
+| `/internal/staff-experience/recalculate` | 서버 내부 고유 이벤트 검증/적격 일수 재계산 job, 공개 API 금지 |
 
-## 11. 제품 v2.0 AI 직원 경력/채용/PM API 확장 초안 (미구현)
+## 11. 제품 v2.0 직원 API 정본 STAFF-API-01~15 (미구현)
 
-> 기존 API-01~23 **삭제/재번호 금지**. 아래 식별자 `STAFF-API-01~14`는 버전 `/api/v1` 아래 **추가 TARGET 계약**이며 실제 URL·OpenAPI 스키마는 UI/G1 마이그레이션 감사 후 확정. 계약/권한 저장은 기존 `agent_contracts`의 authoritative path와 통합하고 중복 상태·요금 원장 생성 금지.
+> 기존 API-01~23 **삭제/재번호 금지**. 아래 식별자 `STAFF-API-01~15`는 버전 `/api/v1` 아래 **추가 TARGET 계약**이며 실제 URL·OpenAPI 스키마는 UI/G1 마이그레이션 감사 후 확정. 계약/권한 저장은 기존 `agent_contracts`의 authoritative path와 통합하고 중복 상태·요금 원장 생성 금지.
 
 | ID | 제안 HTTP 동작 | 요청/결과 핵심 | 서버 권한/오류 |
 |---|---|---|---|
@@ -223,7 +222,7 @@ Content-Type: application/json
 | STAFF-API-03 | POST /api/v1/staff/:staffId/preview | 같은 업무의 F/T 시연·지원 기능 안내 | 개발 Mock와 실제 모델 실행 구분, 비용/데이터 전송 별도 허가 |
 | STAFF-API-04 | POST /api/v1/staff/engagements | 계약 종류 one_off/project/pm_multi, staff_id, 모델·등급·가격 스냅샷, 조건/예산, 명시 project IDs | owner 계약 시작, 한 번의 원자 검증/Idempotency-Key; 미승인 외부 호출 금지 |
 | STAFF-API-05 | GET/PATCH /api/v1/staff/engagements/:hireId/assignments | 배정 프로젝트/범위·상태·비용, 변경 미리보기/확정 | owner+각 프로젝트 멤버십 검사, `If-Match` CAS, 미선택 C/미래 프로젝트 자동 포함 금지 |
-| STAFF-API-06 | POST /api/v1/staff/engagements/:hireId/replace-or-revoke | 직원 교체·해임, 진행 중 작업/정산/승인 영향 확인·기록 | owner, idempotent, 이후 새 run 차단. 실제 RLS와 작업 인수인계 검증 |
+| STAFF-API-06 | POST /api/v1/staff/engagements/:hireId/revoke-or-replace | 직원 교체·해임, 진행 중 작업/정산/승인 영향 확인·기록 | owner, idempotent, 이후 새 run 차단. 실제 RLS와 작업 인수인계 검증 |
 | STAFF-API-07 | POST /api/v1/staff/engagements/:hireId/consents | 직원×프로젝트별 경력 적립 허용, 공개/익명/비공개, 후기·포트폴리오·랭킹·모델 학습 각 목적 | 기본 거부, owner/조직 권리 확인, 계약 동의와 독립. 최신 버전/서명 감시 |
 | STAFF-API-08 | GET/PATCH /api/v1/staff/experience-consents/:consentId | 목적별 변경/철회, 공개·승급 재계산 상태 | owner, `If-Match`, 공개 색인/캐시 제거 큐·회계 감사 별도 |
 | STAFF-API-09 | GET /api/v1/staff/engagements/:hireId/experience-preview | 검증된 작업일 후보, 프로젝트별 동의, 사용 가능한 승인/후기 정보 | 해당 고객/프로젝트만 조회. 공개 배지·타 고용주 상세 비노출 |
@@ -232,6 +231,8 @@ Content-Type: application/json
 | STAFF-API-12 | GET /api/v1/staff/:staffId/price-quote?model=&type= | 같은 직무/패키지 조건의 초·중·고 단가·예상 사용량·가격 유효기간 | 확정 전 quote 아님/Mock 표시, 기존 계약 가격 불변 |
 | STAFF-API-13 | GET /api/v1/pm/engagements/:hireId/projects | 배정된 A/B 진행·작업·승인·장애·근거 기반 운영 브리핑 | 서버에서 각 project 권한+assignment 재검사, C 존재도 누출 금지 |
 | STAFF-API-14 | POST /api/v1/pm/engagements/:hireId/plans | 다중 프로젝트별 계획/업무 배정 **초안 및 승인 요청** | 예산·툴·자료 revision/digest·계약·고객 승인. 실제 실행은 기존 `runs/approvals` 계약 사용 |
+
+| STAFF-API-15 | POST /api/v1/staff/engagements/:hireId/accept | owner: expectedVersion/quoteVersion/termsDigest+프로젝트별 계약 범위 확인 → 상위 채용 + 하위 프로젝트별 실행 계약/배정의 원자 활성화 | STAFF-API-04는 draft 전용. 프로젝트 경력 공개 동의/모델별 유료 실행 승인과 별개 |
 
 **서버 내부 전용:** 작업 검증 이벤트→`experience_ledger` 조건부 적립, 같은 날 중복 합산 방지, 완료·수락/동의 철회 후 승급 재평가, 사용 원가/가격 결정 및 공개 reference 파생 뷰. 브라우저에서 직원 경험일/등급/모델 실행 결과를 직접 WRITE 금지.
 
