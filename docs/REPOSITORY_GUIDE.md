@@ -46,6 +46,7 @@ plan_os/
 |---|---|---|
 | 다음에 무엇을 개발하나? | [통합 실행계획](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) | [작업 운영규칙](plans/PLANOS_WORK_EXECUTION_PROTOCOL_2026-10-21.md) |
 | 이 기능은 무엇을 해야 하나? | [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) | [서비스기획서](product/SERVICE_PLAN_V1_2026-10-20.md), [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) |
+| AI 직원 성향·경력/가격·채용 정책은? | [AI 직원 상세 설계](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md) | [동의·경력·승급·가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md), [기능 추적](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) |
 | 화면 흐름이나 IA는? | [IA](ux/IA.md), [화면명세](ux/SCREEN_SPEC.md) | [업무 흐름](product/TASK_FLOWS.md) |
 | API·데이터 구조는? | [MVP 구현 명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) | [API 계약](engineering/API_CONTRACTS.md), [데이터 모델](engineering/DATA_MODEL.md) |
 | 실제 화면을 수정하나? | `src/pages/` | `src/components/`, `src/store/`, `src/lib/` |
