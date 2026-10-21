@@ -11,6 +11,10 @@
 4. [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 역할·비용·계약
 5. [MVP 구현 상세명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) — 상세 기술 계약
 
+## AI 인력사무소 최신 상세 제품 정책 (Draft PR #28)
+- [직무·성격(F/T)·GPT/Claude 모델·정식 PM 채용 기획](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)
+- [고객 경력 공개 동의·검증 경력일수·초중고 승급·채용 가격](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) — 개별 프로젝트의 공개/익명/비공개, 경력 사용 동의, 고용주 후기·등급/가격 정책 초안; **실제 개발/운영 승인 아님**.
+
 ## 폴더별 문서 정책
 - `product/`: 현재 제품 정의/요구사항
 - `ux/`: UX·IA·화면 흐름
