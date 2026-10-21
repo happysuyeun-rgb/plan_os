@@ -15,6 +15,8 @@
 5. **CURRENT/ TARGET 구분:** 아래 새 URL은 네비게이션 설계용 제안일 뿐, 라우터·DB·API에 반영되지 않음.
 6. **접근권한:** 로그인/프로젝트 멤버십/역할/계약/도구 권한을 화면별로 점검. 프런트 라우트 가드만으로 보안 충족 아님.
 
+> **현재 main App.tsx 직접 확인(2026-10-21):** `/dashboard`, `/projects`, `/projects/new`, `/projects/trash`, `/projects/:projectId`, `/projects/:projectId/:docType`, `/projects/:projectId/tasks`, `/projects/:projectId/audits/new`, `/settings` 등의 실제 라우트가 있다. **`/agents`, `/staff`, `/workspace`, `/pm/overview`는 현재 main App.tsx에 없다.** N16+24 등에서 제안된 경로는 프런트 신규 작업 대상이며 구현 완료로 표기 금지. 기존 DocumentPage 라우트는 변경하지 않는다.
+
 ## 2. CURRENT 라우트 (GitHub main src/App.tsx 정적 확인)
 
 | 화면 ID | 현재 URL | 구현 컴포넌트 | 분류 | 설계 처리 |
