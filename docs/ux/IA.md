@@ -70,7 +70,7 @@
 
 | ID | 화면명 | 제안 URL | 분류 | 핵심 목적 | 접근 주체 | 연결 TF |
 |---|---|---|---|---|---|---|
-| N01 | 프로젝트 워크스페이스 | `/workspace/:projectId` | NEW | 공통 프로젝트 허브·모드 전환 | 멤버 | 04~06 |
+| N01 | 프로젝트 워크스페이스 | `/workspace/:projectId` | NEW | 기존 AI 기획 유지·필요시 AI 직원 투입 | 멤버 | 04~06 |
 | N02 | 개요·브리프 | `/workspace/:projectId/overview` | NEW | 목표/제약·수정 이력 | 멤버(쓰기 owner/editor) | 03~05 |
 | N03 | 업무 보드 | `/workspace/:projectId/tasks` | NEW | 사람/AI 업무 상태 통합 | 멤버 | 13~18 |
 | N04 | 업무 상세 | `/workspace/:projectId/tasks/:taskId` | NEW | 담당/완료 조건/결과 | 멤버 | 15~16,23~24 |
