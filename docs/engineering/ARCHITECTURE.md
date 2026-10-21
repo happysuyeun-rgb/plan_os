@@ -147,7 +147,7 @@ draft → planned → awaiting_approval → queued → running → verifying
 
 ## 10. 공급자·모델 선택
 - 기본: 상용 이용 약관·안정성·도구 호출·데이터 정책·가격을 검증한 공급자 우선.
-- ModelGateway 어댑터는 공급자 장애/가격 변동에 대응하되, 고객 데이터 처리 조건이 달라지는 자동 전환은 별도 정책 필요.
+- ModelGateway 어댑터는 공급자 장애/가격 변동에 대응하되, **미승인 다른 공급자(GPT↔Claude 포함)로의 자동 전환·고객 자료 재전송 금지**. 승인된 model_id·데이터 처리 범위·원가/툴 능력을 확인한 뒤 owner 재동의.
 - FreeLLMAPI는 **개발자 개인 실험용 선택지**. 공개 상용 경로·무료 무제한 비용 가정에 포함하지 않음.
 - 모델/도구/품질 검증 수치가 없는 역할에 검증 배지를 붙이지 않음.
 
@@ -221,3 +221,6 @@ draft → planned → awaiting_approval → queued → running → verifying
 - `pm_aggregator`: 직원이 배정받은 **명시적 project_id**만 접근·요약; 읽기 범위 외 프로젝트 존재/내용을 표시하지 않음. 백그라운드 PM 운영은 검증된 워커/스케줄러가 필요.
 
 [서비스기획 v2](../product/SERVICE_PLAN_V1_2026-10-20.md), [데이터 모델](DATA_MODEL.md), [API 명세](API_CONTRACTS.md)와 연계. 이 절은 시스템 구현 완료/현재 코드에 존재하는 엔진임을 주장하지 않으며 실제 모델/DB/외부 전송 연결은 분리 승인 대상.
+
+
+**직원 데이터/권한 단일 계약 연결(2026-10-21):** [AI 직원 구현 기준 v1.0](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)의 기존 agent_profiles/agent_contracts/agent_assignments와 staff_engagements 고용 묶음 분리, 프로젝트별 active assignment 및 worker 권한 재검증, 경험 기여 원본과 일수 projection·동의·공개 필드 격리, DATAUTH-01~15 참조. 위 ADR의 일반 architecture 설명은 그 단일 계약에 반하는 별도 테이블/모델 자동 fallback 허가가 아니다. 실구현 미완.
