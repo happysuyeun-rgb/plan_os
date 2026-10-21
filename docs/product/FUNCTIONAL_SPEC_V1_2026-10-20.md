@@ -3,7 +3,7 @@
 
 > 본 문서는 기능의 단일 추적 기준선이다. 기능 구현·테스트·출시를 구분하며, 코드 검증 없이 완료라고 표시하지 않는다. 기술 수치는 실제 검증 전 확정하지 않는다.
 
-> **직원 개별 유형/역량/모델 라우팅/정식 채용 세부 수용 테스트:** [AI 직원 상세설계 v1.1](AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)의 ST-01~12 참고. 실제 고용·실행 구현/검증 전에는 관련 STAFF 기능을 완료 처리하지 않는다.
+> **직원 개별 유형/역량/모델 라우팅/정식 채용 세부 수용 테스트:** [AI 직원 상세설계 v1.1](AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)의 ST-01~15 참고. 실제 고용·실행 구현/검증 전에는 관련 STAFF 기능을 완료 처리하지 않는다.
 
 ## 2026-10-21 제품 방향 보정 — 추가 기능 추적 (설계, 미구현)
 
@@ -29,10 +29,10 @@
 **구현 범위 주의:** F-301 역할 선택 Mock PR #25와 F-401 사람 계획 Mock PR #27은 직원 등급/스타일 교체, 전담 PM 정식 채용, 다중 프로젝트 관리의 구현 완료 근거가 아니다. 운영 DB/외부 모델 연결은 G1 안전 검증과 명시적 승인 전 차단.
 
 ## 1. 근거·범위·우선권
-1. 제품 요구: [PRD v0.3](PRD.md), [통합 서비스 기획 v1.0](SERVICE_PLAN_V1_2026-10-20.md).
+1. 제품 요구: [통합 서비스기획 v2.0](SERVICE_PLAN_V1_2026-10-20.md), [PRD](PRD.md).
 2. 정책: [서비스 운영정책 v1.0](SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md), [권한정책](PERMISSIONS_POLICY.md).
 3. 구현 계약: [MVP 구축 상세명세 v1.1](../engineering/MVP_BUILD_READY_SPEC_2026-10-20.md)와 상태/REST 계약.
-4. 코드 근거: GitHub `main` 기존 PlanOS + 개발 전용 [S1 Draft PR #20](https://github.com/happysuyeun-rgb/plan_os/pull/20). 모든 PR은 **미병합**이며 운영 적용으로 간주하지 않는다.
+4. 코드 근거: GitHub `main` 기존 PlanOS 및 이미 **병합된 PR #20의 S1/S2 일부 코드**. 병합≠G1/G2 DB/RLS/브라우저 E2E PASS. 신규 인력사무소 Draft PR #28은 설계 문서이며 `main` 미병합.
 5. 요구 충돌 우선순위: 사용자 확정 결정 > 운영·보안 강제 조건 > 이 문서 기능 계약 > 상세 구현 계획. 충돌 항목은 결정 로그에 보류로 등록한다.
 
 ## 2. 공통 기능 정책
@@ -127,3 +127,13 @@
 - PR #1(기획 문서) 및 PR #20(S1/S2 개발)은 main 병합 완료. 기능/출시 완료 판정과 구분한다.
 - PR #15(기존 저장/RLS 회귀)는 Draft·충돌, PR #19(초안 보존)는 Draft·미검증으로 남음.
 - 후속 실행과 누락의 처리 단계는 [통합 실행계획서](../plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) G0~G7에 따른다.
+
+## 2026-10-21 기능 ID/화면·API 연결의 단일 기준
+
+- **제품:** 서비스기획 v2.0, 기존 AI 인터뷰·기획 5종/채팅/버전/내보내기 KEEP.
+- **실행 TF:** 기존 TF-01~30 + 신규 TF-31~46를 개발 ID로 사용. TF-S01~12은 옛 별칭(대응표는 [TASK_FLOWS](TASK_FLOWS.md)).
+- **화면:** N01~32 정본, ST-UI01~10/P-01~12은 중복 페이지가 아닌 이전/개념 별칭. [화면별 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md).
+- **API:** 기존 API-01~23/S1~S7 수직 검수 유지, 직원 기능은 STAFF-API-01~14 `/api/v1` 정본. [인가/데이터 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md).
+- **DB:** 기존 agent_*와 신규 직원 identity/경력/가격 중복 모델 정리, `staff_work_contributions` 원인 기록 + `staff_experience_daily` 직원×KST일 projection. `agent_contracts` 프로젝트별 실행권한/예산과 `staff_engagements` 고용 묶음/가격을 분리.
+- **권한:** owner 계약/모델 전송/계획·유료실행·결과수락·경력 공개·배정/해임, editor 문서/업무·계획 초안만. 각 프로젝트 owner 검증, PM A/B 배정 시 C 거부.
+- **완료:** 본 추가는 TARGET 요구 연결이며 SQL/실 UI/브라우저/RLS/실모델·요금·배포 PASS가 아님. [문서 전수 재감사](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) V3-01~18 후속 추적.
