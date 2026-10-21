@@ -4,6 +4,16 @@
 
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
 
+## 2026-10-21 docs 53개 전수 재감사·화면/권한 구현 정본 (Draft PR #28)
+
+1. [**53개 문서 전수 재감사 V3 — 중복 ID/명세·P0/P1 V3-01~18**](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md)
+2. [**AI 직원/PM 화면별 상세 스토리보드 v1.0**](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) — N01~32 기본 화면 연계, 채용·PM 다중·경력/평가·철회
+3. [**직원 데이터·권한·API 단일 구현 계약 v1.0**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) — 고용·배정/동의/경력일수 원장·권한/STAFF-API-01~14
+4. [**남은 제품·기술 결정에 대한 권고안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md) — 기본 AI·유료 PM 차별, 모델, 초급 가격, 공유 경력/평가·보안
+5. [**통합 서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 호환으로 보존
+
+> `TF-31~46`은 정식 추가 Task Flow, `TF-S`는 구 별칭. 개발 화면 ID `N01~32`; `ST-UI/P`는 별칭. 직원 API `STAFF-API-01~14` (prefix `/api/v1`) 정본. 기술 선택은 **Draft 설계 기준**, SQL/RLS/실 UI·실공급자/가격/운영 적용 완료 아님.
+
 ## 현재 작업에서 먼저 확인할 문서
 1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
 2. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
@@ -134,5 +144,5 @@
 - [PlanOS 3.0 × AI 인력사무소 MVP 개발용 상세 명세 v1.0](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md): 화면/상태/API/DB/AI 실행/QA 수용 기준, 미승인 운영 결정 분리.
 
 ## 서비스 기획·운영 기준 (2026-10-20)
-- [통합 서비스기획서 v1.0](product/SERVICE_PLAN_V1_2026-10-20.md) — 고객 가치·상품 구성·전체 여정·사업 가설·MVP 수용 기준.
+- [통합 서비스기획서 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md) — 고객 가치·상품 구성·전체 여정·사업 가설·MVP 수용 기준.
 - [통합 서비스 운영정책 v1.0](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 회원·프로젝트·AI 계약/승인·비용·데이터·장애·지원 원칙 및 상용 미결정 게이트.
