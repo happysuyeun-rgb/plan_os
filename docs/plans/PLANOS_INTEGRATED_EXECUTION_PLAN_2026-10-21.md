@@ -336,3 +336,15 @@
 - [ ] **P0 G4~G6/EX:** 지속 PM 일정·실작업/검수·직원 경력 원장/승급/가격 스냅샷·철회/캐시·안전한 공급자 모델, 격리 DB/E2E 검증.
 - [ ] **계약/상품 미결정:** 기본 PM/직원 무료 제공량, 지원 GPT/Claude 모델과 능력/도구, 경력/등급 임계값·시간대, 실제 채용 단가·원가·환불, 고객 IP/개인정보 철회 처리.
 - **실행/배포 상태:** `main` 병합, 운영 DB 변경, 실 AI 유료 실행·과금/배포 **하지 않음**. 신규 문서 내용은 출시 승인이나 기능 완료 판정을 의미하지 않는다.
+
+## 2026-10-21 전수 재감사 V3/상세 스토리보드/데이터 인가 계약 (Draft PR #28)
+
+- [x] **문서 감사:** 브랜치 `docs/` Markdown **53개(새 산출물 추가 전 목록)** 파일을 조회해 제품/TF/UX/기술/QA/구 PlanOS 설계·이전 개발 현황 교차 대조. [V3-01~18 결함 대장](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) (문서 감사, 코드 QA 아님).
+- [x] **ID/설계 정본:** TF-01~46 (TF-S는 대응 alias), 화면 N01~N32 (ST-UI/P는 alias), 직원 API STAFF-API-01~14 /api/v1 (/v1/hirings 구 후보), 데이터 직원 `agent_profiles`/고용 묶음 `staff_engagements`/프로젝트별 `agent_contracts`+`agent_assignments`, 별도 경력 기여 이벤트+직원 고유 활동일 projection로 설계 선택.
+- [x] **UI 산출물:** [12개 인력사무소 핵심 화면군 상세 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) + [현재 C01~11/목표 N01~32 전 화면 수용 매트릭스](../ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md); 기존 인터뷰/5종 문서/채팅·MD/ZIP/버전 복원 KEEP.
+- [x] **데이터/권한 설계:** [AI 직원 단일 데이터·인가·API 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md): owner-only 계약/유료 실행·수락, 프로젝트별 PM A/B 선택·C 차단, 계약 모델/가격 snapshot, 경력 동의/공개 분리·일수 중복/철회·승급, DATAUTH-01~15.
+- [x] **제품 미결정 권고:** [기본 AI vs 정식 PM, 경력 등급/가격·공개·모델·worker/원가 제안](../product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md).
+- [ ] **P0 G1 실제 안전:** 저장/복원/CAS·채팅 writer/RLS·PR stack 충돌·JWT/격리 DB/브라우저 회귀 PASS. 새 직원/PM 실 고객자료 쓰기 전 완료 필수.
+- [ ] **P0 코드/DB 상세검증:** 실제 `agent_*` migration 존재·FK/상태/version, multi-project atomic assignment·경력 일수/동의 ledger DDL/worker 권한, OpenAPI 타입 생성/실 QA.
+- [ ] **서비스 검증:** 사용 모델 제공자/가격·원가, 승급 임계, 고객 공개 권리·법률·철회, 구독/자동 PM 스케줄러/사용량. 운영 DB/배포/실과금/모델 API는 승인 전 금지.
+- **판정:** 모든 [x]는 **문서/설계 산출물만 완료**를 뜻한다. 실 기능/테스트/운영 적용 PASS로 계산하지 않는다.
