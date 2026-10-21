@@ -7,11 +7,12 @@
 ## 현재 작업에서 먼저 확인할 문서
 1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
 2. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
-3. [서비스 기획서](product/SERVICE_PLAN_V1_2026-10-20.md) / [PRD](product/PRD.md) — 범위·고객가치
+3. **[통합 서비스기획서 v2.0 — 전면 개정](product/SERVICE_PLAN_V1_2026-10-20.md)** / [PRD](product/PRD.md) — 기존 AI 기획·AI 직원 채용·PM 운영·동의 기반 경력/승급/가격/수익구조
 4. [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 역할·비용·계약
 5. [MVP 구현 상세명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) — 상세 기술 계약
 
 ## AI 인력사무소 최신 상세 제품 정책 (Draft PR #28)
+- **[통합 서비스기획서 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md)** — 18개 장으로 전면 재작성: 고객/서비스 구성·AI 인력 비교·직원 채용·PM 다중 프로젝트·경력·등급·가격·화면·API/검증·수익가설. 기존 경로를 유지해 링크 호환.
 - [직무·성격(F/T)·GPT/Claude 모델·정식 PM 채용 기획](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)
 - [고객 경력 공개 동의·검증 경력일수·초중고 승급·채용 가격](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) — 개별 프로젝트의 공개/익명/비공개, 경력 사용 동의, 고용주 후기·등급/가격 정책 초안; **실제 개발/운영 승인 아님**.
 
