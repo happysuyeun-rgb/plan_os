@@ -8,9 +8,10 @@
 
 1. [**53개 문서 전수 재감사 V3 — 중복 ID/명세·P0/P1 V3-01~18**](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md)
 2. [**AI 직원/PM 화면별 상세 스토리보드 v1.0**](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) — N01~32 기본 화면 연계, 채용·PM 다중·경력/평가·철회
-3. [**직원 데이터·권한·API 단일 구현 계약 v1.0**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) — 고용·배정/동의/경력일수 원장·권한/STAFF-API-01~14
-4. [**남은 제품·기술 결정에 대한 권고안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md) — 기본 AI·유료 PM 차별, 모델, 초급 가격, 공유 경력/평가·보안
-5. [**통합 서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 호환으로 보존
+3. [**전체 기존·신규 32개 화면과 C01~11 라우트 수용 매트릭스**](ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md)
+4. [**직원 데이터·권한·API 단일 구현 계약 v1.0**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) — 고용·배정/동의/경력일수 원장·권한/STAFF-API-01~14
+5. [**남은 제품·기술 결정에 대한 권고안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md) — 기본 AI·유료 PM 차별, 모델, 초급 가격, 공유 경력/평가·보안
+6. [**통합 서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 호환으로 보존
 
 > `TF-31~46`은 정식 추가 Task Flow, `TF-S`는 구 별칭. 개발 화면 ID `N01~32`; `ST-UI/P`는 별칭. 직원 API `STAFF-API-01~14` (prefix `/api/v1`) 정본. 기술 선택은 **Draft 설계 기준**, SQL/RLS/실 UI·실공급자/가격/운영 적용 완료 아님.
 
