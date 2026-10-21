@@ -8,6 +8,15 @@ interface SaveTask {
   content: string
   timer: ReturnType<typeof setTimeout> | null
   tail: Promise<void>
+  /** Revision whose persist() call has started and not yet settled. */
+  activeRevision: number | null
+  /**
+   * Revision that was already in flight when a newer edit was scheduled.
+   * Its write still lands on the server (and must advance the baseline via
+   * onCommitted), but emitting onSaved for it would report a stale snapshot
+   * as the saved state, so the visible acknowledgement is suppressed.
+   */
+  suppressAckRevision: number | null
 }
 
 interface DocumentAutosaveOptions<T> {
@@ -39,6 +48,8 @@ export function createDocumentAutosave<T>({
         content: '',
         timer: null,
         tail: Promise.resolve(),
+        activeRevision: null,
+        suppressAckRevision: null,
       }
       tasks.set(documentId, task)
     }
@@ -60,6 +71,13 @@ export function createDocumentAutosave<T>({
     task.revision += 1
     task.failedRevision = null
     task.content = content
+    // An edit arriving while an older write is already on the wire makes that
+    // write's success acknowledgement stale. The write itself is not
+    // cancelled (the server may already have it); only its onSaved emission
+    // is suppressed, and the baseline still advances through onCommitted.
+    if (task.activeRevision !== null) {
+      task.suppressAckRevision = task.activeRevision
+    }
     if (task.timer) clearTimeout(task.timer)
     task.timer = setTimeout(() => { void flush(documentId) }, delayMs)
   }
@@ -72,20 +90,36 @@ export function createDocumentAutosave<T>({
     const revision = task.revision
     const content = task.content
 
-    // Serialize writes for a document. Skip snapshots superseded before send.
+    // Serialize writes for a document in schedule order. A snapshot that was
+    // superseded while still queued is still written and acknowledged in
+    // order: with a compare-and-swap persist, the next snapshot's expected
+    // baseline is exactly this snapshot, so skipping it would strand every
+    // later save on a stale baseline. Only snapshots already saved (duplicate
+    // flush of the same revision) are skipped.
     const operation = task.tail.then(async () => {
-      if (revision !== task.revision || task.savedRevision >= revision) return
+      if (task.savedRevision >= revision) return
+      task.activeRevision = revision
       try {
         const updated = await persist(documentId, content)
         task.savedRevision = revision
         task.failedRevision = null
-        // Even if the editor has newer text, advance its acknowledged server baseline.
-        onSaved(documentId, content, updated)
+        if (task.suppressAckRevision === revision) {
+          // Newer text was scheduled while this write was in flight. Advance
+          // the server baseline silently; do not report the stale snapshot
+          // as saved, and never mark the newer edit as saved yet.
+          task.suppressAckRevision = null
+          onCommitted?.(documentId, content)
+        } else {
+          // Even if the editor has newer text, advance its acknowledged server baseline.
+          onSaved(documentId, content, updated)
+        }
       } catch {
         if (task.revision === revision) {
           task.failedRevision = revision
           onError(documentId)
         }
+      } finally {
+        if (task.activeRevision === revision) task.activeRevision = null
       }
     })
     task.tail = operation
@@ -122,9 +156,14 @@ export function createDocumentAutosave<T>({
         // A failed draft must never be discarded by a replacement operation.
         if (pendingRevision > task.savedRevision) {
           try {
-            const saved = await persist(documentId, pendingContent)
+            await persist(documentId, pendingContent)
             task.savedRevision = pendingRevision
-            onSaved(documentId, pendingContent, saved)
+            // The pending draft is persisted only as a preflight for the
+            // explicit overwrite. Its acknowledgement must not be emitted as
+            // a visible "saved" event: the replacement owns the final state
+            // (and reports it through onCommitted/onReplaced). The baseline
+            // still advances so a later edit compares against this snapshot.
+            onCommitted?.(documentId, pendingContent)
           } catch (error) {
             throw new Error(
               'Unsaved document changes must be retried before overwrite',

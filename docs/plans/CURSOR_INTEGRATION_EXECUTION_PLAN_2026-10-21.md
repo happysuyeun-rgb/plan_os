@@ -552,3 +552,57 @@ main 기존 번호(001~008, 011, 012)는 건드리지 않았다. PR 전용 SQL�
 | 실패 테스트 4건 유지 | 충족 (동일하게 재현, 삭제·우회 없음) |
 
 **단계 B-01 판정: 조건부 완료.** 격리 환경 구축과 PostgreSQL 수준의 RLS 실증이라는 목적은 달성했지만, 실제 Supabase 스택에서의 재검증이 남아 있어 단계 B 전체가 끝난 것으로 보지 않는다. 다음은 단계 C(저장 안전성 코드 수정)로 넘어가되, B의 잔여 실증(실제 Supabase 로컬 스택 기동 후 동일 매트릭스 재실행)을 단계 E 회귀 전에 반드시 채운다. 운영 DB·main 병합·배포는 하지 않았다.
+
+---
+
+## 실행 기록 — 단계 C-01 (Cursor 지시서 05, 2026-10-21)
+
+### C01-1. 실패 4건의 원인과 조치
+
+작업 시작 시점에 `npm run test:unit`으로 47건 중 4건 실패를 다시 재현한 뒤 착수했다. 기존 테스트의 기대값은 하나도 바꾸지 않았다.
+
+| # | 실패 테스트 | 원인 (실제 코드 기준) | 조치 |
+|---|---|---|---|
+| 1 | `serializes in-flight writes without stale success callback` (`tests/documentAutosave.test.mjs`) | 저장이 진행 중일 때 새 편집이 들어와도, 진행 중이던 오래된 저장이 완료되면 `onSaved`가 그대로 발행돼 낡은 스냅샷이 "저장됨"으로 보고됐다. | 문서별 작업에 진행 중 revision 추적을 추가했다. 진행 중 저장이 있던 상태에서 새 편집이 예약되면 그 저장은 서버에 그대로 기록하되(취소 불가) 가시적인 저장 완료 콜백을 발행하지 않고, 기준값만 조용히 전진시킨다. |
+| 2 | `restore after pending draft never lets old debounce overwrite the restored content` (`tests/documentReplacement.test.mjs`) | 복원(`replace`)이 사전 작업으로 미저장 초안을 저장하면서 그 저장 완료 이벤트까지 발행해, 복원이 소유해야 할 최종 상태와 경합하는 표시가 남았다. | 교체 경로의 사전 저장은 완료 이벤트를 발행하지 않고 기준값만 전진시키도록 바꿨다. 최종 상태는 복원 결과(`onCommitted`/`onReplaced`)만 보고한다. |
+| 3 | `acknowledgement of older in-flight revision advances baseline for newer queued edit` (`tests/g1-autosave-cas.test.mjs`) | 큐에 대기 중인 저장이 실행 시점에 "최신 revision이 아니다"라는 이유로 통째로 건너뛰어졌다. CAS에서는 다음 저장의 기대 기준값이 바로 이 스냅샷이라, 건너뛰면 이후 저장이 전부 오래된 기준값으로 실패한다. | 건너뛰기 조건을 "이미 저장된 revision의 중복 실행"으로만 좁혔다. 큐에 들어간 스냅샷은 예약 순서대로 전부 저장·확인되며 기준값이 순서대로 전진한다. |
+| 4 | `draft CAS compares compact server revision, not document body` (`tests/g1-revision-cas-contract.test.mjs`) | 017 초안의 CAS 함수가 본문을 갱신하면서 revision을 명시적으로 전진시키지 않아, 계약 테스트가 요구하는 "revision 비교 + revision 전진" 형태와 달랐다. 트리거와의 이중 전진 우려는 트리거가 `old + 1`을 강제 대입하므로 실제로는 한 번만 오른다. | CAS의 SET 절에서 revision을 명시적으로 `+1` 전진시키고(트리거의 강제 대입과 합쳐도 최종 증가량은 1), 본문이 아니라 revision으로만 비교한다는 주석을 달았다. 017은 여전히 DRAFT이며 어떤 DB에도 적용하지 않았다. |
+
+### C01-2. 자동저장·복원 충돌 방지 방식 (수정 후)
+
+- **문서별 직렬화:** 저장은 문서 ID별 큐(`tail`)로만 직렬화되고, 다른 문서는 서로를 막지 않는다. 신규 테스트로 "한 문서가 막혀 있어도 다른 문서는 저장 완료됨"을 검증했다.
+- **기준값 관리:** 성공한 저장만 기준값을 전진시킨다. 진행 중 덮인 저장은 가시 콜백 없이 `onCommitted`로 기준값과 로컬 복구 초안의 기준을 함께 전진시키며(`documentStore`), 실패·충돌한 저장은 기준값을 건드리지 않고 해당 revision을 실패로 표시해 같은 경로로 재시도할 수 있게 한다.
+- **복원 보호:** 복원·재생성·채팅은 같은 문서별 큐의 `replace`를 거친다. 미저장 초안은 복원 전에 먼저 저장하고, 그 저장이 실패하면 복원 자체를 시작하지 않는다. 복원 중 들어온 새 편집은 복원보다 최신으로 취급해 복원 결과로 화면을 덮지 않는다.
+- **충돌 처리:** 서버 비교 저장이 실패하면 `DocumentWriteConflictError`로 상태를 `error`로 표시하고, 로컬 입력은 복구 초안으로 보존된다. 자동 재시도로 서버를 덮지 않으며, 사용자가 서버를 다시 확인한 뒤 같은 편집을 재저장하는 경로를 신규 테스트로 검증했다. 화면에는 기존 복구 충돌 UI(`DocumentPage`의 충돌 초안 표시)가 그대로 연결된다.
+
+### C01-3. 수정 파일
+
+| 파일 | 변경 |
+|---|---|
+| `src/lib/documentAutosave.ts` | 진행 중 revision 추적과 낡은 완료 콜백 억제, 큐 스냅샷 건너뛰기 조건 축소, 교체 사전 저장의 콜백 분리 |
+| `src/store/documentStore.ts` | 조용한 기준값 전진 시 복구 초안의 기준도 함께 전진 |
+| `supabase/migrations/017_document_revision_cas_DRAFT.sql` | CAS revision 명시 전진과 주석 정합 (적용하지 않음) |
+| `tests/documentAutosave-concurrency.test.mjs` | 신규: 문서 간 독립 저장, 충돌 후 입력 보존·재저장 검증 |
+
+### C01-4. 수정 전후 테스트 결과
+
+| 검사 | 수정 전 | 수정 후 |
+|---|---|---|
+| `npm run test:unit` | 47건 중 43 pass / **4 fail** | **49건 중 49 pass** (기존 47건 전부 통과 + 신규 2건) |
+| `npm run test:s1` | 6/6 pass | 6/6 pass |
+| `npm run build` | 성공 | 성공 (경고는 기존 번들 크기·eval 2건과 동일) |
+| `npm run lint` | 0 errors / 1 warning | 0 errors / 1 warning (신규 오류 없음) |
+
+필수 검증 대응: 동일 문서 다중 요청(직렬화 테스트), 다른 문서 동시 저장(신규 테스트), 복원과 자동저장 경쟁(교체 테스트군), 충돌 후 입력 유지(신규 테스트)가 전부 실행됐다. 실제 DB·브라우저 검증은 이번 범위에서 수행하지 않았다.
+
+### C01-5. 서버 CAS·DB 의존성으로 남긴 것
+
+- 클라이언트 저장은 여전히 **본문 비교** 방식(`saveDocumentContentIfUnchanged`)이다. 이번에 정합을 맞춘 revision CAS(017)는 초안이며, 클라이언트가 `content_revision`을 읽어 RPC를 호출하는 연결, 다른 쓰기 경로(생성·재생성·게스트 이전)의 revision 전진, 직접 UPDATE 차단은 아직 없다.
+- 따라서 다중 클라이언트 동시 편집의 최종 차단은 서버 revision CAS와 격리 DB 실증이 끝나야 성립한다. 이번 수정은 단일 클라이언트 안에서의 순서·기준값·표시 안전성을 코드와 단위 테스트로 고정한 것까지다.
+- 실제 Supabase Auth/PostgREST 실증(B01-D3)과 댓글·알림 상세 매트릭스(B01-D4)도 그대로 남아 있다.
+
+### C01-6. 단계 C-01 판정
+
+**단계 C-01 판정: 완료(코드·단위 테스트 범위).** 실패 4건의 원인을 코드에서 해결했고 전체 단위 테스트와 빌드·린트를 통과했다. 다만 지시서 기준대로 **단계 C 전체 완료로 표시하지 않는다.** 서버 Revision CAS 연동과 실제 DB 검증이 남아 있기 때문이다.
+
+**다음 개발 작업 1개:** 클라이언트 자동저장을 본문 비교에서 revision CAS로 전환하는 단계 C-02. 017을 정식화하기 전에, 생성·재생성·게스트 이전까지 모든 쓰기 경로가 revision을 전진시키는 설계와 격리 DB 동시성 테스트를 먼저 확정한다. 운영 DB·main 병합·배포는 하지 않는다.

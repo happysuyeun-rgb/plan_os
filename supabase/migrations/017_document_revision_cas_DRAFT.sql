@@ -20,8 +20,13 @@ begin
   if v_project_id is null or not public.can_edit_project_content(v_project_id) then
     raise exception 'document unavailable or not editable' using errcode='42501';
   end if;
+  -- The CAS predicate compares the compact revision only, never the body.
+  -- The SET advances the revision explicitly; the BEFORE UPDATE trigger
+  -- below assigns old.content_revision + 1 as well, so the stored value
+  -- still moves exactly once per content change.
   update public.documents
-    set content = p_content
+    set content_revision = content_revision + 1,
+        content = p_content
     where id = p_document_id and content_revision = p_expected_revision
     returning * into v_row;
   if not found then
@@ -57,7 +62,8 @@ create trigger trg_bump_document_content_revision
 before update on public.documents
 for each row execute function public.bump_document_content_revision();
 
--- CAS UPDATE itself must not increment revision a second time: trigger does it.
+-- The CAS UPDATE sets content_revision = old + 1 and the trigger assigns
+-- old.content_revision + 1 over it, so a CAS save still bumps revision once.
 -- SECURITY DEFINER is only acceptable after independent role/RLS and search_path review.
 -- Direct client UPDATE remains a stale-write bypass and MUST be disabled on rollout.
 -- No grant/revoke to tables in this DRAFT: changing legacy clients could cause outages.

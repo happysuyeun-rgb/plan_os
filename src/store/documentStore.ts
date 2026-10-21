@@ -64,7 +64,13 @@ const autosave = createDocumentAutosave<Document>({
     })
   },
   onCommitted: (documentId, content) => {
+    // Silent baseline advancement (stale in-flight save, replacement
+    // preflight/commit): the server now holds this content, so both the CAS
+    // baseline and the local recovery draft must rebase onto it even though
+    // no visible "saved" acknowledgement is emitted for it.
     acknowledgedContent.set(documentId, content)
+    const userId = useAuthStore.getState().user?.id
+    if (userId) acknowledgeSavedDraft(userId, documentId, content)
   },
   onReplaced: (documentId, content) => {
     acknowledgedContent.set(documentId, content)
