@@ -2,6 +2,30 @@
 
 **2026-10-20 · 교차검토 보완:** 실제 소스/기존 설계/감사 결과를 대조한 **MVP 개발 기준선**. 이 문서의 기본 선택은 개발을 위한 잠정 결정이며 상용 가격·외부 모델·운영 배포 승인을 뜻하지 않는다. 코드/테스트/운영 적용 전에는 완료가 아니다.
 
+## 제품 v2.0 범위 구분 및 구현 연결 (2026-10-21 보정)
+
+> [통합 서비스기획 v2.0](../product/SERVICE_PLAN_V1_2026-10-20.md)을 상위 TARGET 제품 기준으로 참조. 아래 S1~S7 **기획서 감사 전문가 1개**는 첫 **기술 수직 E2E**에 해당하며 AI 인력사무소 전체 인재 채용·경력/가격·PM 복수 프로젝트 운영이 구현됐다는 뜻이 아니다. 기존 PlanOS AI 인터뷰/5종 문서·채팅 수정·문서 버전은 KEEP. 기존 'MVP 제외 다중 전문 AI 마켓플레이스'란 **첫 E2E 범위 제외**라는 뜻이지 최종 PlanOS 제품 기능 폐기가 아니다.
+
+### 다음 수직 슬라이스의 개발 계약
+
+| ID | 구현 단위 | 필요한 선행 계약 | 필수 검증 |
+|---|---|---|---|
+| H1 | 직원 카탈로그: 직무×F/T 의사소통×검증 경력등급×GPT/Claude 모델/툴×채용형태 | [IA N24/25](../ux/IA.md), [화면명세](../ux/SCREEN_SPEC.md); 모델 검증 결과와 가상 캐릭터 소개 분리 | 같은 업무의 팩트는 성향에 따라 달라지지 않음, 미검증 경력 배지 금지 |
+| H2 | 단발 vs 프로젝트 전담 vs PM 정식 채용·기본 직원 교체 | `staff_identity`, `staff_engagement`↔기존 `agent_contracts` 연계, `staff_project_assignment` | owner-only, 인수인계·해임·기존 문서 보존, 미선택 프로젝트 접근 거부 |
+| H3 | 채용 시 고객별 직원 경력 적립/공개 동의 | `staff_experience_consent`, 프로젝트×직원×목적/버전, 공개·익명·비공개(기본 미공개), 모델 외부 전송 동의와 분리 | 동의 없는 적립/표시 0, 거절해도 업무 수행, 조직 owner 실제 권한 |
+| H4 | AI PM 복수 프로젝트 진행 허브 | PM engagement + A/B 각 프로젝트 배정·툴/예산/승인 바인딩, server worker/scheduler 별도 | A/B 요약, C 자료 404, 작업·승인 상태/실제 근거로만 '진행' |
+| H5 | 종료 평가→업무 검증 경력일수 원장→승급 | `staff_verified_work_event`, `staff_experience_ledger`, artifact acceptance, reviews, tier ruleset | 같은 날짜 A/B=경력 1일, 동의 철회해도 B가 적격이면 유지, 허위/fixture 제외, 등급 증빙 |
+| H6 | 경력 등급 단가/가격 버전 | tier/rate card, `engagement.price_snapshot`, model package/usage 분리 | 같은 조건 초급 저가, 승급해도 기존 계약 자동 단가 인상 0, 갱신 재동의 |
+| H7 | 공개 이력서·경력 동의 철회 | 서버 consent allowlist/모델 재전송 제한·캐시/색인 갱신·등급 재평가 | 타 고객 정보 유출 0, 익명 재식별 점검, 거부/철회 이후 공개 반영 |
+
+**실행 순서:** H1~H3 Mock/순수 로직은 G1 저장 안정화와 병행 가능. 서버 writes H2~H7은 기존 S1~S7 데이터/계약/권한·revision/RLS·worker 연결을 **독립 격리 환경에서 검증 후** 통합. `main`/운영 DB/유료 공급자/배포는 별도 승인. 첫 실모델 역할 `requirements_auditor_v1` 1종과 전체 직원 카탈로그 목표를 구분.
+
+**독립 승인 체계:** 프로젝트 문서 읽기 허가, 모델 공급자에 고객 데이터 전송, 실행 계약, 실제 AI 모델 계획 생성 비용, owner 계획 승인, run 실행, 최종 artifact acceptance, AI 직원 경력 적립 동의, 경력 사례 공개 및 2차 목적이 **서로 다른 승인·이벤트**여야 함.
+
+**데이터 저장 제약:** 직원 간 경력/프로필 실적의 공통 집계와 고객별 프로젝트 자료 격리는 별도 저장 경계. 동일 `staff_id`를 다른 고객이 채용해도 타 프로젝트 원문/프롬프트를 사용할 수 없다. `agent_contracts`와 `staff_engagement` 중복 source of truth와 `run.status`/사람 업무/수락상태 enum 혼용 금지.
+
+**H1~H7 필수 테스트:** [기능정의서 STAFF-01~11](../product/FUNCTIONAL_SPEC_V1_2026-10-20.md), [경력/승급 정책 EX-01~14](../product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md), [직원 상세 ST-01~15](../product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md), [업무흐름 TF-S01~12](../product/TASK_FLOWS.md). 기술/보안 수치는 실제 실행하지 않았으므로 PASS 표시 금지.
+
 ## 0. 제품 정의와 완료 정의
 
 **단일 사용자 가치:** 이미 작성된 PlanOS 프로젝트 PRD와 기능명세서(IA)를 선택하여 기획 검수 AI에게 검토를 맡기고, 근거가 달린 검수 보고서를 승인/반려하는 것.
