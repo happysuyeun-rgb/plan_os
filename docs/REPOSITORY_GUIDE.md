@@ -42,6 +42,8 @@ plan_os/
 
 > **2026-10-21 DRAFT v2.0 교차검수:** [서비스기획 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md)(파일명은 구버전 링크 호환용), [제품/설계 누락·불일치 감사 V2-01~18](quality/PLANOS_V2_DESIGN_CROSS_AUDIT_2026-10-21.md), [경력동의·승급 가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md). 이 초안은 `main` 운영 완성 기준이 아니라 PR #28의 목표 문서이며, 실제 DB/권한/브라우저 검증이 필요하다.
 
+> **설계 문서 정본 v3 (Draft PR #28):** [53개 docs 전수 재감사](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) / [상세 스토리보드](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) / [데이터·권한·API 단일 구현 계약](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) / [남은 결정 권고안](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md). TF-S/ ST-UI/ /v1/hirings 등 중복안은 정본 참조 대응표로만 사용. 기존 V1/2026.06 구현 완료 주장은 G1 재검증 없이 신규 기능 출시 증거로 사용하지 않는다.
+
 ## 2. 일을 할 때 무엇을 열까?
 
 | 질문/작업 | 가장 먼저 볼 곳 | 이어서 확인 |
