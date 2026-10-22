@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Clock, Inbox, Plus, RefreshCw } from 'lucide-react'
-import type { DocumentType } from '../types'
+import type { DocumentType, Project } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
 import { UpgradeModal } from '../components/common/UpgradeModal'
@@ -49,17 +49,45 @@ export default function DashboardPage() {
   const summary = useNotificationStore((s) => s.summary)
   const refreshNotifications = useNotificationStore((s) => s.refresh)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [accessibleProjects, setAccessibleProjects] = useState<Project[] | null>(null)
   const [workRows, setWorkRows] = useState<DashboardProjectRow[] | null>(null)
+  const [approvalsAvailable, setApprovalsAvailable] = useState(true)
   const [workError, setWorkError] = useState<string | null>(null)
   const [workLoading, setWorkLoading] = useState(false)
   const [syncedAt, setSyncedAt] = useState<string | null>(null)
+  // 계정 전환·연속 새로고침 경합 방지: 마지막 요청만 화면에 반영한다.
+  const requestGuard = useRef({ sequence: 0, controller: null as AbortController | null })
+
+  const beginRequest = useCallback(() => {
+    requestGuard.current.controller?.abort()
+    const controller = new AbortController()
+    requestGuard.current.controller = controller
+    requestGuard.current.sequence += 1
+    return { sequence: requestGuard.current.sequence, controller }
+  }, [])
+
+  const isCurrentRequest = useCallback((sequence: number, userId: string) => {
+    return (
+      requestGuard.current.sequence === sequence &&
+      useAuthStore.getState().user?.id === userId
+    )
+  }, [])
 
   const refreshWorkStatus = useCallback(async () => {
-    if (!user || !serverTasksEnabled) return
-    setWorkLoading(true)
+    if (!user) return
+    const requestedUserId = user.id
+    const { sequence, controller } = beginRequest()
     try {
-      const dashboardProjects = await fetchDashboardProjects(user.id)
-      const summaries = await fetchWorkSummaries(dashboardProjects.map((p) => p.id))
+      const dashboardProjects = await fetchDashboardProjects(requestedUserId, controller.signal)
+      if (!isCurrentRequest(sequence, requestedUserId)) return
+      setAccessibleProjects(dashboardProjects)
+      if (!serverTasksEnabled) return
+      setWorkLoading(true)
+      const { summaries, approvalsAvailable: approvalsOk } = await fetchWorkSummaries(
+        dashboardProjects.map((p) => p.id),
+        controller.signal,
+      )
+      if (!isCurrentRequest(sequence, requestedUserId)) return
       const summaryById = new Map(summaries.map((s) => [s.projectId, s]))
       setWorkRows(
         sortDashboardRows(
@@ -72,24 +100,37 @@ export default function DashboardPage() {
           })),
         ),
       )
+      setApprovalsAvailable(approvalsOk)
       setWorkError(null)
       setSyncedAt(
         new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       )
     } catch (loadError) {
+      if (controller.signal.aborted || !isCurrentRequest(sequence, requestedUserId)) return
       console.error('[대시보드] 업무 현황을 불러오지 못했습니다.', loadError)
-      setWorkError('이 환경에서는 업무 통계를 연결하지 못했습니다.')
+      if (serverTasksEnabled) {
+        setWorkError('업무 현황을 불러오지 못했습니다. 네트워크 상태를 확인하고 다시 시도하세요.')
+      }
     } finally {
-      setWorkLoading(false)
+      if (isCurrentRequest(sequence, requestedUserId)) setWorkLoading(false)
     }
-  }, [user])
+  }, [user, beginRequest, isCurrentRequest])
 
   useEffect(() => {
-    // 마운트 시 서버 업무 현황을 불러온다 (동기 렌더링과 분리하기 위해 microtask로 실행).
+    // 마운트·계정 변경 시 서버 현황을 불러온다 (동기 렌더링과 분리).
+    const guard = requestGuard.current
     void Promise.resolve().then(() => refreshWorkStatus())
+    return () => {
+      guard.controller?.abort()
+      guard.sequence += 1
+    }
   }, [refreshWorkStatus])
 
   const totals = workRows ? summarizeTotals(workRows.map((row) => row.summary)) : null
+  const ownedProjectIds = new Set(projects.map((project) => project.id))
+  const sharedProjects = (accessibleProjects ?? []).filter(
+    (project) => !ownedProjectIds.has(project.id),
+  )
 
   const {
     contextMenu,
@@ -135,8 +176,11 @@ export default function DashboardPage() {
             기능은 그대로 사용할 수 있습니다.
           </div>
         ) : workError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {workError}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <span>{workError}</span>
+            <Button variant="ghost" onClick={() => void refreshWorkStatus()}>
+              다시 시도
+            </Button>
           </div>
         ) : workLoading && !workRows ? (
           <p className="text-sm text-gray-400">업무 현황을 불러오는 중입니다...</p>
@@ -166,10 +210,16 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <p className="text-xs font-medium text-gray-500">승인 대기 중인 계획</p>
-                <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
-                  <Inbox className={`h-5 w-5 ${totals.pendingApprovalsTotal > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
-                  {totals.pendingApprovalsTotal}건
-                </p>
+                {approvalsAvailable ? (
+                  <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
+                    <Inbox className={`h-5 w-5 ${totals.pendingApprovalsTotal > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
+                    {totals.pendingApprovalsTotal}건
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm font-medium text-gray-500">
+                    PM 승인이 연결되지 않은 환경입니다
+                  </p>
+                )}
               </div>
             </div>
 
@@ -210,7 +260,9 @@ export default function DashboardPage() {
                     <span className={row.summary.blocked > 0 ? 'font-medium text-red-600' : 'text-gray-600'}>
                       차단 {row.summary.blocked}
                     </span>
-                    {row.summary.pendingApprovals > 0 ? (
+                    {!approvalsAvailable ? (
+                      <span className="text-gray-400">승인 현황 미연결</span>
+                    ) : row.summary.pendingApprovals > 0 ? (
                       <span className="font-medium text-amber-600">
                         승인 대기 {row.summary.pendingApprovals}건
                       </span>
@@ -240,7 +292,7 @@ export default function DashboardPage() {
 
       {isLoading ? (
         <p className="mt-12 text-center text-gray-400">로딩 중...</p>
-      ) : projects.length === 0 ? (
+      ) : projects.length === 0 && sharedProjects.length === 0 ? (
         <div className="mt-8">
           <EmptyState
             title="아직 프로젝트가 없습니다"
@@ -250,6 +302,28 @@ export default function DashboardPage() {
               </Button>
             }
           />
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="mt-8">
+          <p className="text-sm text-gray-600">
+            본인이 소유한 프로젝트는 없습니다. 공유받은 프로젝트는 아래에서 열 수 있습니다.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {sharedProjects.map((project) => (
+              <button
+                key={project.id}
+                type="button"
+                onClick={() => navigate(`/projects/${project.id}/tasks`)}
+                className="rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-300 hover:shadow-sm"
+              >
+                <p className="truncate font-semibold text-gray-900">{project.title}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{project.service_type}</p>
+                <span className="mt-3 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                  공유받은 프로젝트
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="mt-8 flex gap-6">
@@ -272,6 +346,27 @@ export default function DashboardPage() {
             ))}
             <NewProjectCard onClick={handleNewProject} />
           </ProjectGrid>
+          {sharedProjects.length > 0 ? (
+            <div className="mt-6">
+              <h2 className="text-sm font-semibold text-gray-700">공유받은 프로젝트</h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {sharedProjects.map((project) => (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => navigate(`/projects/${project.id}/tasks`)}
+                    className="rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-300 hover:shadow-sm"
+                  >
+                    <p className="truncate font-semibold text-gray-900">{project.title}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{project.service_type}</p>
+                    <span className="mt-3 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                      공유받은 프로젝트
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           </div>
           <NotificationFeed className="hidden w-80 shrink-0 lg:flex" />
         </div>

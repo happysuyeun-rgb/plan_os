@@ -62,6 +62,39 @@ export function buildWorkSummaries(
   return [...perProject.values()]
 }
 
+/** 서버 집계 RPC(get_dashboard_task_counts)의 프로젝트별 행. */
+export interface TaskCountAggregate {
+  project_id: string
+  total: number
+  done: number
+  in_progress: number
+  in_review: number
+  blocked: number
+}
+
+export function buildWorkSummariesFromCounts(
+  projectIds: string[],
+  counts: TaskCountAggregate[],
+  pendingApprovals: Map<string, number>,
+): ProjectWorkSummary[] {
+  const countById = new Map(counts.map((row) => [row.project_id, row]))
+  return projectIds.map((projectId) => {
+    const count = countById.get(projectId)
+    const total = count?.total ?? 0
+    const done = count?.done ?? 0
+    return {
+      projectId,
+      total,
+      done,
+      inProgress: count?.in_progress ?? 0,
+      inReview: count?.in_review ?? 0,
+      blocked: count?.blocked ?? 0,
+      pendingApprovals: pendingApprovals.get(projectId) ?? 0,
+      completionRate: rate(done, total),
+    }
+  })
+}
+
 export function summarizeTotals(summaries: ProjectWorkSummary[]): DashboardTotals {
   const doneTotal = summaries.reduce((sum, s) => sum + s.done, 0)
   const taskTotal = summaries.reduce((sum, s) => sum + s.total, 0)
