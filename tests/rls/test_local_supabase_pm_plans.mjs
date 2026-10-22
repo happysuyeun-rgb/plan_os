@@ -6,42 +6,9 @@ import assert from 'node:assert/strict'
 import {
   people, projectOne, anonKey, API_URL,
 } from './test_local_supabase_auth.mjs'
+import { createRestClient } from '../helpers/rest.mjs'
 
-async function rest(role, method, path, body, params = '') {
-  const started = performance.now()
-  const response = await fetch(API_URL + '/rest/v1/' + path + params, {
-    method,
-    headers: {
-      apikey: anonKey,
-      Authorization: 'Bearer ' + people[role].access_token,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15000),
-  })
-  const raw = await response.text()
-  let data = null
-  try { data = raw ? JSON.parse(raw) : null } catch { data = raw }
-  return { status: response.status, ok: response.ok, data, ms: Math.round(performance.now() - started) }
-}
-
-async function rpc(role, fn, params) {
-  const response = await fetch(API_URL + '/rest/v1/rpc/' + fn, {
-    method: 'POST',
-    headers: {
-      apikey: anonKey,
-      Authorization: 'Bearer ' + people[role].access_token,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params),
-    signal: AbortSignal.timeout(15000),
-  })
-  const raw = await response.text()
-  let data = null
-  try { data = raw ? JSON.parse(raw) : null } catch { data = raw }
-  return { status: response.status, ok: response.ok, data }
-}
+const { rest, rpc } = createRestClient({ apiUrl: API_URL, anonKey, roles: people })
 
 // 1) editor creates a human plan draft with two steps through the
 // atomic create RPC (migration 024 bars raw pm_plans inserts).

@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import { createAdminClient, loopbackUrl, assertUuid } from '../helpers/rest.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
@@ -29,32 +30,29 @@ const OBJECTIVE = 'PM loop browser E2E objective text'
 const STEP_ONE = 'Survey current users'
 const STEP_TWO = 'Ship onboarding fix'
 
-async function admin(path, method, body) {
-  const r = await fetch(api + path, {
-    method,
-    headers: {
-      apikey: variables.SERVICE_ROLE_KEY,
-      Authorization: 'Bearer ' + variables.SERVICE_ROLE_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15000),
-  })
-  const result = await r.json()
-  assert(r.ok, 'admin auth operation failed HTTP ' + r.status)
-  return result
+const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
+
+async function findUserByEmail(targetEmail) {
+  for (let pageNumber = 1; pageNumber <= 20; pageNumber += 1) {
+    const listedPage = await admin(`/auth/v1/admin/users?page=${pageNumber}&per_page=100`, 'GET')
+    const users = listedPage.users ?? []
+    const found = users.find((u) => u.email === targetEmail)
+    if (found) return found
+    if (users.length < 100) return null
+  }
+  return null
 }
 
-const listed = await admin('/auth/v1/admin/users?per_page=100', 'GET')
-const leftover = (listed.users ?? []).find((u) => u.email === email)
+const leftover = await findUserByEmail(email)
 if (leftover) await admin('/auth/v1/admin/users/' + leftover.id, 'DELETE')
 const created = await admin('/auth/v1/admin/users', 'POST', {
   email, password, email_confirm: true, user_metadata: { full_name: 'PM Plan E2E' },
 })
 const projectId = '99999999-9999-4999-8999-999999999999'
+assertUuid(created.id, 'created user id')
 execFileSync('psql', [
   '-X', '-v', 'ON_ERROR_STOP=1',
-  '-c', `delete from public.projects where id = '${projectId}'`,
+  '-c', `delete from public.projects where id = '${assertUuid(projectId, 'project id')}'`,
   '-c', `insert into public.projects(id,user_id,title) values ('${projectId}','${created.id}','PM loop E2E project')`,
 ], {
   env: {
@@ -66,7 +64,7 @@ execFileSync('psql', [
 console.log('PASS PM loop account and project seeded')
 
 async function ownerToken() {
-  const r = await fetch(api + '/auth/v1/token?grant_type=password', {
+  const r = await fetch(loopbackUrl(api, '/auth/v1/token?grant_type=password'), {
     method: 'POST',
     headers: { apikey: variables.ANON_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -154,13 +152,13 @@ try {
   // Server-side cross-check: exactly one linked task, audit trail complete.
   const token = await ownerToken()
   const tasksResponse = await fetch(
-    api + '/rest/v1/project_tasks?select=id,title,source_plan_step_id&project_id=eq.' + projectId,
+    loopbackUrl(api, '/rest/v1/project_tasks?select=id,title,source_plan_step_id&project_id=eq.' + projectId),
     { headers: { apikey: variables.ANON_KEY, Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(15000) },
   )
   const tasks = await tasksResponse.json()
   assert.equal(tasks.length, 1, 'expected exactly one linked task: ' + JSON.stringify(tasks))
   const eventsResponse = await fetch(
-    api + '/rest/v1/pm_plan_approval_events?select=event_type&plan_id=eq.' + planId + '&order=created_at',
+    loopbackUrl(api, '/rest/v1/pm_plan_approval_events?select=event_type&plan_id=eq.' + planId + '&order=created_at'),
     { headers: { apikey: variables.ANON_KEY, Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(15000) },
   )
   const events = await eventsResponse.json()
