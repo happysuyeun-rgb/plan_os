@@ -149,6 +149,34 @@ const deleted = await rest('editor', 'DELETE', 'pm_plan_steps', null, '?plan_id=
 assert.equal(deleted.data?.length ?? 0, 0, 'pending 계획의 단계 삭제가 허용됨')
 console.log('A-02 pending/approved plans lock step writes')
 
+// 정당한 재오픈 경로는 살아 있어야 한다: 반려된 계획은 save RPC로
+// 본문 수정과 함께 draft로 돌아가고, 다시 승인 요청할 수 있다.
+const reopenedSeed = await createPlanRaw('editor')
+assert.equal(reopenedSeed.ok, true)
+const seedRequest = await rpc('editor', 'transition_pm_plan', {
+  p_plan_id: reopenedSeed.data.id,
+  p_expected_version: reopenedSeed.data.version,
+  p_action: 'request_approval',
+})
+assert.equal(seedRequest.ok, true)
+const rejected = await rpc('owner', 'transition_pm_plan', {
+  p_plan_id: reopenedSeed.data.id,
+  p_expected_version: seedRequest.data.version,
+  p_action: 'reject',
+  p_comment: 'revise please',
+})
+assert.equal(rejected.ok, true)
+const reopened = await rpc('editor', 'save_pm_plan_draft', {
+  p_plan_id: reopenedSeed.data.id,
+  p_expected_version: rejected.data.version,
+  p_objective: 'Reopened draft objective after rejection',
+  p_steps: [step('Anchor task')],
+})
+assert.equal(reopened.ok, true, '반려 후 재오픈 저장이 막힘: ' + JSON.stringify(reopened.data))
+assert.equal(reopened.data.status, 'draft')
+assert.equal(reopened.data.objective, 'Reopened draft objective after rejection')
+console.log('A-01 rejected plans still reopen through the save RPC with edits')
+
 // ----------------------------------------------------------------
 // A-03 concurrency: parallel calls with one request id make one plan
 const currentRequestId = randomUUID()

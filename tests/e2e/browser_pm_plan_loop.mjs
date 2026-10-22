@@ -7,6 +7,7 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
 import { createAdminClient, loopbackUrl, assertUuid } from '../helpers/rest.mjs'
+import { runPsqlSeed } from '../helpers/psql.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
@@ -24,7 +25,7 @@ assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 const site = 'http://127.0.0.1:5173'
-const email = 'browser-pm-plan@example.test'
+const email = `browser-pm-plan-${Date.now()}@example.test`
 const password = 'Synthetic-pm-plan-password-123!'
 const OBJECTIVE = 'PM loop browser E2E objective text'
 const STEP_ONE = 'Survey current users'
@@ -50,17 +51,10 @@ const created = await admin('/auth/v1/admin/users', 'POST', {
 })
 const projectId = '99999999-9999-4999-8999-999999999999'
 assertUuid(created.id, 'created user id')
-execFileSync('psql', [
-  '-X', '-v', 'ON_ERROR_STOP=1',
-  '-c', `delete from public.projects where id = '${assertUuid(projectId, 'project id')}'`,
-  '-c', `insert into public.projects(id,user_id,title) values ('${projectId}','${created.id}','PM loop E2E project')`,
-], {
-  env: {
-    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
-    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
-  },
-  stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000,
-})
+runPsqlSeed([
+  `delete from public.projects where id = '${assertUuid(projectId, 'project id')}'`,
+  `insert into public.projects(id,user_id,title) values ('${projectId}','${created.id}','PM loop E2E project')`,
+])
 console.log('PASS PM loop account and project seeded')
 
 async function ownerToken() {
