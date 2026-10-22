@@ -24,7 +24,7 @@
 | C01 | `/` | LandingPage | KEEP | 공개 랜딩; 비회원/로그인 리다이렉트 회귀 |
 | C02 | `/login` | LoginPage | KEEP | 인증 및 에러 안내 |
 | C03 | `/onboarding` | OnboardingPage | KEEP | 최초 진입 가드 유지 |
-| C04 | `/dashboard` | DashboardPage | MODIFY | 프로젝트·승인·최근 실행 요약 확장 |
+| C04 | `/dashboard` | DashboardPage | MODIFY | **프로젝트별 업무 완료율(등록 업무 기준)·차단·승인·다음 행동 집계**. 현재 프로젝트 카드/알림만, 서버 통합 집계 미구현 |
 | C05 | `/projects` | ProjectListPage | KEEP | 프로젝트 검색/열기 |
 | C06 | `/projects/new` | ProjectCreatePage | MODIFY | 목표·제약·예산 입력은 후속 확장 |
 | C07 | `/projects/trash` | TrashPage | KEEP | 삭제/복원 권한 검증 |
@@ -203,3 +203,12 @@
 
 
 **최신 화면 단일 상세 정본:** [AI 직원 채용·PM 운영·경력 화면별 스토리보드 v1.0](AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md). P-01~12(서비스기획)도 고객 여정용 별칭이지 중복 페이지 ID가 아니다. 접근성/실제 URL/기존 React 라우트 검수 전 TARGET.
+
+## 2026-10-22 V5 추가 — C04 / N29 정보 구조 및 PR #36 실제 경로 정합
+
+- **C04 기본 대시보드(`/dashboard`, 기존):** 사용자가 접근 가능한 활성 프로젝트 전체에서 **프로젝트명/업무 완료 x/y/차단/승인 대기/최근 변경/다음 행동**을 하나의 화면에 표시. 정식 AI PM 채용 여부와 무관하게 제공할 기본 기능. C04에 신규 N 번호·중복 독립 화면 생성 금지.
+- **프로젝트 운영 진입:** C04 카드→실제 `/projects/:projectId/tasks` (기존 N03 일부), 현재 프로젝트 문서→기존 C09/C10. PR #36 이후에만 존재하는 `/projects/:projectId/plans`, `/plans/new`, `/plans/:planId`은 **Draft 신규 구현 경로**, 운영 라우트 아님. 실제 사용 전 GitHub main·Vercel 확인 필요.
+- **N29 전담 PM 운영실:** 명시 배정 계약으로 지정된 프로젝트 A/B만 조회 가능, 미배정 C는 제외. **C04는 사용자 권한, N29는 계약/직원 배정 scope**로 서버 집계/컴포넌트만 공유하며 표시 대상은 분리. PM 자동 작업/비용/AI 직원 배지는 실제 런타임/승인 검증 후.
+- **N12/N22 통합 승인:** PR #36의 계획 상세 N09 승인 버튼과 완성된 통합 승인함은 다름. PM `pending_owner_approval` 목록만 먼저 C04 owner 대기 업무로 표시하고, 미구현 다른 승인 리소스는 '0'이 아닌 '미연결' 표기. N12/N22 별도 중복 approval ID 생성 금지.
+- **IA 우선순위:** 기존 C04/프로젝트 동선 KEEP → 서버 RLS 통합 읽기 요약 → 실제 PM 022 적용·승인 연결 → 정식 PM 배정 운영 N29. 배포/데이터 전송은 별도 승인.
+- **근거/수용:** [대시보드 Issue #39](https://github.com/happysuyeun-rgb/plan_os/issues/39), [교차감사 V5](../quality/PLANOS_PM_DASHBOARD_CROSS_AUDIT_V5_2026-10-22.md), [기능 DASH-01~08](../product/FUNCTIONAL_SPEC_V1_2026-10-20.md).
