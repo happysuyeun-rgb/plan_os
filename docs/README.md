@@ -4,7 +4,9 @@
 
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
 
-## 2026-10-22 Cursor 개발 착수용 2개 정본 (새 기능을 실제로 구현하기 위한 최신 인계)
+## 2026-10-22 Cursor 개발 착수용 2개 정본 + 자동 읽기 규칙
+
+- **[Cursor 자동 적용 프로젝트 규칙](../.cursor/rules/planos-spec-driven.mdc)** — Cursor가 이 브랜치의 설정을 읽는 환경에서 실행전략→기능/TF/화면/권한/테스트 순서로 확인. 규칙은 **PR #28에만 존재**하며 main/다른 작업 브랜치로 병합되거나 안전하게 복사되기 전 자동 적용되지 않는다. Cursor는 현재 개발 브랜치 내용을 덮어쓰지 말고 read-only fetch/show로 본 브랜치의 문서를 확인할 것.
 
 1. **[Cursor 기능정의·화면명세 기반 실행전략](plans/CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md)** — G1 마무리→F401 계획 서버 저장→F402 owner 승인→S1 업무 연결, 매 슬라이스의 F/TF/N/API·CI 보고 계약.
 2. **[전체 화면/기능 교차감사 V4 — A4-01~22](quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md)** — 기존 C01~11/목표 N01~32/기능 F-001~801·STAFF-01~11, 실제 코드/Mock/TARGET 상태, 22개 누락·상충 및 첫 PM 화면 구체 테스트.
