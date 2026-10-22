@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { AlertTriangle, Clock, Inbox, Plus, RefreshCw } from 'lucide-react'
 import type { DocumentType } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
@@ -16,6 +16,24 @@ import { useProjectStore } from '../store/projectStore'
 import { DOCUMENT_TYPE_UI_ORDER } from '../lib/documentTypes'
 import { usePlanStore } from '../store/planStore'
 import { useNotificationStore } from '../store/notificationStore'
+import { fetchDashboardProjects, fetchWorkSummaries } from '../lib/api/dashboard'
+
+const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
+import {
+  formatCompletionRate,
+  sortDashboardRows,
+  summarizeTotals,
+  type DashboardProjectRow,
+} from '../lib/dashboardSummary'
+
+function formatUpdatedAt(updatedAt: string): string {
+  return new Date(updatedAt).toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 const ALL_DOC_TYPES: DocumentType[] = DOCUMENT_TYPE_UI_ORDER
 
@@ -31,6 +49,47 @@ export default function DashboardPage() {
   const summary = useNotificationStore((s) => s.summary)
   const refreshNotifications = useNotificationStore((s) => s.refresh)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [workRows, setWorkRows] = useState<DashboardProjectRow[] | null>(null)
+  const [workError, setWorkError] = useState<string | null>(null)
+  const [workLoading, setWorkLoading] = useState(false)
+  const [syncedAt, setSyncedAt] = useState<string | null>(null)
+
+  const refreshWorkStatus = useCallback(async () => {
+    if (!user || !serverTasksEnabled) return
+    setWorkLoading(true)
+    try {
+      const dashboardProjects = await fetchDashboardProjects(user.id)
+      const summaries = await fetchWorkSummaries(dashboardProjects.map((p) => p.id))
+      const summaryById = new Map(summaries.map((s) => [s.projectId, s]))
+      setWorkRows(
+        sortDashboardRows(
+          dashboardProjects.map((project) => ({
+            projectId: project.id,
+            title: project.title,
+            serviceType: project.service_type,
+            updatedAt: project.updated_at,
+            summary: summaryById.get(project.id)!,
+          })),
+        ),
+      )
+      setWorkError(null)
+      setSyncedAt(
+        new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      )
+    } catch (loadError) {
+      console.error('[대시보드] 업무 현황을 불러오지 못했습니다.', loadError)
+      setWorkError('이 환경에서는 업무 통계를 연결하지 못했습니다.')
+    } finally {
+      setWorkLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    // 마운트 시 서버 업무 현황을 불러온다 (동기 렌더링과 분리하기 위해 microtask로 실행).
+    void Promise.resolve().then(() => refreshWorkStatus())
+  }, [refreshWorkStatus])
+
+  const totals = workRows ? summarizeTotals(workRows.map((row) => row.summary)) : null
 
   const {
     contextMenu,
@@ -67,6 +126,117 @@ export default function DashboardPage() {
           새 프로젝트
         </Button>
       </div>
+
+      {/* 업무 현황 요약 (C04) — 서버 업무 모드가 켜진 환경에서만 집계한다. */}
+      <section aria-label="업무 현황" className="mt-6">
+        {!serverTasksEnabled ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            현재 환경에서는 서버 업무가 연결되지 않아 업무 통계를 표시하지 않습니다. 프로젝트·문서·기획
+            기능은 그대로 사용할 수 있습니다.
+          </div>
+        ) : workError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {workError}
+          </div>
+        ) : workLoading && !workRows ? (
+          <p className="text-sm text-gray-400">업무 현황을 불러오는 중입니다...</p>
+        ) : workRows && totals ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-medium text-gray-500">접근 가능한 프로젝트</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{totals.projectCount}개</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-medium text-gray-500">
+                  등록 업무 완료율 <span className="text-gray-400">(프로젝트 전체 완성도 아님)</span>
+                </p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">
+                  {totals.completionRate !== null
+                    ? `${totals.doneTotal} / ${totals.taskTotal} · ${totals.completionRate}%`
+                    : '업무 미등록'}
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-medium text-gray-500">차단된 업무</p>
+                <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
+                  <AlertTriangle className={`h-5 w-5 ${totals.blockedTotal > 0 ? 'text-red-500' : 'text-gray-300'}`} />
+                  {totals.blockedTotal}개
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-medium text-gray-500">승인 대기 중인 계획</p>
+                <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
+                  <Inbox className={`h-5 w-5 ${totals.pendingApprovalsTotal > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
+                  {totals.pendingApprovalsTotal}건
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-400">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  마지막 업데이트 {syncedAt ?? '—'}
+                </span>
+              </p>
+              <Button variant="ghost" onClick={() => void refreshWorkStatus()} disabled={workLoading}>
+                <RefreshCw className={`h-4 w-4 ${workLoading ? 'animate-spin' : ''}`} />
+                새로고침
+              </Button>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              {workRows.map((row) => (
+                <button
+                  key={row.projectId}
+                  type="button"
+                  onClick={() => navigate(`/projects/${row.projectId}/tasks`)}
+                  className="rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-300 hover:shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900">{row.title}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{row.serviceType}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      최근 업데이트 {formatUpdatedAt(row.updatedAt)}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                    <span className="font-medium text-gray-900">{formatCompletionRate(row.summary)}</span>
+                    <span className="text-gray-600">진행 중 {row.summary.inProgress}</span>
+                    <span className="text-gray-600">검토 중 {row.summary.inReview}</span>
+                    <span className={row.summary.blocked > 0 ? 'font-medium text-red-600' : 'text-gray-600'}>
+                      차단 {row.summary.blocked}
+                    </span>
+                    {row.summary.pendingApprovals > 0 ? (
+                      <span className="font-medium text-amber-600">
+                        승인 대기 {row.summary.pendingApprovals}건
+                      </span>
+                    ) : null}
+                  </div>
+                  {row.summary.total > 0 ? (
+                    <div
+                      className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={row.summary.completionRate ?? 0}
+                      aria-label={`${row.title} 등록 업무 완료율`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-blue-500 transition-all"
+                        style={{ width: `${row.summary.completionRate ?? 0}%` }}
+                      />
+                    </div>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       {isLoading ? (
         <p className="mt-12 text-center text-gray-400">로딩 중...</p>
