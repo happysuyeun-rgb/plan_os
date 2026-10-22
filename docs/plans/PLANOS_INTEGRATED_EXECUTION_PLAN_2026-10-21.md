@@ -361,3 +361,12 @@
 - [ ] G1 P0 autosave/restore/chat/version CAS·project_members RLS 재현/해결(신규 직원 코드/운영 승인과 분리).
 - [ ] N16/17/19/20/N27~32 실제 Mock UX/접근성 E2E, F401 브라우저 검증, PM worker/비용·공급자 모델 실제 PoC(승인 전 호출 금지).
 - **운영 안전:** 단일 브랜치 Draft 문서 설계, main 병합·운영 DB 변경·고객 데이터 외부 전송·상용 가격·배포 진행하지 않음.
+
+
+## 2026-10-22 화면·기능 V4 교차감사 및 Cursor 문서 기반 코드 착수 계약 (Draft PR #28)
+
+- [x] **Cursor 문서 기반 실행전략 작성:** [실행전략 v1.0](CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md) / [Cursor 프로젝트 규칙](../../.cursor/rules/planos-spec-driven.mdc), 정본 읽기/ID 매핑/각 슬라이스의 코드·JWT/RLS·Chromium/CI 증빙 기준. 이 문서의 과거 작업 큐는 작성 시점 기록이며 **다음 작업은 Issue #32** 기준.
+- [x] **화면·기능 정합 감사:** [V4 A4-01~22](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md), C01~11/N01~32/기능 F-001~801·STAFF-01~11의 누락/상충 점검. 기능·TF/화면/IA/운영규칙/README 직접 정정. 설계 수정만 완료.
+- [ ] **다음 실제 코드 개발 1:** [Issue #32](https://github.com/happysuyeun-rgb/plan_os/issues/32) DEV-01 F-401 사람 계획의 격리 서버 저장·owner/editor 역할 RLS·새로고침·409 → DEV-02 F-402 owner 승인·S1 task 1건 연결. 신규 Draft PR/실제 E2E 전 완료 체크 금지.
+- [ ] **병합 게이트:** G1 [PR #30](https://github.com/happysuyeun-rgb/plan_os/pull/30) C-03 최신 HEAD `d9e34e9` 이후 최초 생성 UPSERT 경합 보완·DB/배포 호환성 결정 대기. 현재 `main` 미병합. PR #25/#27은 Mock Draft, 신규 코드에 재사용하되 중복 병합 금지.
+- **실제 제품 코드·운영 상태:** 이번 2026-10-22 작업은 PR #28의 문서 및 Cursor 읽기 규칙만 변경, 앱·운영 DB·Vercel·유료 공급자 API 미변경.
