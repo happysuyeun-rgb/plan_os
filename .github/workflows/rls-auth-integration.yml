@@ -95,6 +95,8 @@ jobs:
         run: node tests/rls/test_local_supabase_pm_hardening.mjs
       - name: Test PM plan final integrity negatives (migration 024)
         run: node tests/rls/test_local_supabase_pm_final.mjs
+      - name: Test dashboard work summaries (Issue 39 C04)
+        run: node tests/rls/test_local_supabase_dashboard.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |
