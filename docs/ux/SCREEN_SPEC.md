@@ -1,11 +1,13 @@
 # PlanOS 3.0 × AI 인력사무소 — 화면별 기능명세서
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-21  
+**최종 수정일:** 2026-10-22  
 **문서 버전:** v0.3 (스토리보드 정본)  
 **진행 상태:** TARGET 화면 기능명세 초안 / 정책·개발 검토 전  
-**상위 문서:** [PRD](../product/PRD.md) · [TF-01~30](../product/TASK_FLOWS.md) · [IA](IA.md)  
-**범위:** MVP 핵심 9개 화면 상세 + 잔여 14개 화면의 통합/후속 방침. 아래 UI/API는 목표 정의이며 구현 완료가 아님.
+**상위 문서:** [PRD](../product/PRD.md) · [TF-01~46](../product/TASK_FLOWS.md) · [IA](IA.md)  
+**범위:** N01~23 중 MVP 9개 우선 상세 + 14개 전략, 신규 N24~32 확장. 전체 N01~32는 [화면 수용 매트릭스](PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md). 실제 구현 아님.
+
+> **2026-10-22:** [A4 화면·기능 교차감사](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md) 및 [Cursor 실행전략](../plans/CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md) 우선 확인. main N03은 `/projects/:projectId/tasks` 일부 존재; N08 `/projects/:projectId/plans/new`는 PR #27 사람 작성 Mock만 있고 서버 저장/승인 미구현. `/workspace`는 TARGET. 내부 생성 문서 6개, UI 노출 5개.
 
 ## 1. 공통 설계 계약
 
@@ -137,7 +139,7 @@
 | 이벤트 | 사전 상태 | 후속 상태 | UI 반응 | 금지 조건 |
 |---|---|---|---|---|
 | 모델 PM 계획 생성 | active contract + owner의 PM 비용·데이터 처리 동의 | generating → planned 또는 failed | 비용 상한·진행·재시도/실패 및 완료 버전 표시 | 계약/예산 동의 전 유료 모델 호출 및 승인 없이 전문 run 생성 |
-| 계획 승인 | planned | awaiting_approval → queued(서버 검증 후) | 승인 이벤트 표시 | 만료·범위 변경 |
+| 계획 승인 | plan.pending_owner_approval | plan.approved 및 별도 승인 사건 생성(유료 run 생성 아님) | owner·계획 버전·승인 시각 표시 | stale/만료/범위 변경/중복·무권한 승인 차단 |
 | 실행 시작 | queued | running | 진행 로그·취소 가능 여부 | 예산/도구/계약 위반 |
 | 도구 결과 수신 | running | verifying | 검증 대기 표시 | 바로 accepted 처리 |
 | 검증 통과 | verifying | awaiting_acceptance | 산출물·증빙·비용 표시 | 검증 없는 완료 |
@@ -215,5 +217,19 @@
 - [AI 직원/PM/경력 화면별 스토리보드 v1.0](AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md)를 각 화면의 CTA·데이터 필드·상태·접근권한·실패/복구의 상세 정본으로 사용.
 - N16/N24는 하나의 인력 탐색 화면, N17/N25 하나의 직원 상세 경험, N19/20/26/27은 **하나의 연결된 채용 플로우**이며 독립 중복 페이지를 늘리지 않는다.
 - N28 경력 적립/공개 동의는 계약·모델 전송 동의와 **완전히 분리**, N29 PM은 명시 배정 A/B만 읽기, N30 평가/경력 후보, N31 동의된 직원 이력서, N32 동의/채용 철회.
-- TF 구현 ID는 TF-31~46 (TF-S 기존 별칭), API는 STAFF-API-01~14, 권한/데이터 정본은 [단일 구현 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md).
-- 기존 C09/C10 인터뷰/5종 산출물/채팅/버전·MD/ZIP·Cursor 프롬프트 회귀 없이 진행. 실제 URL/컴포넌트/브라우저 검증은 미완.
+- TF 구현 ID는 TF-31~46 (TF-S 기존 별칭), API는 STAFF-API-01~15, 권한/데이터 정본은 [단일 구현 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md).
+- 기존 C09/C10 인터뷰/노출 5종(내부 생성 6타입)/채팅/버전·MD/ZIP·Cursor 프롬프트 회귀 없이 진행. 실제 신규 URL/컴포넌트/브라우저 검증은 미완.
+
+
+## 8. F-401/F-402 첫 실제 운영 슬라이스 상세 인계 (2026-10-22, TARGET)
+
+아래는 **N08 사람 계획 작성 → N09/N12 owner 승인 → N03/N04 실제 업무 1건 연결**의 [A4 감사 §3](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md) 및 [Issue #32](https://github.com/happysuyeun-rgb/plan_os/issues/32)와 같은 계약이다. **현재 PR #27은 메모리 Mock, 서버 기능 아님.**
+
+| 화면/기능 | CTA 및 actor | 서버 상태·자료 | 오류·성공 수용 |
+|---|---|---|---|
+| N08 F-401 | owner/editor `초안 저장`, `승인 요청` | projectId/author/objective/step(1~20)/source revision/version 저장. 사람 작성→LLM 호출 0 | validation, 403/404, 409/2탭, reload·복구 시 내용 보존 |
+| N09/N12 F-402 | owner `승인`, `반려`, `수정 요청` | plan `draft→pending_owner_approval→approved/rejected/needs_revision`, immutable decision event, expectedVersion/idempotency | editor/viewer/외부인 승인 0; stale·동시 승인·만료·중복 사건 0; 승인만으로 유료 실행 0 |
+| N03/N04 F-101~105 | owner 승인된 계획 단계 `업무 반영` | S1 task와 출처 plan/step 링크, projectId 동일, 재시도시 task 1개 | 미승인/타 프로젝트 연결 거부, 새로고침 후 상태 동일, 실제 서버/JWT/RLS 확인 |
+| N11/N12 후속 결과 | 유효한 실검수 보고서만 `최종 수락/수정요청/반려` | 검증/report와 owner human accepted 별개 | 합성 Mock를 실제 수행 실적·요금으로 표시 금지 |
+
+**작성 주체 UI:** human-draft와 실제 모델 AI-planned 출처를 별도 필드와 문구로 노출. 계약 없는 사람 초안 작성은 허용하지만, 유료 AI PM 생성/전문직원 호출은 공급자·문서 전송·예산/별도 owner 승인 후 실행. 기존 C09/C10 DocumentPage URL은 유지.
