@@ -2,7 +2,7 @@
 
 **작성:** 2026-10-21 / **상태:** IA/화면별 상세 스토리보드 동기화 TARGET. 기존 `C01~C11` 화면/라우트 보존, `N01~N32`은 제품 목표 ID. 실화면/라우트·테스트 PASS 아님.
 
-**사용법:** 개발자는 이 매트릭스로 화면·기능 누락 여부를 확인하고, 구체 직원 채용/PM/동의/경력 화면군의 필드·CTA·대화/실패 UX는 [AI 직원 상세 스토리보드](AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md)를 따라야 한다. 데이터/권한/API는 [단일 구현 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md), 업무 흐름은 [정본 TF-01~46](../product/TASK_FLOWS.md).
+**사용법:** 개발자는 이 매트릭스로 화면·기능 누락 여부를 확인하고, **2026-10-22 실제 구현·Mock·TARGET 및 불일치 A4-01~22 판정은 [화면/기능 감사 V4](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md)를 우선 참조**한다. 구체 직원 채용/PM/동의/경력 화면군의 필드·CTA·대화/실패 UX는 [AI 직원 상세 스토리보드](AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md)를 따른다. 데이터/권한/API는 [단일 구현 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md), 업무 흐름은 [정본 TF-01~46](../product/TASK_FLOWS.md).
 
 ## 1. CURRENT 11개 라우트(C01~11) 회귀 검수
 
@@ -31,8 +31,8 @@
 | N05 | 문서·산출물 목록 | 기존 5종 기획/버전/AI 결과, `기존 문서 열기` | C09/C10 deep link·내보내기/휴지통 회귀 |
 | N06 | 프로젝트 AI 팀 | 배치 직원·프로젝트 계약·업무/권한, `인력 투입` | owner 채용/해임, viewer 비공개 비용 제한 |
 | N07 | 직원 배치 | 직무·기존 직원/계약 범위, `프로젝트에 배정` | 해당 프로젝트 owner; 복수 PM N27 연결 |
-| N08 | PM 계획 | 사람이 작성한 Mock vs 실 AI 작성 출처, 작업/의존성·버전, `초안 검토` | editor 초안 허용, 모델 계획 유료 실행은 사전 계약/승인 |
-| N09 | 계획 최종 승인 | source digest/예상 비용/계약/도구, `승인·반려` | owner 전용, 승인 만료·stale 409 |
+| N08 | PM 계획 | 사람이 작성한 Mock vs 실 AI 작성 출처, 작업/의존성·버전, `초안 검토/서버 저장/승인 요청` | **PR #27 owner-only 메모리 Mock 존재**, 목표 owner/editor 초안 저장 + 409/reload. 모델 계획 유료 실행은 사전 계약/승인 |
+| N09 | 계획 최종 승인 | human draft/version/source digest/제안자·실 AI 계획 비용을 구분, `승인·반려·수정요청` | owner 전용, 승인 사건 1회, stale·만료 409. **계획 승인만으로 run/실과금 시작 금지** |
 | N10 | 실행 내역 | queued/running/검증/실패·영속 job 리스트, `실행 상세` | 멤버별 공개 제한, 브라우저 재접속 |
 | N11 | 실행 증빙 | provider/tool 로그·근거/산출물/원가, `안전 재시도·취소` | 원문·모델 비밀 마스킹, duplicate idempotency |
 | N12 | 프로젝트 승인함 | 해당 프로젝트 승인 요청과 비용/범위, `승인 상세` | owner 결정, editor 보기/초안만, 만료/철회 |
@@ -59,9 +59,9 @@
 
 ## 3. 화면↔TF/API/QA 전역 적용
 
-- **기존 기본 기획**: C06/C09/C10 + N01/02/05/15, TF-01~06/25/29/30, F-001~005/STAFF-01, 기존 문서/버전 복원/RLS G1.
+- **기존 기본 기획**: C06/C09/C10 + N01/02/05/15, TF-01~06/25/29/30, F-001~005/STAFF-01, 기존 문서/버전 복원/RLS G1. **실제 내부 생성 6종/UI 노출 5종**, 현 생성기는 placeholder 템플릿으로 실제 LLM 생성과 구분.
 - **사람/AI 업무·검수**: N03/04/08~14/22, TF-13~24/37~40, F-101~105/F-201~603, 기존 API-01~23와 별도 S1~S7 서버 실행·사람 수락.
-- **직원 인력사무소**: N06/07/16~21/24~28, TF-07~12/31~36/45~46, STAFF-01~08, STAFF-API-01~08.
+- **직원 인력사무소**: N06/07/16~21/24~28, TF-07~12/31~36/45~46, STAFF-01~08. **STAFF-API-01~15 전체**에서 04는 draft, 15는 owner final accept. 직원별 화면군으로 일부 API만 호출하더라도 계약 활성화는 15를 누락할 수 없음.
 - **PM 다중 진행**: N01/29/12/22, TF-34/37~39/45, STAFF-04~06, STAFF-API-05/13/14.
 - **경력/평가/가격/철회**: N28/30~32, TF-35~36/40~44, STAFF-08~11, STAFF-API-07~12 + 서버 내부 projection. DATAUTH-01~15/EX-01~14.
 - **방어:** `loading/empty/forbidden/not-found/price_unconfirmed/consent_required/stale409/provider503/revoking/settlement_pending/review_pending` UI 상태. editor는 초안만/owner는 계약·실행·최종수락·고객 경력 공개. URL 제안만, 실제 현재 라우트와 모의/신규 코드 충돌을 개발 전에 확인해야 한다.
