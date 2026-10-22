@@ -43,27 +43,25 @@ async function rpc(role, fn, params) {
   return { status: response.status, ok: response.ok, data }
 }
 
-// 1) editor creates a human plan draft with two steps.
-const planCreated = await rest('editor', 'POST', 'pm_plans', {
-  project_id: projectOne,
-  objective: 'PM plan E2E objective for review loop',
-  source: 'human',
-  created_by: people.editor.id,
+// 1) editor creates a human plan draft with two steps through the
+// atomic create RPC (migration 024 bars raw pm_plans inserts).
+const planCreated = await rpc('editor', 'create_pm_plan', {
+  p_project_id: projectOne,
+  p_objective: 'PM plan E2E objective for review loop',
+  p_steps: [
+    { title: 'Step one', acceptance_criteria: 'first criteria met', depends_on_position: null, position: 1 },
+    { title: 'Step two', acceptance_criteria: 'second criteria met', depends_on_position: 1, position: 2 },
+  ],
+  p_client_request_id: '44444444-4444-4444-8444-444444444444',
 })
 assert(planCreated.ok, 'plan create failed: ' + JSON.stringify(planCreated.data))
-const plan = planCreated.data[0]
+const plan = planCreated.data
 assert.equal(plan.status, 'draft')
 assert.equal(plan.version, 1)
-
-const stepOne = await rest('editor', 'POST', 'pm_plan_steps', {
-  plan_id: plan.id, position: 1, title: 'Step one', acceptance_criteria: 'first criteria met',
-})
-const stepTwo = await rest('editor', 'POST', 'pm_plan_steps', {
-  plan_id: plan.id, position: 2, title: 'Step two', acceptance_criteria: 'second criteria met',
-})
-assert(stepOne.ok && stepTwo.ok, 'step create failed')
-await rest('editor', 'PATCH', 'pm_plan_steps', { depends_on_step_id: stepOne.data[0].id },
-  '?id=eq.' + stepTwo.data[0].id)
+const createdSteps = await rest('editor', 'GET', 'pm_plan_steps', null,
+  '?plan_id=eq.' + plan.id + '&order=position')
+assert.equal(createdSteps.data.length, 2, 'step create failed')
+assert(createdSteps.data[1].depends_on_step_id === createdSteps.data[0].id, 'create must wire dependencies')
 const creationEvents = await rest('editor', 'GET', 'pm_plan_approval_events', null, '?plan_id=eq.' + plan.id)
 assert(creationEvents.data.some((e) => e.event_type === 'draft_saved'), 'draft_saved event must be recorded')
 console.log('PASS editor creates plan draft with steps and a draft_saved audit event')
