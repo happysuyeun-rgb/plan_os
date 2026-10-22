@@ -1,4 +1,4 @@
-// Disposable browser E2E for the C04 integrated dashboard (Issue #39):
+﻿// Disposable browser E2E for the C04 integrated dashboard (Issue #39):
 // seeded task states on real server rows are aggregated by RLS and shown
 // as 등록 업무 완료율 / 차단 / 승인 대기; clicking a project row navigates to
 // the existing S1 board. Nothing invokes AI or billing.
@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import { createAdminClient, loopbackUrl } from '../helpers/rest.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
@@ -23,27 +24,24 @@ assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 const site = 'http://127.0.0.1:5173'
-const email = 'browser-dashboard@example.test'
+const email = `browser-dashboard-${Date.now()}@example.test`
 const password = 'Synthetic-dashboard-password-123!'
 
-async function admin(path, method, body) {
-  const r = await fetch(api + path, {
-    method,
-    headers: {
-      apikey: variables.SERVICE_ROLE_KEY,
-      Authorization: 'Bearer ' + variables.SERVICE_ROLE_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15000),
-  })
-  const result = await r.json()
-  assert(r.ok, 'admin auth operation failed HTTP ' + r.status)
-  return result
+const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
+
+// Test accounts can outnumber one admin page after repeated local runs.
+async function findUserByEmail(targetEmail) {
+  for (let pageNumber = 1; pageNumber <= 20; pageNumber += 1) {
+    const listedPage = await admin(`/auth/v1/admin/users?page=${pageNumber}&per_page=100`, 'GET')
+    const users = listedPage.users ?? []
+    const found = users.find((u) => u.email === targetEmail)
+    if (found) return found
+    if (users.length < 100) return null
+  }
+  return null
 }
 
-const listed = await admin('/auth/v1/admin/users?per_page=100', 'GET')
-const leftover = (listed.users ?? []).find((u) => u.email === email)
+const leftover = await findUserByEmail(email)
 if (leftover) await admin('/auth/v1/admin/users/' + leftover.id, 'DELETE')
 const created = await admin('/auth/v1/admin/users', 'POST', {
   email, password, email_confirm: true, user_metadata: { full_name: 'Dashboard E2E' },
@@ -66,7 +64,7 @@ execFileSync('psql', [
 console.log('PASS dashboard account and two projects seeded')
 
 async function ownerToken() {
-  const r = await fetch(api + '/auth/v1/token?grant_type=password', {
+  const r = await fetch(loopbackUrl(api, '/auth/v1/token?grant_type=password'), {
     method: 'POST',
     headers: { apikey: variables.ANON_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -77,13 +75,34 @@ async function ownerToken() {
   return body.access_token
 }
 
+// Second account that only receives the first project as a shared member.
+const sharedEmail = `browser-dashboard-shared-${Date.now()}@example.test`
+const leftoverShared = await findUserByEmail(sharedEmail)
+if (leftoverShared) await admin('/auth/v1/admin/users/' + leftoverShared.id, 'DELETE')
+const sharedUser = await admin('/auth/v1/admin/users', 'POST', {
+  email: sharedEmail, password, email_confirm: true,
+  user_metadata: { full_name: 'Dashboard Shared E2E' },
+})
+execFileSync('psql', [
+  '-X', '-v', 'ON_ERROR_STOP=1',
+  '-c', `update public.users set onboarding_completed = true where id = '${sharedUser.id}'`,
+  '-c', `delete from public.project_members where project_id = '${projectWithTasks}' and user_id = '${sharedUser.id}'`,
+  '-c', `insert into public.project_members(project_id,user_id,email,role,status) values ('${projectWithTasks}','${sharedUser.id}','${sharedEmail}','editor','active')`,
+], {
+  env: {
+    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
+    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
+  },
+  stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000,
+})
+
 // Seed 10 tasks (done 4, blocked 2, todo 4) through the same versioned PATCH
 // discipline the S1 board uses, then one pending-owner-approval PM plan.
 const token = await ownerToken()
 const authHeaders = { apikey: variables.ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Prefer: 'return=representation' }
 
 async function createTask(title, target) {
-  const r = await fetch(api + '/rest/v1/project_tasks', {
+  const r = await fetch(loopbackUrl(api, '/rest/v1/project_tasks'), {
     method: 'POST', headers: authHeaders,
     body: JSON.stringify({ project_id: projectWithTasks, title, created_by: created.id }),
     signal: AbortSignal.timeout(15000),
@@ -92,7 +111,7 @@ async function createTask(title, target) {
   assert(task?.id, 'task create failed for ' + title)
   let version = 1
   const move = async (to, reason) => {
-    const response = await fetch(api + '/rest/v1/project_tasks?id=eq.' + task.id, {
+    const response = await fetch(loopbackUrl(api, '/rest/v1/project_tasks?id=eq.' + task.id), {
       method: 'PATCH', headers: authHeaders,
       body: JSON.stringify({ status: to, version: version + 1, ...(reason ? { blocked_reason: reason } : {}) }),
       signal: AbortSignal.timeout(15000),
@@ -109,7 +128,7 @@ for (let i = 1; i <= 4; i += 1) await createTask(`E2E task done ${i}`, 'done')
 for (let i = 5; i <= 6; i += 1) await createTask(`E2E task blocked ${i}`, 'blocked')
 for (let i = 7; i <= 10; i += 1) await createTask(`E2E task todo ${i}`, 'todo')
 
-const planResponse = await fetch(api + '/rest/v1/rpc/create_pm_plan', {
+const planResponse = await fetch(loopbackUrl(api, '/rest/v1/rpc/create_pm_plan'), {
   method: 'POST', headers: authHeaders,
   body: JSON.stringify({
     p_project_id: projectWithTasks,
@@ -121,7 +140,7 @@ const planResponse = await fetch(api + '/rest/v1/rpc/create_pm_plan', {
 })
 const plan = await planResponse.json()
 assert(plan?.id, 'pm plan creation failed: ' + JSON.stringify(plan))
-const submit = await fetch(api + '/rest/v1/rpc/transition_pm_plan', {
+const submit = await fetch(loopbackUrl(api, '/rest/v1/rpc/transition_pm_plan'), {
   method: 'POST', headers: authHeaders,
   body: JSON.stringify({ p_plan_id: plan.id, p_expected_version: plan.version, p_action: 'request_approval' }),
   signal: AbortSignal.timeout(15000),
@@ -181,6 +200,52 @@ try {
   await page.getByText('접근 가능한 프로젝트', { exact: false }).first()
     .waitFor({ state: 'visible', timeout: 30000 })
   console.log('PASS returning visit renders the dashboard again')
+
+  // B-04: delay the owner's summary RPC, switch accounts mid-flight, and
+  // prove the late owner response never lands on the shared user's screen.
+  await page.route('**/rest/v1/rpc/get_dashboard_task_counts', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+    await route.continue()
+  })
+  await page.goto(site + '/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.waitForTimeout(800)
+  await page.goto(site + '/settings', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.getByRole('button', { name: '로그아웃' }).click()
+  await page.waitForURL((u) => u.pathname === '/login', { timeout: 30000 })
+  await page.unroute('**/rest/v1/rpc/get_dashboard_task_counts')
+  await page.locator('input[type=email]').fill(sharedEmail)
+  await page.locator('input[type=password]').fill(password)
+  await page.getByRole('button', { name: '임시 로그인' }).click()
+  // A brand-new account lands on onboarding first; shared members skip
+  // project creation and go straight to the dashboard.
+  await page.waitForURL((u) => ['/onboarding', '/dashboard'].includes(u.pathname), { timeout: 30000 })
+  if (page.url().includes('/onboarding')) {
+    await page.goto(site + '/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  }
+  await page.getByText('4 / 10 · 40%', { exact: false }).first()
+    .waitFor({ state: 'visible', timeout: 30000 })
+  const dashboardText = await page.locator('body').innerText()
+  assert(!dashboardText.includes('Dashboard Empty Project'), '이전 계정의 프로젝트가 새 계정 화면에 노출됨')
+  assert(dashboardText.includes('본인이 소유한 프로젝트는 없습니다'), '공유 전용 계정 안내가 표시되지 않음')
+  assert(dashboardText.includes('공유받은 프로젝트'), '공유 프로젝트 카드가 표시되지 않음')
+  console.log('PASS account switch mid-load keeps accounts isolated; shared-only layout is consistent')
+
+  // 오류 후 재시도: RPC를 한 번 실패시킨 뒤 '다시 시도'로 복구한다.
+  let failOnce = true
+  await page.route('**/rest/v1/rpc/get_dashboard_task_counts', async (route) => {
+    if (failOnce) {
+      failOnce = false
+      await route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"fixture failure"}' })
+      return
+    }
+    await route.continue()
+  })
+  await page.goto(site + '/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.getByRole('button', { name: '다시 시도' }).click()
+  await page.getByText('4 / 10 · 40%', { exact: false }).first()
+    .waitFor({ state: 'visible', timeout: 30000 })
+  await page.unroute('**/rest/v1/rpc/get_dashboard_task_counts')
+  console.log('PASS failed summary load recovers through the retry button')
 } finally {
   if (browser) await browser.close().catch(() => {})
 }

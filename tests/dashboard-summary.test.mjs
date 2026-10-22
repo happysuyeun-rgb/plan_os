@@ -7,8 +7,13 @@ const source = readFileSync(new URL('../src/lib/dashboardSummary.ts', import.met
 const js = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText
-const { buildWorkSummaries, formatCompletionRate, sortDashboardRows, summarizeTotals } =
-  await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'))
+const {
+  buildWorkSummaries,
+  buildWorkSummariesFromCounts,
+  formatCompletionRate,
+  sortDashboardRows,
+  summarizeTotals,
+} = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'))
 
 function rowsOf(projectId, counts) {
   const rows = []
@@ -61,4 +66,24 @@ test('다른 프로젝트의 업무 행은 집계에 섞이지 않는다', () =>
   const isolated = buildWorkSummaries(['X'], rowsOf('Y', { done: 3 }), new Map())
   assert.equal(isolated[0].total, 0)
   assert.equal(isolated[0].completionRate, null)
+})
+
+test('서버 집계 RPC 행으로도 같은 완료율이 계산된다 (1001건 규모 포함)', () => {
+  const fromCounts = buildWorkSummariesFromCounts(
+    ['A', 'B'],
+    [
+      { project_id: 'A', total: 1001, done: 400, in_progress: 150, in_review: 150, blocked: 100 },
+      { project_id: 'B', total: 2, done: 2, in_progress: 0, in_review: 0, blocked: 0 },
+    ],
+    new Map([['A', 3]]),
+  )
+  const a = fromCounts.find((s) => s.projectId === 'A')
+  assert.equal(a.total, 1001)
+  assert.equal(a.done, 400)
+  assert.equal(a.blocked, 100)
+  assert.equal(a.pendingApprovals, 3)
+  assert.equal(a.completionRate, 40)
+  const totals = summarizeTotals(fromCounts)
+  assert.equal(totals.taskTotal, 1003)
+  assert.equal(totals.doneTotal, 402)
 })

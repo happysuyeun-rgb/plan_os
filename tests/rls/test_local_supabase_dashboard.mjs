@@ -155,4 +155,68 @@ const plansVisible = await via(owner, { path: '/rest/v1/pm_plans?select=id&statu
 assert.strictEqual(plansVisible.status, 200)
 console.log(`대시보드: 승인 대기 쿼리 동작 (현재 ${plansVisible.body?.length ?? 0}건 pending) 확인`)
 
+// ------------------------------------------------------------------
+// B-01: 서버 집계 RPC는 1,001건에서도 잘리지 않고 역할별로 격리된다.
+const [bulkProject] = await must('대량 fixture 프로젝트 생성', via(owner, {
+  path: '/rest/v1/projects',
+  method: 'POST',
+  body: { user_id: owner.id, title: 'DASH-BULK', description: 'bulk fixture', service_type: 'SaaS', target_user: 'testers' },
+}))
+const bulkSeeds = []
+for (let i = 0; i < 1001; i += 1) {
+  bulkSeeds.push({ project_id: bulkProject.id, title: `BULK-${i}`, created_by: owner.id })
+}
+for (let offset = 0; offset < bulkSeeds.length; offset += 200) {
+  const chunk = bulkSeeds.slice(offset, offset + 200)
+  await must('대량 업무 삽입', via(owner, {
+    path: '/rest/v1/project_tasks',
+    method: 'POST',
+    body: chunk,
+  }))
+}
+const { execFileSync } = await import('node:child_process')
+const bulkSql = (sql) => execFileSync('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], {
+  env: {
+    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
+    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
+  },
+  encoding: 'utf8', timeout: 60000,
+})
+bulkSql(`update public.project_tasks set status='in_progress', version=2 where project_id='${bulkProject.id}' and title like 'BULK-%' and (substring(title from 6))::int < 550`)
+bulkSql(`update public.project_tasks set status='in_review', version=3 where project_id='${bulkProject.id}' and status='in_progress' and (substring(title from 6))::int < 400`)
+bulkSql(`update public.project_tasks set status='done', version=4 where project_id='${bulkProject.id}' and status='in_review' and (substring(title from 6))::int < 250`)
+bulkSql(`update public.project_tasks set status='blocked', version=3, blocked_reason='bulk blocked' where project_id='${bulkProject.id}' and status='in_progress' and (substring(title from 6))::int between 400 and 499`)
+// done 250, in_review 150, blocked 100, in_progress 50, todo 451 = 1001
+
+async function rpcCounts(person, projectIds) {
+  const res = await via(person, {
+    path: '/rest/v1/rpc/get_dashboard_task_counts',
+    method: 'POST',
+    body: { p_project_ids: projectIds },
+  })
+  assert.strictEqual(res.status, 200, '집계 RPC 실패: ' + JSON.stringify(res.body))
+  return new Map((res.body ?? []).map((row) => [row.project_id, row]))
+}
+
+const bulkCounts = await rpcCounts(owner, [bulkProject.id])
+assert.deepStrictEqual(bulkCounts.get(bulkProject.id), {
+  project_id: bulkProject.id, total: 1001, done: 250, in_progress: 50, in_review: 150, blocked: 100,
+})
+console.log('대시보드: 1,001건 서버 집계가 잘리지 않음')
+
+const outsiderCounts = await rpcCounts(people.outsider, [bulkProject.id])
+assert.strictEqual(Number(outsiderCounts.get(bulkProject.id)?.total ?? -1), 0, 'outsider에게 업무 수가 노출됨')
+const editorCounts = await rpcCounts(people.editor, [bulkProject.id])
+assert.strictEqual(Number(editorCounts.get(bulkProject.id)?.total ?? -1), 0, '미공유 editor에게 업무 수가 노출됨')
+console.log('대시보드: 집계 RPC도 RLS로 격리됨')
+
+const approvalCounts = await via(owner, {
+  path: '/rest/v1/rpc/get_dashboard_pending_approvals',
+  method: 'POST',
+  body: { p_project_ids: [projectOne, projectTwo, bulkProject.id] },
+})
+assert.strictEqual(approvalCounts.status, 200)
+assert(approvalCounts.body.every((row) => Number(row.pending_approvals) === 0))
+console.log('대시보드: 승인 대기 RPC가 프로젝트별로 0건을 정확히 반환')
+
 console.log('test_local_supabase_dashboard 통과')
