@@ -4,22 +4,14 @@
 // the existing S1 board. Nothing invokes AI or billing.
 // Disposable local Supabase + local Vite dev server only.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
 import { createAdminClient, loopbackUrl } from '../helpers/rest.mjs'
+import { runPsqlStatements } from '../helpers/psql.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
-for (const key of ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD']) {
-  assert(!process.env[key], 'Hosted Supabase credentials are not allowed')
-}
-const raw = execFileSync('supabase', ['status', '-o', 'env'], {
-  cwd: localDir, encoding: 'utf8', timeout: 30000,
-})
-const variables = Object.fromEntries(raw.split('\n').flatMap((line) => {
-  const match = line.match(/^([A-Z_]+)=(.*)$/)
-  return match ? [[match[1], match[2].replace(/^["']|["']$/g, '')]] : []
-}))
+const variables = readLocalSupabaseEnv(localDir)
 assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
@@ -49,18 +41,11 @@ const created = await admin('/auth/v1/admin/users', 'POST', {
 
 const projectWithTasks = 'aaaaaaaa-0000-4000-8000-000000000001'
 const projectEmpty = 'aaaaaaaa-0000-4000-8000-000000000002'
-execFileSync('psql', [
-  '-X', '-v', 'ON_ERROR_STOP=1',
-  '-c', `delete from public.projects where id in ('${projectWithTasks}','${projectEmpty}')`,
-  '-c', `insert into public.projects(id,user_id,title,service_type) values ('${projectWithTasks}','${created.id}','Dashboard Tasks Project','SaaS')`,
-  '-c', `insert into public.projects(id,user_id,title,service_type) values ('${projectEmpty}','${created.id}','Dashboard Empty Project','SaaS')`,
-], {
-  env: {
-    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
-    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
-  },
-  stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000,
-})
+runPsqlStatements([
+  `delete from public.projects where id in ('${projectWithTasks}','${projectEmpty}')`,
+  `insert into public.projects(id,user_id,title,service_type) values ('${projectWithTasks}','${created.id}','Dashboard Tasks Project','SaaS')`,
+  `insert into public.projects(id,user_id,title,service_type) values ('${projectEmpty}','${created.id}','Dashboard Empty Project','SaaS')`,
+])
 console.log('PASS dashboard account and two projects seeded')
 
 async function ownerToken() {
@@ -83,18 +68,11 @@ const sharedUser = await admin('/auth/v1/admin/users', 'POST', {
   email: sharedEmail, password, email_confirm: true,
   user_metadata: { full_name: 'Dashboard Shared E2E' },
 })
-execFileSync('psql', [
-  '-X', '-v', 'ON_ERROR_STOP=1',
-  '-c', `update public.users set onboarding_completed = true where id = '${sharedUser.id}'`,
-  '-c', `delete from public.project_members where project_id = '${projectWithTasks}' and user_id = '${sharedUser.id}'`,
-  '-c', `insert into public.project_members(project_id,user_id,email,role,status) values ('${projectWithTasks}','${sharedUser.id}','${sharedEmail}','editor','active')`,
-], {
-  env: {
-    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
-    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
-  },
-  stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000,
-})
+runPsqlStatements([
+  `update public.users set onboarding_completed = true where id = '${sharedUser.id}'`,
+  `delete from public.project_members where project_id = '${projectWithTasks}' and user_id = '${sharedUser.id}'`,
+  `insert into public.project_members(project_id,user_id,email,role,status) values ('${projectWithTasks}','${sharedUser.id}','${sharedEmail}','editor','active')`,
+])
 
 // Seed 10 tasks (done 4, blocked 2, todo 4) through the same versioned PATCH
 // discipline the S1 board uses, then one pending-owner-approval PM plan.

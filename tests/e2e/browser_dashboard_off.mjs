@@ -2,19 +2,14 @@
 // the dashboard must stay usable and must not invent progress numbers.
 // Run with a Vite server started WITHOUT VITE_S1_SERVER_TASKS.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
 import { createAdminClient } from '../helpers/rest.mjs'
+import { runPsqlStatements } from '../helpers/psql.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
-const raw = execFileSync('supabase', ['status', '-o', 'env'], {
-  cwd: localDir, encoding: 'utf8', timeout: 30000,
-})
-const variables = Object.fromEntries(raw.split('\n').flatMap((line) => {
-  const match = line.match(/^([A-Z_]+)=(.*)$/)
-  return match ? [[match[1], match[2].replace(/^["']|["']$/g, '')]] : []
-}))
+const variables = readLocalSupabaseEnv(localDir)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 const site = 'http://127.0.0.1:5173'
 const email = `browser-dashboard-off-${Date.now()}@example.test`
@@ -25,16 +20,9 @@ const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROL
 const created = await admin('/auth/v1/admin/users', 'POST', {
   email, password, email_confirm: true, user_metadata: { full_name: 'Dashboard Off E2E' },
 })
-execFileSync('psql', [
-  '-X', '-v', 'ON_ERROR_STOP=1',
-  '-c', `update public.users set onboarding_completed = true where id = '${created.id}'`,
-], {
-  env: {
-    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
-    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
-  },
-  stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000,
-})
+runPsqlStatements(
+  `update public.users set onboarding_completed = true where id = '${created.id}'`,
+)
 
 let browser
 try {
