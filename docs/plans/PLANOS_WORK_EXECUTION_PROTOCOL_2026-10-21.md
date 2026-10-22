@@ -1,10 +1,10 @@
 # PlanOS 실행계획 기반 개발 운영규칙 v1.0
 
 작성: 2026-10-21 · 상태: **즉시 적용하는 업무 운영 기준**  
-상위 기준: [통합 실행계획서](PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md)
+상위 기준: [통합 실행계획서](PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) + [2026-10-22 Cursor 실행전략](CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md) + [화면·기능 교차감사 V4](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md). 기존 문서의 과거 다음 작업은 작성 시점의 스냅샷이다.
 
 ## 매 작업의 필수 순환
-1. **계획서 먼저 확인:** 작업을 시작하기 전 GitHub `main`의 통합 실행계획서를 읽고 현재 게이트, 다음 우선 작업, 선행조건, 누락/불일치 목록 확인.
+1. **계획서·정본 먼저 확인:** 실제 GitHub `main` + 최신 PR #30/#25/#27/#28과 통합 실행계획, [Cursor 문서→기능 구현 전략](CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md)을 함께 읽고, 기능정의서/화면/TF/API/실코드의 현재 vs TARGET과 P0 목록을 확인.
 2. **한 개의 검증 가능한 기능 단위 선택:** 해당 작업의 목적·변경 파일·수용 기준·테스트와 되돌리기/운영 위험을 계획서에 기재. 반드시 기존 문서와 코드의 실제 상태를 비교.
 3. **개발:** 별도 작업 브랜치/PR에서 기능 구현. 데이터 보호 P0에 영향 있는 변경은 운영 DB·배포·비용을 유발하는 외부 API와 분리.
 4. **검수:** 정적 테스트뿐 아니라 가능할 때 빌드, 회귀, 권한, 오류·실패·경계값 테스트. 검사 누락·불일치·충돌을 기록하고 수정 뒤 재검수.
@@ -24,8 +24,8 @@
 
 | 레인 | 현재 다음 단위 | 완료 기준 |
 |---|---|---|
-| 기능 레인 | AI 전문가 선택·업무 요청·승인 전 Mock 플로우의 범위 결정 및 실제 화면 개발 | 화면 흐름, 상태 및 실패 처리, 빌드·테스트, PR 증빙 |
-| P0 안정화 레인 | 기존 문서 저장/복구의 CAS 경합, 직접 쓰기 우회 및 PR #15/#19 정합성 | 관련 DB/브라우저 테스트 PASS 전 운영 DB·main 반영 금지 |
+| 기능 레인 | **[Issue #32](https://github.com/happysuyeun-rgb/plan_os/issues/32)** 의 F401 사람 계획 draft 서버 저장 → F402 owner 승인 → S1 업무 보드 1건 연결 | 실제 DB + JWT/RLS/Chromium, 중복 승인·동시성/새로고침 수용, Draft PR SHA/CI |
+| P0 안정화 레인 | **[PR #30](https://github.com/happysuyeun-rgb/plan_os/pull/30)** G1 C-03 통합 후 마지막 문서 최초 생성 UPSERT 경합과 기존 고객 DB/배포 호환성 확인 | 격리 Auth+CAS+브라우저 PASS, 생산 rollout/백업/승인 계획. PR #15~24 중복 병합 금지 |
 
 ## 금지
 - 별도 승인 없는 운영 Supabase DB 마이그레이션·운영 배포·유료 AI 실행.
