@@ -36,10 +36,15 @@ begin
   ) then
     raise exception 'INVALID_PLAN_TRANSITION' using errcode = 'P4001';
   end if;
-  -- A transition may never smuggle a content change: the reviewed text
-  -- must be byte-identical to what was submitted for approval.
+  -- A review transition may never smuggle a content change: the
+  -- reviewed text must be byte-identical to what was submitted for
+  -- approval. Reopening a rejected plan into a draft is the one
+  -- exception: save_pm_plan_draft performs it together with the edit
+  -- that starts the next review round, and it can never touch a plan
+  -- that is pending or approved.
   if new.status is distinct from old.status
-      and new.objective is distinct from old.objective then
+      and new.objective is distinct from old.objective
+      and not (old.status in ('rejected', 'needs_revision') and new.status = 'draft') then
     raise exception 'PLAN_CONTENT_CHANGE_WITH_TRANSITION' using errcode = '23514';
   end if;
   -- Content edits are draft-only: while approval is pending or granted,
