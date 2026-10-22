@@ -170,14 +170,8 @@ for (let offset = 0; offset < bulkSeeds.length; offset += 200) {
     body: chunk,
   }))
 }
-const { execFileSync } = await import('node:child_process')
-const bulkSql = (sql) => execFileSync('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], {
-  env: {
-    ...process.env, PGHOST: '127.0.0.1', PGPORT: process.env.PLANOS_LOCAL_DB_PORT ?? '55322',
-    PGUSER: 'postgres', PGPASSWORD: 'postgres', PGDATABASE: 'postgres', PGSSLMODE: 'disable',
-  },
-  encoding: 'utf8', timeout: 60000,
-})
+const { runPsqlSeed } = await import('../helpers/psql.mjs')
+const bulkSql = (sql) => runPsqlSeed(sql)
 bulkSql(`update public.project_tasks set status='in_progress', version=2 where project_id='${bulkProject.id}' and title like 'BULK-%' and (substring(title from 6))::int < 550`)
 bulkSql(`update public.project_tasks set status='in_review', version=3 where project_id='${bulkProject.id}' and status='in_progress' and (substring(title from 6))::int < 400`)
 bulkSql(`update public.project_tasks set status='done', version=4 where project_id='${bulkProject.id}' and status='in_review' and (substring(title from 6))::int < 250`)
