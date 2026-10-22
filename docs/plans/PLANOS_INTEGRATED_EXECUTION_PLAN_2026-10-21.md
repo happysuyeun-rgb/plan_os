@@ -305,3 +305,68 @@
 - [ ] P1: S3 고객 고지, 내부 MVP 역할 1종, 철회·변경 후 복구 UX, 사람/AI/수락 상태 분리, 기능 추적 상태 갱신.
 - [ ] Cursor 로컬 감사·통합 결과 02가 도착하면 증빙을 대조해 실제 코드 결함과 정책 변경 필요 항목을 분리하고 우선순위를 재조정.
 - [ ] 운영 DB·배포·PR 병합·유료 호출 없이 설계 문서만 작성.
+
+## 2026-10-21 제품 보정 — AI 직원 동의 기반 경력 성장/단가 분리 (Draft PR #28)
+
+- [x] **설계 문서 작성/연결:** [AI 경력 동의·검증일수·승급·가격 정책](../product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) 신설, [AI 직원 직무·성격·모델·정식 PM 설계](../product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)/기능 추적/운영정책 링크 반영.
+- [x] **요구 복원:** 고객 채용 시 경력 적립 허용과 공개/익명 공개/비공개를 별도 설정; 완료 후 최종 승인·고용주 후기; 검증된 활동일수/수락 실적의 초급→중급→고급 성장; 초급 채용 단가가 낮아야 한다는 상품 전략.
+- [ ] **S3 채용·계약 UX:** 프로젝트×직원×목적별 동의/철회·비공개/익명 레퍼런스, 기존 계약·가격 고지, 임의 기본 동의 금지.
+- [ ] **S5/S6 수행·결과:** 직원별 실제 작업·검증 활동일수 원장, 중복 제외, 완료 수락·고객 평가, 권한/철회·RLS.
+- [ ] **직원 승급/가격:** 품질+수락+경력일수 승급 규칙과 가격 버전·계약 단가 고정, 초급 저가 실험·원가 확인.
+- [ ] **검증:** 정책 EX-01~EX-14 실제 API/JWT/RLS/E2E; 고객 비공개 원본 외부 전송/직원별 교차 누출/모델 학습 무단 전용 없음.
+- **상태:** 제품 문서 초안만 작성. 실제 운영 DB 변경·앱 구현·실모델 API/과금·main 병합/배포는 전혀 이 변경으로 승인하지 않는다. G1 P0 저장 안정화 게이트 유지.
+
+
+## 2026-10-21 서비스기획서 v2.0 전면 개정 및 문서 정합화 (Draft PR #28)
+
+- [x] [서비스기획서 v2.0](../product/SERVICE_PLAN_V1_2026-10-20.md)을 기존 8장 부분 수정본에서 **18장 전체 서비스 기준서로 재작성**: 기존 AI 인터뷰/기획 KEEP, 직무·성격(F/T)·GPT/Claude 모델, 직원 단발/정식 PM 다중 프로젝트, 채용 동의·검증 활동일수·승급·초급 저가, 화면·예외·원가·수익·의사결정.
+- [x] 관련 PRD, 기능정의서, 운영정책, IA, 화면명세, 업무흐름, 데이터 모델, API 계약, 개발 인계 명세, 문서 색인·구조 가이드에 v2 핵심 계약과 크로스링크 갱신.
+- [ ] **미구현:** 직원 이력/경력 승급/가격 실제 DB·API·UI, 실제 PM 정식 채용, 다중 프로젝트 안전 운영, GPT·Claude 실모델 호출. 제품 설계 반영을 개발 완료로 표기 금지.
+- [ ] **시나리오 기준:** STAFF-01~11, EX-01~14 및 최신 서비스기획서 시나리오 A(기본 AI→단발 의뢰), B(PM 2개 프로젝트 배정/해임), C(초급 직원 성장/고객 비공개 철회) 실제 브라우저/RLS 검증.
+- [ ] **QA/정합:** 문서 링크·충돌 확인, 기존 기획 인터뷰/5종 문서/자동저장·버전·댓글 회귀, G1 P0와 독립 Mock 경계, 상용 데이터/가격/약관/모델 공급자 별도 승인.
+- **승인:** 이 문서와 관련 기획 변경은 Draft PR #28에만 포함. 사용자 사전 승인 없는 운영 DB/배포/유료 AI 호출 및 위험 Draft PR 병합 없음.
+
+## 2026-10-21 v2.0 누락·불일치 설계서 교차검수 (Draft PR #28)
+
+- [x] **서비스기획서 v2.0 전체 재구성 GitHub 확인**: 기존 AI 기획+직원 직무/성격/모델+정식 PM 다중 프로젝트+경력 공개 동의/검증일수/초급 저가·승급+가격/운영/검수/원가. 기존 파일명 `SERVICE_PLAN_V1_2026-10-20.md`은 링크 호환 유지.
+- [x] **설계 갭 대장**: [V2-01~18](../quality/PLANOS_V2_DESIGN_CROSS_AUDIT_2026-10-21.md) 기록. 완료는 문서 계약 보정만 뜻함. 신규 IA N24~32 / TF-S01~12 / STAFF-API-01~14 / 구현 H1~H7 / 위협 TM-13~19 매핑.
+- [x] **문서 상충 직접 수정:** 초기 MVP editor의 계획/실행·산출물 최종 승인 C→D, owner만 승인; PRD 다른 제공사 자동 fallback 가능성 제거·재동의 원칙 보강; 첫 단발 기획 검수 MVP와 전체 인력사무소 상품 구별.
+- [ ] **P0 G1 잔여:** 기존 저장/복원/채팅 writer CAS·RLS/PR 충돌 실제 DB/브라우저 재검증 후 단계 통합.
+- [ ] **P0 G3/H1~H3 실제 기능:** 기존 기획→직원 비교·채용·PM A/B 배정·경력 적립/공개 동의(Mock 먼저), 고객별 RLS·서버 API 검증.
+- [ ] **P0 G4~G6/EX:** 지속 PM 일정·실작업/검수·직원 경력 원장/승급/가격 스냅샷·철회/캐시·안전한 공급자 모델, 격리 DB/E2E 검증.
+- [ ] **계약/상품 미결정:** 기본 PM/직원 무료 제공량, 지원 GPT/Claude 모델과 능력/도구, 경력/등급 임계값·시간대, 실제 채용 단가·원가·환불, 고객 IP/개인정보 철회 처리.
+- **실행/배포 상태:** `main` 병합, 운영 DB 변경, 실 AI 유료 실행·과금/배포 **하지 않음**. 신규 문서 내용은 출시 승인이나 기능 완료 판정을 의미하지 않는다.
+
+## 2026-10-21 전수 재감사 V3/상세 스토리보드/데이터 인가 계약 (Draft PR #28)
+
+- [x] **문서 감사:** 브랜치 `docs/` Markdown **53개(새 산출물 추가 전 목록)** 파일을 조회해 제품/TF/UX/기술/QA/구 PlanOS 설계·이전 개발 현황 교차 대조. [V3-01~18 결함 대장](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) (문서 감사, 코드 QA 아님).
+- [x] **ID/설계 정본:** TF-01~46 (TF-S는 대응 alias), 화면 N01~N32 (ST-UI/P는 alias), 직원 API STAFF-API-01~14 /api/v1 (/v1/hirings 구 후보), 데이터 직원 `agent_profiles`/고용 묶음 `staff_engagements`/프로젝트별 `agent_contracts`+`agent_assignments`, 별도 경력 기여 이벤트+직원 고유 활동일 projection로 설계 선택.
+- [x] **UI 산출물:** [12개 인력사무소 핵심 화면군 상세 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) + [현재 C01~11/목표 N01~32 전 화면 수용 매트릭스](../ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md); 기존 인터뷰/5종 문서/채팅·MD/ZIP/버전 복원 KEEP.
+- [x] **데이터/권한 설계:** [AI 직원 단일 데이터·인가·API 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md): owner-only 계약/유료 실행·수락, 프로젝트별 PM A/B 선택·C 차단, 계약 모델/가격 snapshot, 경력 동의/공개 분리·일수 중복/철회·승급, DATAUTH-01~15.
+- [x] **제품 미결정 권고:** [기본 AI vs 정식 PM, 경력 등급/가격·공개·모델·worker/원가 제안](../product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md).
+- [ ] **P0 G1 실제 안전:** 저장/복원/CAS·채팅 writer/RLS·PR stack 충돌·JWT/격리 DB/브라우저 회귀 PASS. 새 직원/PM 실 고객자료 쓰기 전 완료 필수.
+- [ ] **P0 코드/DB 상세검증:** 실제 `agent_*` migration 존재·FK/상태/version, multi-project atomic assignment·경력 일수/동의 ledger DDL/worker 권한, OpenAPI 타입 생성/실 QA.
+- [ ] **서비스 검증:** 사용 모델 제공자/가격·원가, 승급 임계, 고객 공개 권리·법률·철회, 구독/자동 PM 스케줄러/사용량. 운영 DB/배포/실과금/모델 API는 승인 전 금지.
+- **판정:** 모든 [x]는 **문서/설계 산출물만 완료**를 뜻한다. 실 기능/테스트/운영 적용 PASS로 계산하지 않는다.
+
+## 2026-10-21 v3 재감사·스토리보드/계약 인계 (Draft PR #28)
+
+- [x] 53개 docs Markdown 목록·내용/상태 전수 재분류 및 [V3-01~23 중복·불일치](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) 기록. 기구현·설계·모의·운영 승인별 상태 분리.
+- [x] Task Flow TF-01~46 정본 + TF-S 중복 별칭 대응표, IA N01~32 정본 + ST-UI/P-ID 대응표, `/v1/hirings` 후보를 STAFF-API-01~15로 매핑.
+- [x] [직원 채용·경력 동의·PM 복수 프로젝트 화면별 상세 스토리보드](../ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) 작성.
+- [x] [데이터·권한·API 단일 TARGET 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) 보정: main SQL 실제 migration(001~008,011,012)에는 agent_/staff_ AI 직원 테이블 없음; 서버 DB 구현 전임을 정정.
+- [x] STAFF-API-15 owner **최종 채용 수락·선택 프로젝트별 계약/배정 원자 활성화** 추가; STAFF-API-04는 draft 전용, 실제 모델/예산/경력 공개는 별도 동의.
+- [x] [해결되지 않은 제품 설계문제 DS-01~16의 권고](../product/AI_STAFF_OPEN_DESIGN_DECISIONS_2026-10-21.md) 작성. 무료/유료 PM 분리, 경력일/모델·등급/가격, 조직 공개권한, 철회/해임/작업중단, 본격 출시 게이트.
+- [ ] 현재 App.tsx 실제 route 및 009~017 Draft migration 중복·기존 PR 의존 상태 확인 → SQL/DTO/OpenAPI 작성, 격리 JWT/RLS/E2E.
+- [ ] G1 P0 autosave/restore/chat/version CAS·project_members RLS 재현/해결(신규 직원 코드/운영 승인과 분리).
+- [ ] N16/17/19/20/N27~32 실제 Mock UX/접근성 E2E, F401 브라우저 검증, PM worker/비용·공급자 모델 실제 PoC(승인 전 호출 금지).
+- **운영 안전:** 단일 브랜치 Draft 문서 설계, main 병합·운영 DB 변경·고객 데이터 외부 전송·상용 가격·배포 진행하지 않음.
+
+
+## 2026-10-22 화면·기능 V4 교차감사 및 Cursor 문서 기반 코드 착수 계약 (Draft PR #28)
+
+- [x] **Cursor 문서 기반 실행전략 작성:** [실행전략 v1.0](CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md) / [Cursor 프로젝트 규칙](../../.cursor/rules/planos-spec-driven.mdc), 정본 읽기/ID 매핑/각 슬라이스의 코드·JWT/RLS·Chromium/CI 증빙 기준. 이 문서의 과거 작업 큐는 작성 시점 기록이며 **다음 작업은 Issue #32** 기준.
+- [x] **화면·기능 정합 감사:** [V4 A4-01~22](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md), C01~11/N01~32/기능 F-001~801·STAFF-01~11의 누락/상충 점검. 기능·TF/화면/IA/운영규칙/README 직접 정정. 설계 수정만 완료.
+- [ ] **다음 실제 코드 개발 1:** [Issue #32](https://github.com/happysuyeun-rgb/plan_os/issues/32) DEV-01 F-401 사람 계획의 격리 서버 저장·owner/editor 역할 RLS·새로고침·409 → DEV-02 F-402 owner 승인·S1 task 1건 연결. 신규 Draft PR/실제 E2E 전 완료 체크 금지.
+- [ ] **병합 게이트:** G1 [PR #30](https://github.com/happysuyeun-rgb/plan_os/pull/30) C-03 최신 HEAD `d9e34e9` 이후 최초 생성 UPSERT 경합 보완·DB/배포 호환성 결정 대기. 현재 `main` 미병합. PR #25/#27은 Mock Draft, 신규 코드에 재사용하되 중복 병합 금지.
+- **실제 제품 코드·운영 상태:** 이번 2026-10-22 작업은 PR #28의 문서 및 Cursor 읽기 규칙만 변경, 앱·운영 DB·Vercel·유료 공급자 API 미변경.

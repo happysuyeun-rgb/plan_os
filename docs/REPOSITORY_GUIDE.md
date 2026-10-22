@@ -40,12 +40,17 @@ plan_os/
 
 `src/`, `supabase/`, `tests/` 등의 표시 경로는 **실제로 확인한 대표 폴더**이며, 상기 트리는 이해를 돕기 위한 축약본이다.
 
+> **2026-10-21 DRAFT v2.0 교차검수:** [서비스기획 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md)(파일명은 구버전 링크 호환용), [제품/설계 누락·불일치 감사 V2-01~18](quality/PLANOS_V2_DESIGN_CROSS_AUDIT_2026-10-21.md), [경력동의·승급 가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md). 이 초안은 `main` 운영 완성 기준이 아니라 PR #28의 목표 문서이며, 실제 DB/권한/브라우저 검증이 필요하다.
+
+> **설계 문서 정본 v3 (Draft PR #28):** [53개 docs 전수 재감사](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md) / [상세 스토리보드](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) / [데이터·권한·API 단일 구현 계약](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) / [남은 결정 권고안](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md). TF-S/ ST-UI/ /v1/hirings 등 중복안은 정본 참조 대응표로만 사용. 기존 V1/2026.06 구현 완료 주장은 G1 재검증 없이 신규 기능 출시 증거로 사용하지 않는다.
+
 ## 2. 일을 할 때 무엇을 열까?
 
 | 질문/작업 | 가장 먼저 볼 곳 | 이어서 확인 |
 |---|---|---|
 | 다음에 무엇을 개발하나? | [통합 실행계획](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) | [작업 운영규칙](plans/PLANOS_WORK_EXECUTION_PROTOCOL_2026-10-21.md) |
-| 이 기능은 무엇을 해야 하나? | [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) | [서비스기획서](product/SERVICE_PLAN_V1_2026-10-20.md), [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) |
+| 이 기능은 무엇을 해야 하나? | [통합 서비스기획서 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md) | [기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md), [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) |
+| AI 직원 성향·경력/가격·채용 정책은? | [AI 직원 상세 설계](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md) | [동의·경력·승급·가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md), [기능 추적](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) |
 | 화면 흐름이나 IA는? | [IA](ux/IA.md), [화면명세](ux/SCREEN_SPEC.md) | [업무 흐름](product/TASK_FLOWS.md) |
 | API·데이터 구조는? | [MVP 구현 명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) | [API 계약](engineering/API_CONTRACTS.md), [데이터 모델](engineering/DATA_MODEL.md) |
 | 실제 화면을 수정하나? | `src/pages/` | `src/components/`, `src/store/`, `src/lib/` |

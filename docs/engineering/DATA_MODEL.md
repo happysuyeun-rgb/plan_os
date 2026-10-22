@@ -1,8 +1,8 @@
 # PlanOS 3.0 — 데이터 모델 명세 (TARGET)
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
+**최종 수정일:** 2026-10-21  
+**문서 버전:** v0.3 (TARGET 직원 스키마 단일화 및 실제 main SQL 경계)  
 **진행 상태:** 설계 정합성 1차 보완 / SQL 작성·적용·실 DB 검증 전  
 **기준:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [AI 아키텍처](ARCHITECTURE.md)  
 **증빙:** GitHub `main`의 `supabase/migrations/001~008` 정적 확인. 실제 운영 DB 적용 상태는 미확인.
@@ -77,7 +77,7 @@
 | AI 실행/도구 호출 | 읽기·승인/취소 | 허용 조회 | 요약 조회 | 특정 run 이벤트 기록 |
 | 승인 | 결정 | 명시적 위임 없으면 결정 불가 | 읽기 제한 | 승인 상태 검증만 |
 | 비용 원장 | 읽기·설정 | 최소 필요 요약 | 거부 | append-only 기록 |
-| 검증/수락 | 수락·반려 | 명시적 위임 시 수락 | 읽기 | 검증 이벤트만 |
+| 검증/수락 | 수락·반려 | 문서/계획 초안만, 최종 수락 불가(초기 MVP) | 읽기 | 검증 이벤트만 |
 
 **테넌트 차단:** API 조회와 RLS 모두 `project_id` 및 역할을 확인. 내부 service_role 요청은 별도 정책 계층에서 검증.
 
@@ -118,3 +118,37 @@
 |---|---|---|---|
 | 2026-10-16 | v0.1 | CURRENT 스키마 대비 TARGET 데이터 모델·무결성·권한·단계적 변경 전략 | 검토 전 |
 | 2026-10-16 | v0.2 | DQ-06 유니크 키 불일치 정리, 승인·원장·FK 데이터 무결성 후속 검증 명시 | 검토 전 |
+
+
+
+## 2026-10-21 직원 스키마 정합화 — 실제 SQL 확인 + 단일 TARGET 모델
+
+> 데이터·권한·API **정본**: [AI 직원 데이터·인가 구현 계약 v1.0](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md). 이전 staff_identity/staff_project_assignment/staff_experience_ledger 후보 표는 독립 DB CREATE 지시가 아니다.
+
+### 실제 main DB migration의 확인 범위
+
+- 2026-10-21 GitHub main 커밋 `3e3fc66018067e009e95fa9b7917bad87fb38499`의 supabase/migrations 파일은 001~008, 011, 012. 001/011/012의 CREATE TABLE을 직접 확인.
+- **아직 SQL CREATE TABLE이 없는 목표 객체**: agent_profiles / agent_contracts / agent_assignments / staff_engagements / staff_work_contributions / staff_experience_daily / staff_tier_history / ai_runs. 앞의 TARGET 3절 표는 기구현/운영 반영 근거가 아니다.
+- 011 project_tasks와 012 audit_source_manifests는 GitHub SQL 파일에 **운영 적용 전 검수 경고**. 실제 hosted DB 마이그레이션 적용 여부는 별도 증빙이 필요.
+
+### TARGET 구현 이름·관계 정본 (SQL 미작성)
+
+| 이전 중복 명칭 | 선택한 단일 개발 객체 | 불변식 |
+|---|---|---|
+| staff_identity | agent_profiles (id = staff_id) | 글로벌 직원 캐릭터/직무·가상 정보. 고객 문서/개인정보 기억 저장 금지 |
+| staff_project_assignment | agent_assignments | engagement_id + project_id 각각 승인 배정, 미래 프로젝트 자동 포함 거부 |
+| staff_engagement | staff_engagements | 고용주별 계약/기간·가격 snapshot을 소유하는 채용 묶음. 단일·다중 프로젝트 모두 허용 |
+| 직원별 실제 프로젝트 실행 권한 | agent_contracts | staff_engagements에 속한 **프로젝트별** terms/scope/digest/예산 계약 |
+| staff_work_event/verified_work_event | staff_work_contributions | 프로젝트·직원·run 별 실제 검증 이벤트, 서버 전용·중복 방지 |
+| staff_experience_ledger / day counter | staff_experience_daily | unique staff_id + work_day_kst **projection**. 근거 contribution의 동의가 철회되면 다시 계산 |
+| staff_experience_consent | staff_experience_consents | 프로젝트×직원×목적/버전, 기본 적립 거부·공개 비공개, 공개와 모델 데이터 전송 분리 |
+| staff_tier_history / rate / reviews | staff_tier_history + staff_rate_catalog + staff_employer_reviews | 실제 일수/수락/역량 검증, 현재 계약 등급·가격 동결 |
+| staff_public_reference | staff_public_references + staff_publication_jobs | 동의된 허용 공개 필드/익명화·철회·검색 캐시 정정 |
+
+**직원 다중 프로젝트:** 고객이 A/B를 선택해 채용할 때 STAFF-API-04는 draft, owner의 STAFF-API-15 최종 수락과 연결된 하위 계약/배정만 active. A의 owner가 B에서는 editor뿐이면 다중 배정 전체 거부. 사용자 권한/직원 접근/프로젝트별 원문·예산/실행 승인/RLS 재검증.
+
+**경력:** A/B에서 같은 날 실제 검증된 작업이라도 직원 고유 활동일은 1일; A 프로젝트 적립 철회해도 B 적격이라면 해당 일수 유지. 비공개 고객 자료/AI 직원 가상 인물 배경·실제 모델 품질/가격 등급은 서로 독립. 경력 적립 허용 자체가 다른 고객의 모델 학습/프롬프트 재사용 허가가 아니다.
+
+**권한:** 초기 owner만 채용·계약/유료 실행·계획/결과 최종 승인·경력 등록/공개. editor는 문서·계획·업무 초안 작성만 가능. worker service_role의 RLS 우회 가능성을 무시하지 않고 서버에서 재검증.
+
+**검증/운영:** G1 autosave·복원 CAS 및 project_members RLS 문제 해결, draft migrations 009~017과 011/012의 번호/의존/적용 상태 확인, SQL FK/유니크/RLS 설계→격리 DB·JWT·브라우저 검증 후 별도 승인 전 실운영 DB/모델/과금/배포 금지.

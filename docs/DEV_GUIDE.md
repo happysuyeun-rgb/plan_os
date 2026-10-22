@@ -1,5 +1,8 @@
 # PlanOS 개발 가이드 — 역할 분담 & 잔여 작업
 
+> **2026-10-21 기준 안내:** 본 2026.06 개발 기록의 성공/완료·개발 순서는 현재 PlanOS 3.0 통합 출시 증거가 아니다. 새 작업은 [통합 실행계획 G0~G7](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md), [현재 서비스기획 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md), [53개 문서 교차검수](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md), [개발용 데이터/권한 계약](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)를 기준으로 판단. 기존 V1 AI 인터뷰·5종 문서·댓글/버전/내보내기 기능 보존 참고에만 사용하며 실제 G1 CAS/RLS 재검증 필요.
+
+
 > 최종 갱신: 2026.06.12 (v3)  
 > 기준 문서: `TECH_SPEC.md`, `PlanOS_기획서_v3.0`, `PlanOS_화면설계서_v1.0`  
 > 현재 모드: **Supabase Real API** (`USE_MOCK_API = false`) + **Supabase Auth** + **라우트 가드 ON** (`ENABLE_MOCK_ROUTE_GUARDS = true`)

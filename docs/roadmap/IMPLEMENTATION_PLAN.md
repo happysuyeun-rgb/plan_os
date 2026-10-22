@@ -1,5 +1,8 @@
 # PlanOS 3.0 — 단계별 개발 실행계획
 
+> **2026-10-21 최신 설계 기준:** 이 파일은 과거 개발계획/이력이다. 현행 실행은 [G0~G7 통합계획](../plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md)(해당 링크는 현재 docs/roadmap 기준 ../plans 경로), 신규 직원 설계는 [전수 재감사](../quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md)와 [화면별 인계](../ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md)를 참조. 과거 CI/P0/완료 추정은 현재 운영 검증·출시 완료가 아님.
+
+
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-19  
 **문서 버전:** v2.1  

@@ -147,7 +147,7 @@ draft → planned → awaiting_approval → queued → running → verifying
 
 ## 10. 공급자·모델 선택
 - 기본: 상용 이용 약관·안정성·도구 호출·데이터 정책·가격을 검증한 공급자 우선.
-- ModelGateway 어댑터는 공급자 장애/가격 변동에 대응하되, 고객 데이터 처리 조건이 달라지는 자동 전환은 별도 정책 필요.
+- ModelGateway 어댑터는 공급자 장애/가격 변동에 대응하되, **미승인 다른 공급자(GPT↔Claude 포함)로의 자동 전환·고객 자료 재전송 금지**. 승인된 model_id·데이터 처리 범위·원가/툴 능력을 확인한 뒤 owner 재동의.
 - FreeLLMAPI는 **개발자 개인 실험용 선택지**. 공개 상용 경로·무료 무제한 비용 가정에 포함하지 않음.
 - 모델/도구/품질 검증 수치가 없는 역할에 검증 배지를 붙이지 않음.
 
@@ -207,3 +207,20 @@ draft → planned → awaiting_approval → queued → running → verifying
 | 2026-10-16 | v0.2 | Phase 3 내부 최소 계약 선행/Phase 5 고객 UX 분리, PM 모델 계획 호출 비용 경계 보완 | 검토 전 |
 
 | 2026-10-19 | v0.3 | 첫 전문 AI 수직 슬라이스 권고·수용 기준(설계만) 문서 연결, 워커 기술·모델·상용정책 미정 유지 | 제안/승인 대기 |
+
+
+## 2026-10-21 AI 직원(정체성)·실행 모델(엔진)·실경력(원장) 분리 아키텍처 (TARGET)
+
+- `staff_identity`: 서비스 카탈로그의 고유 직원 인격/직무·검증된 공개 이력. 고객별 비공개 프롬프트/프로젝트 기억은 담지 않음.
+- `engagement+assignment`: 고객별 단발/전담/정식 PM 고용·1개/복수 프로젝트 배정과 권한/현재 계약 단가.
+- `model_gateway`: GPT/Claude 등 provider/model_id/도구를 해당 작업·예산·고객별 데이터 전송 동의에 맞춰 선택; 미동의 공급자 자동 fallback 금지.
+- `worker/outbox`: 실제 서버 작업·재시도/취소·승인/상태/도구·원가 추적. 모델이 생성한 계획 출력만으로 작업 완료로 표시하지 않음.
+- `experience_event/ledger`: 검증된 작업 결과와 프로젝트별 사용 동의를 근거로 활동 고유일수/실적을 **별도 집계**. 계약/보안용 내부 로그를 무단 경력·마케팅으로 사용 불가.
+- `tier_engine+rate_version`: 활동일수/수락 결과/품질 평가→검증 경력 등급 변경; 직원 모델 자체의 학습이 아님. 고용 계약 가격은 기간 내 스냅샷 유지.
+- `public_profile_projection`: 동의된 필드만 고객에게 공개, 익명 재식별 위험 차단, 철회 후 집계/캐시·검색색인 정정.
+- `pm_aggregator`: 직원이 배정받은 **명시적 project_id**만 접근·요약; 읽기 범위 외 프로젝트 존재/내용을 표시하지 않음. 백그라운드 PM 운영은 검증된 워커/스케줄러가 필요.
+
+[서비스기획 v2](../product/SERVICE_PLAN_V1_2026-10-20.md), [데이터 모델](DATA_MODEL.md), [API 명세](API_CONTRACTS.md)와 연계. 이 절은 시스템 구현 완료/현재 코드에 존재하는 엔진임을 주장하지 않으며 실제 모델/DB/외부 전송 연결은 분리 승인 대상.
+
+
+**직원 데이터/권한 단일 계약 연결(2026-10-21):** [AI 직원 구현 기준 v1.0](AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)의 기존 agent_profiles/agent_contracts/agent_assignments와 staff_engagements 고용 묶음 분리, 프로젝트별 active assignment 및 worker 권한 재검증, 경험 기여 원본과 일수 projection·동의·공개 필드 격리, DATAUTH-01~15 참조. 위 ADR의 일반 architecture 설명은 그 단일 계약에 반하는 별도 테이블/모델 자동 fallback 허가가 아니다. 실구현 미완.

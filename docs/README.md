@@ -1,15 +1,58 @@
-# PlanOS 3.0 문서 가이드 (2026-10-21 정리)
+# PlanOS 3.0 문서 가이드 (2026-10-22 Cursor 인계 보완)
 
 > 이 페이지는 최신 문서를 찾아가기 위한 **색인**입니다. 설계·코드·테스트·운영 반영은 서로 다른 완료 단계입니다.
 
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
 
+## 2026-10-22 Cursor 개발 착수용 2개 정본 + 자동 읽기 규칙
+
+- **[Cursor 자동 적용 프로젝트 규칙](../.cursor/rules/planos-spec-driven.mdc)** — Cursor가 이 브랜치의 설정을 읽는 환경에서 실행전략→기능/TF/화면/권한/테스트 순서로 확인. 규칙은 **PR #28에만 존재**하며 main/다른 작업 브랜치로 병합되거나 안전하게 복사되기 전 자동 적용되지 않는다. Cursor는 현재 개발 브랜치 내용을 덮어쓰지 말고 read-only fetch/show로 본 브랜치의 문서를 확인할 것.
+
+1. **[Cursor 기능정의·화면명세 기반 실행전략](plans/CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md)** — G1 마무리→F401 계획 서버 저장→F402 owner 승인→S1 업무 연결, 매 슬라이스의 F/TF/N/API·CI 보고 계약.
+2. **[전체 화면/기능 교차감사 V4 — A4-01~22](quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md)** — 기존 C01~11/목표 N01~32/기능 F-001~801·STAFF-01~11, 실제 코드/Mock/TARGET 상태, 22개 누락·상충 및 첫 PM 화면 구체 테스트.
+
+> **실제 기준:** `main`과 열린 PR의 최신 SHA/CI가 코드 진행 사실의 기준이다. 이 문서들은 Draft PR #28에 작성된 설계·감사 결과이며 실행·실 DB 반영 완료가 아니다. [Issue #32](https://github.com/happysuyeun-rgb/plan_os/issues/32)가 다음 실제 기능 개발 단위다. 아래 이전 2026-10-21 색인의 TF-01~30·STAFF-API-01~14 표기는 역사적 문맥이며 새 기능 구현은 TF-01~46 / STAFF-API-01~15 기준.
+
+
+## 2026-10-21 docs 53개 전수 재감사·화면/권한 구현 정본 (Draft PR #28)
+
+1. [**53개 문서 전수 재감사 V3 — 중복 ID/명세·P0/P1 V3-01~18**](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md)
+2. [**AI 직원/PM 화면별 상세 스토리보드 v1.0**](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) — N01~32 기본 화면 연계, 채용·PM 다중·경력/평가·철회
+3. [**전체 기존·신규 32개 화면과 C01~11 라우트 수용 매트릭스**](ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md)
+4. [**직원 데이터·권한·API 단일 구현 계약 v1.0**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) — 고용·배정/동의/경력일수 원장·권한/STAFF-API-01~15
+5. [**남은 제품·기술 결정에 대한 권고안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md) — 기본 AI·유료 PM 차별, 모델, 초급 가격, 공유 경력/평가·보안
+6. [**통합 서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 호환으로 보존
+
+> `TF-31~46`은 정식 추가 Task Flow, `TF-S`는 구 별칭. 개발 화면 ID `N01~32`; `ST-UI/P`는 별칭. 직원 API `STAFF-API-01~15` (prefix `/api/v1`) 정본. 기술 선택은 **Draft 설계 기준**, SQL/RLS/실 UI·실공급자/가격/운영 적용 완료 아님.
+
 ## 현재 작업에서 먼저 확인할 문서
 1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
 2. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
-3. [서비스 기획서](product/SERVICE_PLAN_V1_2026-10-20.md) / [PRD](product/PRD.md) — 범위·고객가치
+3. **[통합 서비스기획서 v2.0 — 전면 개정](product/SERVICE_PLAN_V1_2026-10-20.md)** / [PRD](product/PRD.md) — 기존 AI 기획·AI 직원 채용·PM 운영·동의 기반 경력/승급/가격/수익구조
 4. [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 역할·비용·계약
 5. [MVP 구현 상세명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) — 상세 기술 계약
+
+## AI 인력사무소 최신 상세 제품 정책 (Draft PR #28)
+- **[통합 서비스기획서 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md)** — 18개 장으로 전면 재작성: 고객/서비스 구성·AI 인력 비교·직원 채용·PM 다중 프로젝트·경력·등급·가격·화면·API/검증·수익가설. 기존 경로를 유지해 링크 호환.
+- [직무·성격(F/T)·GPT/Claude 모델·정식 PM 채용 기획](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md)
+- [고객 경력 공개 동의·검증 경력일수·초중고 승급·채용 가격](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md) — 개별 프로젝트의 공개/익명/비공개, 경력 사용 동의, 고용주 후기·등급/가격 정책 초안; **실제 개발/운영 승인 아님**.
+
+## 2026-10-21 서비스기획 v2.0 교차검수 및 설계 명세(보정)
+
+- [**서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 보존, **문서 본문은 v2.0으로 전면 개정**.
+- [**서비스기획 v2.0 누락·불일치 교차감사**](quality/PLANOS_V2_DESIGN_CROSS_AUDIT_2026-10-21.md) — V2-01~18, 문서 보정·설계 미결정·실제 구현/검증을 구분.
+- [직원 유형·성격·모델·PM 상세설계](product/AI_STAFF_PERSONA_MODEL_HIRING_SPEC_2026-10-21.md) / [경력 동의·승급·가격 정책](product/AI_STAFF_VERIFIED_EXPERIENCE_CONSENT_TIER_PRICING_2026-10-21.md).
+- [IA N24~32](ux/IA.md) · [화면명세](ux/SCREEN_SPEC.md) · [TF-S01~12](product/TASK_FLOWS.md) · [DATA_MODEL](engineering/DATA_MODEL.md) · [API STAFF-API-01~14](engineering/API_CONTRACTS.md) · [구현명세 H1~H7](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md).
+- 위 신규 구조는 **Draft PR #28의 설계 목표**이며 실제 Supabase migration/프런트/API/GPT·Claude 모델 연동 또는 운영 QA PASS 아님.
+
+### AI 직원 채용/경력 설계 — 이번 교차검수 결과
+
+- [**전 문서 재감사 v3 + 추가 V3-19~23 결함**](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md): 53개 docs 파일 중복·불일치/결함 및 실DB 검증 경계.
+- [**화면별 상세 스토리보드 v1**](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md): 기존 AI 기획→인력 탐색·프로필/고용·경력 동의→PM A/B 배정→검수/승급/철회.
+- [**데이터·권한·API 단일 계약 v1**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md): 현재 SQL 테이블 vs TARGET, staff engagement/agent contracts, STAFF-API-01~15 owner 채용 최종 수락, DATAUTH tests.
+- [**미결정 설계 16개 문제와 제안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_2026-10-21.md): 실제 유료 PM 차별화·가격/경력/공개/모델/직원 인수인계 등 권고.
+- **개발 정본 식별자:** TF-01~46, N01~32, STAFF-API-01~15. 옛 TF-S/ST-UI/P-ID·/v1/hirings API는 대응표에만 기록하고 중복 개발하지 않음.
+
 
 ## 폴더별 문서 정책
 - `product/`: 현재 제품 정의/요구사항
@@ -121,5 +164,5 @@
 - [PlanOS 3.0 × AI 인력사무소 MVP 개발용 상세 명세 v1.0](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md): 화면/상태/API/DB/AI 실행/QA 수용 기준, 미승인 운영 결정 분리.
 
 ## 서비스 기획·운영 기준 (2026-10-20)
-- [통합 서비스기획서 v1.0](product/SERVICE_PLAN_V1_2026-10-20.md) — 고객 가치·상품 구성·전체 여정·사업 가설·MVP 수용 기준.
+- [통합 서비스기획서 v2.0](product/SERVICE_PLAN_V1_2026-10-20.md) — 고객 가치·상품 구성·전체 여정·사업 가설·MVP 수용 기준.
 - [통합 서비스 운영정책 v1.0](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 회원·프로젝트·AI 계약/승인·비용·데이터·장애·지원 원칙 및 상용 미결정 게이트.

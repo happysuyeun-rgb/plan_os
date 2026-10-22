@@ -84,3 +84,16 @@
 - [ ] 실제 호스트/큐/모델/비용 서비스 선택·검증, 상세 SQL/OpenAPI, 공급자 약관·상용 비용/보존 승인.
 - [ ] PoC, real browser, worker crash, actor/RLS, cost reconciliation 등의 실행 테스트(현재 **0건**).
 - [ ] 사용자 최종 아키텍처 승인, Phase 0/1 종료, main/운영 DB/배포.
+
+## 9. 서비스기획 v2.0 확장 — 직원 채용·복수 PM/경력 원장 경계 (후속 ADR, 구현 전)
+
+본 ADR의 기존 수직 실행 경로는 첫 전문 AI `requirements_auditor_v1` 검증용이며 **전체 AI 직원 채용/경력/다중 PM 상품의 완성된 기술 구현이 아니다**.
+
+- **직원 vs 모델:** `staff_identity`(역할·성격·검증 경력)과 `model_gateway` provider/model_id를 분리. 실제 직원 채용은 `agent_contracts`와 중복 source of truth가 없는 `staff_engagement + assignment`로 구현.
+- **PM 권한:** 여러 프로젝트는 한 PM worker의 계정 전체 스캔 권한이 아니라 각 `project_id`별 계약/owner 명시 배정·멤버·자료 digest·툴 allowlist·예산의 합집합. 집계 쿼리와 실 도구 실행마다 재검증.
+- **경력:** run/audit와 별도 event/consent/ledger를 사용해 고객 동의·검증 업무일수·수락 결과·고용주 평가만 적립, 중복일/철회 재계산. 모델 프롬프트에 타 고객의 실제 문서를 경력 메모리로 로딩 금지.
+- **승급/요금:** 검증 경력등급과 모델/도구 상품 등급 분리. 현재 계약의 rate_snapshot 불변, 갱신 때만 재견적. 같은 조건 초급 낮은 단가 정책은 원가·고객 수요 실증 후 확정.
+- **모델 변경:** GPT/Claude 제공사 간 무동의 자동 fallback/새 고객 원문 전송 금지. 현재 실행 원가/응답 유실 상태, 사용자 동의 및 계약/권한 차이를 재검증.
+- **비동기 PM:** 스케줄러/worker가 실제 예약·읽기·쓰기/승인·동의/예산·실패/취소를 기록하지 않는 한 '상시 작업 중'으로 표시 금지.
+
+추가 [DATA_MODEL](DATA_MODEL.md), [API 계약](API_CONTRACTS.md), [위협 모델](../quality/THREAT_MODEL_2026-10-20.md), [통합 서비스기획 v2.0](../product/SERVICE_PLAN_V1_2026-10-20.md), [검증 계획](../quality/TEST_PLAN_2026-10-20.md) 준수. 신규 DB/큐/실모델 연결/운영 DB 변경은 별도 검증과 승인 전 실행하지 않는다.
