@@ -11,7 +11,7 @@
 -- migration:
 --   1. Every app write path goes through CAS/RPC (autosave, regenerate and
 --      the generation pipeline were moved to CAS in src/lib/api/generation.ts;
---      upsertDocument remains only as a first-creation INSERT).
+--      insertDocument remains only as a first-creation INSERT).
 --   2. Isolated verification (tests/rls/test_local_supabase_cutover.mjs)
 --      passes against a disposable local Supabase with this file applied.
 --   3. No legacy client version still issues unconditional document UPDATEs

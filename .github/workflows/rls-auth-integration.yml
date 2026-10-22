@@ -79,6 +79,8 @@ jobs:
         run: node tests/rls/test_local_supabase_content.mjs
       - name: Test Revision CAS RPC through JWT and PostgREST (C-03)
         run: node tests/rls/test_local_supabase_cas.mjs
+      - name: Test task version conflict fails fast over JWT and PostgREST
+        run: node tests/rls/test_local_supabase_task_conflict.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |

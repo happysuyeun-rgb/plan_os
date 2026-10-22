@@ -1,4 +1,4 @@
-// C-03 cutover rehearsal: applies supabase/drafts/020_cutover...DRAFT.sql to
+﻿// C-03 cutover rehearsal: applies supabase/drafts/020_cutover...DRAFT.sql to
 // the disposable local stack and proves every server write path still works
 // while direct client UPDATE is denied. NOT wired into CI on purpose: run
 // manually against a throwaway stack only, and restore the policy (or drop
@@ -9,7 +9,7 @@ import {
   people, projectOne, anonKey, API_URL, call, db,
 } from './test_local_supabase_auth.mjs'
 
-db('supabase/drafts/020_cutover_deny_direct_document_update_DRAFT.sql')
+db('supabase/drafts/021_cutover_deny_direct_document_update_DRAFT.sql')
 console.log('PASS cutover draft applied: documents_update_editor dropped')
 
 async function rpc(role, fn, params) {

@@ -1,6 +1,6 @@
 import type { DocumentType } from '../types'
 import { createProject } from './api/projects'
-import { upsertDocument } from './api/documents'
+import { insertDocument } from './api/documents'
 
 import { DOCUMENT_TYPE_ORDER } from './documentTypes'
 
@@ -62,7 +62,7 @@ export async function transferGuestToProject(userId: string): Promise<string | n
   for (const type of DOC_TYPES) {
     const content = guest.generatedResults[type]
     if (content) {
-      await upsertDocument({
+      await insertDocument({
         id: `doc-guest-${type}-${project.id}`,
         project_id: project.id,
         type,

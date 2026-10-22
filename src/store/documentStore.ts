@@ -129,10 +129,10 @@ const autosave = createDocumentAutosave<Document>({
 })
 
 /**
- * Regeneration writes through upsertDocument (INSERT for a new document,
- * UPDATE for an existing one). Migration 018's trigger advances
- * content_revision on the UPDATE; re-read the row so the CAS baseline
- * tracks the stored revision exactly.
+ * Regeneration writes through writeGeneratedDocument: Revision CAS for an
+ * existing document, INSERT-only for first creation (a racing create
+ * surfaces as DocumentAlreadyExistsError instead of overwriting). Re-read
+ * the row so the CAS baseline tracks the stored revision exactly.
  */
 async function regenerateWithRevision(
   projectId: string,

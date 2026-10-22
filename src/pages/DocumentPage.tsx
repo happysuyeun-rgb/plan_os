@@ -34,6 +34,10 @@ import { buildSingleMarkdown } from '../lib/export/buildMarkdown'
 import { buildProjectZip } from '../lib/export/buildZip'
 import { copyToClipboard, downloadBlob, downloadText, sanitizeFilename } from '../lib/export/download'
 import { useProjectPermissions } from '../hooks/useProjectPermissions'
+import {
+  DocumentAlreadyExistsError,
+  DocumentWriteConflictError,
+} from '../lib/api/documents'
 import { useProjectStore } from '../store/projectStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useVersionStore } from '../store/versionStore'
@@ -352,6 +356,23 @@ export default function DocumentPage() {
     showToast('success', '버전이 저장되었습니다', { animation: 'completion' })
   }
 
+  // Write conflicts never discard the user's input: a first-creation race
+  // reloads the document that was created in the meantime (nothing local
+  // existed for it), while a revision conflict keeps the draft and leaves
+  // the reload choice to the conflict banner. The user retries explicitly.
+  const handleRegenerateError = async (error: unknown) => {
+    if (error instanceof DocumentAlreadyExistsError) {
+      showToast('error', error.message)
+      if (projectId) await fetchDocuments(projectId)
+      return
+    }
+    if (error instanceof DocumentWriteConflictError) {
+      showToast('error', error.message)
+      return
+    }
+    showToast('error', '재생성에 실패했습니다. 다시 시도하세요.')
+  }
+
   const handleRegenerate = async () => {
     if (!canGenerate()) {
       setShowUpgrade(true)
@@ -364,7 +385,12 @@ export default function DocumentPage() {
       return
     }
 
-    await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    try {
+      await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    } catch (error) {
+      await handleRegenerateError(error)
+      return
+    }
     await logActivity({
       project_id: projectId,
       document_id: activeDoc?.id,
@@ -377,7 +403,12 @@ export default function DocumentPage() {
   const handleRegenerateSingle = async () => {
     if (!projectId || !currentProject) return
     setShowRegenerateModal(false)
-    await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    try {
+      await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    } catch (error) {
+      await handleRegenerateError(error)
+      return
+    }
     await logActivity({
       project_id: projectId,
       document_id: activeDoc?.id,
@@ -390,7 +421,12 @@ export default function DocumentPage() {
   const handleRegenerateCascade = async () => {
     if (!projectId || !currentProject) return
     setShowRegenerateModal(false)
-    await regenerateCascade(projectId, activeDocType, currentProject.title, targetUser)
+    try {
+      await regenerateCascade(projectId, activeDocType, currentProject.title, targetUser)
+    } catch (error) {
+      await handleRegenerateError(error)
+      return
+    }
     await logActivity({
       project_id: projectId,
       document_id: activeDoc?.id,

@@ -1,4 +1,4 @@
-# PlanOS Cursor 통합 실행계획서 2026-10-21
+﻿# PlanOS Cursor 통합 실행계획서 2026-10-21
 
 ## P0 안정화 및 Draft PR 통합 준비
 
@@ -708,7 +708,7 @@ C02-05(타 프로젝트 접근 차단)를 실행하자 editor-e(다른 프로젝
 | 2단계 | 생성 파이프라인·재생성의 기존 문서 UPDATE를 CAS로 교체 (`writeGeneratedDocument`). `upsertDocument`는 최초 INSERT 전용으로 축소 | **완료 (이번 작업)** |
 | 3단계 | `documents_update_editor` 정책을 제거하는 컷오버 | draft + 격리 리허설 완료, **정식 채택은 별도 승인 필요** |
 
-컷오버는 `supabase/drafts/020_cutover_deny_direct_document_update_DRAFT.sql`로 준비하고 `tests/rls/test_local_supabase_cutover.mjs`로 리허설했다: 정책 제거 후 editor 직접 PATCH는 0행으로 차단되고 CAS·복원·채팅·최초 INSERT는 전부 정상 동작했다. 정식 마이그레이션으로 승격하지 않은 이유: 구버전 클라이언트가 같은 DB에 직접 UPDATE를 보내는 환경이 있는지를 운영 측에서 확인해야 하며, 그 확인 전 차단은 기능 파손 위험이 있다. **이 항목은 완료로 표시하지 않는다.**
+컷오버는 `supabase/drafts/021_cutover_deny_direct_document_update_DRAFT.sql`로 준비하고 `tests/rls/test_local_supabase_cutover.mjs`로 리허설했다: 정책 제거 후 editor 직접 PATCH는 0행으로 차단되고 CAS·복원·채팅·최초 INSERT는 전부 정상 동작했다. 정식 마이그레이션으로 승격하지 않은 이유: 구버전 클라이언트가 같은 DB에 직접 UPDATE를 보내는 환경이 있는지를 운영 측에서 확인해야 하며, 그 확인 전 차단은 기능 파손 위험이 있다. **이 항목은 완료로 표시하지 않는다.**
 
 ### C03-4. P0-04 — Chromium E2E (Playwright, 로컬 스택 + 실제 Vite 앱)
 
@@ -738,3 +738,30 @@ C02-05(타 프로젝트 접근 차단)를 실행하자 editor-e(다른 프로젝
 ### C03-7. 단계 C-03 판정과 병합 준비 상태
 
 **단계 C 판정: 완료.** 서버 CAS의 실제 Supabase 경로 검증(B01-D3 해소), 017 위험 제거, 직접 UPDATE 전환안과 리허설, 브라우저 E2E까지 지시서 범위를 마쳤다. PR #30은 main 병합 후보로 제출한다. 병합 자체와 운영 DB 마이그레이션 적용(013~019 순서 적용)은 별도 승인 없이는 하지 않는다.
+
+---
+
+## 실행 기록 — 병합 전 최종 보완 (2026-10-22)
+
+### FB-1. P0 — 최초 문서 생성 UPSERT 경합 해소
+
+- 문제: `writeGeneratedDocument`의 최초 생성 분기와 게스트 이전이 `upsertDocument`(onConflict `project_id,type`)를 써서, 두 요청이 같은 문서를 처음 만들 때 늦은 쪽이 이긴 쪽의 문서를 조용히 덮어썼다.
+- 수정: `src/lib/api/documents.ts`에서 `upsertDocument`를 제거하고 INSERT-only `insertDocument`로 교체했다. 중복키(23505)는 새로 둔 `DocumentAlreadyExistsError`로 변환돼 원본 문서가 절대 덮어써지지 않는다. 호출부는 `src/lib/api/generation.ts`(최초 생성 분기)와 `src/lib/guestTransfer.ts` 두 곳뿐임을 전수 확인했다. 다른 쓰기(재생성·자동저장)는 기존대로 Revision CAS를 쓴다.
+- 사용자 흐름: 재생성 핸들러(`src/pages/DocumentPage.tsx`)가 두 충돌 에러를 안내 토스트로 표시하고, 최초 생성 경합인 경우 최신 문서를 다시 불러온다. 생성 파이프라인은 기존 catch가 "다시 시도해주세요"를 표시한다. 재시도 시 `fetchDocument`가 기존 문서를 보고 CAS로 가므로 명시적 재시도가 안전하다.
+- 검증: 실제 로컬 Supabase에서 두 세션 동시 최초 생성을 재현하는 테스트를 `tests/rls/test_local_supabase_cas.mjs`에 추가했다 — 정확히 하나만 성공, 패자는 409/23505, 저장된 문서는 승자 내용 그대로, 이후 CAS 재시도 성공. 기존 C-03 시나리오 전부 회귀 없이 통과했다.
+
+### FB-2. P1 — 업무 충돌 SQLSTATE 40001 (재현됨 → 대응 완료)
+
+- 재현: 일회용 로컬 Supabase에서 version 필터 없는 PATCH로 `validate_project_task_change` 트리거를 직접 때리자 두 번 모두 **약 60초 지연 후 Kong 504**. C-03에서 본 PostgREST 40001 재시도 나선과 동일. 앱의 정상 경로(`.eq('version', expected)`)는 0행을 즉시 반환해 트리거에 도달하지 않음도 함께 확인했다.
+- 대응: 011 원본은 수정하지 않고 신규 마이그레이션 `supabase/migrations/020_task_conflict_sqlstate.sql`에서 트리거 함수를 재정의해 충돌 코드만 `40001` → `P4001`로 교체했다. `src/lib/api/projectTasks.ts`는 P4001(및 구 DB용 40001)을 `TaskConflictError`로 매핑한다. 컷오버 draft는 파일명 번호 혼동을 피하려 `020` → `021`로 개명했다(참조 2곳 수정).
+- 검증: 정식 회귀 테스트 `tests/rls/test_local_supabase_task_conflict.mjs`를 CI(`rls-auth-integration.yml`)에 연결했다. 잘못된 version 쓰기는 **P4001로 6ms 거부**, 원본 보존, 앱 방식 CAS와 stale 빈 결과가 그대로 통과한다.
+
+### FB-3. 배포 전환 계획
+
+운영 DB 적용 상태와 Vercel 자동 배포 여부는 저장소만으로 확정할 수 없어(운영 접속·대시보드 확인이 별도 승인 대상) 사실대로 미확인으로 기록하고, 사전 점검→적용 순서→백업→호환성→복구를 `docs/plans/DEPLOYMENT_TRANSITION_PLAN_2026-10-22.md`에 분리해 뒀다. **운영 DB 적용·main 병합·Vercel 배포는 실행하지 않았다.**
+
+### FB-4. 최종 판정
+
+- **신규 결함 해결 여부:** P0(최초 생성 경합) 해소, P1(업무 40001 지연) 재현·해소. 기존 C-03 테스트 8개 CI·검증 결과는 유지되며, 이번 변경으로 생긴 회귀는 없다.
+- **잔여 P0: 없음.** 잔여 NOT RUN은 두 브라우저 동시 편집 충돌 배너 E2E와 021 컷오버 정식 채택(별도 승인 건)뿐이며 P0가 아니다.
+- **main 병합 가능 여부: 가능(조건부).** 기술적 차단은 없다. 단, 병합과 같은 시점에 운영 DB 마이그레이션을 §FB-3 계획의 순서(013 → 014 → 015 → 016 → 018 → 019, 011 미적용이면 011 → 020)로 적용해야 하며, 코드 단독 선행 배포는 금지다. 병합·적용 모두 별도 승인이 필요하다.

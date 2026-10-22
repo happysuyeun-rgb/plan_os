@@ -222,4 +222,66 @@ const staleAfterDirect = await rpc('editor', 'save_document_content_cas', {
 assert(!staleAfterDirect.ok && staleAfterDirect.data?.code === 'P4001')
 console.log('PASS direct UPDATE detected by revision advance (bypass measured, not silent)')
 
+// 9) two sessions racing to create the same document for the first time:
+// exactly one INSERT succeeds, the loser gets 23505, and the winner's
+// document is never overwritten. (The app maps 23505 to
+// DocumentAlreadyExistsError via insertDocument; an unconditional upsert
+// used to replace the winner silently.)
+const DOC_TYPES = ['prd', 'ia', 'screen_list', 'policy', 'wireframe', 'cursor_prompt']
+const existingDocs = await call(
+  '/rest/v1/documents?select=type&project_id=eq.' + projectOne,
+  { bearer: people.owner.access_token },
+)
+const raceType = DOC_TYPES.find((t) => !existingDocs.some((d) => d.type === t))
+assert(raceType, 'fixture project must have a free document type for the create race')
+
+async function createDocumentAttempt(role, content) {
+  const response = await fetch(API_URL + '/rest/v1/documents', {
+    method: 'POST',
+    headers: {
+      apikey: anonKey,
+      Authorization: 'Bearer ' + people[role].access_token,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({ project_id: projectOne, type: raceType, content }),
+    signal: AbortSignal.timeout(15000),
+  })
+  const raw = await response.text()
+  let data = null
+  try { data = raw ? JSON.parse(raw) : null } catch { data = raw }
+  return { status: response.status, ok: response.ok, data }
+}
+
+const createRace = await Promise.all([
+  createDocumentAttempt('editor', 'first-create race editor body'),
+  createDocumentAttempt('owner', 'first-create race owner body'),
+])
+const createWinners = createRace.filter((r) => r.ok)
+const createLosers = createRace.filter((r) => !r.ok)
+assert.equal(createWinners.length, 1, 'exactly one first create may win: ' + JSON.stringify(createRace))
+assert.equal(createLosers.length, 1)
+assert.equal(createLosers[0].status, 409, 'losing create must be rejected with 409, got ' + createLosers[0].status)
+assert.equal(createLosers[0].data?.code, '23505', 'losing create must surface 23505, got ' + JSON.stringify(createLosers[0].data))
+const winnerBody = createWinners[0].data[0].content
+const createdDocs = await call(
+  '/rest/v1/documents?select=id,content,content_revision&project_id=eq.' + projectOne + '&type=eq.' + raceType,
+  { bearer: people.owner.access_token },
+)
+assert.equal(createdDocs.length, 1, 'the race must leave exactly one document')
+assert.equal(createdDocs[0].content, winnerBody, 'the winner document must not be overwritten by the loser')
+const raceDoc = createdDocs[0]
+console.log('PASS first-creation race: one winner, loser 23505, winner content preserved')
+
+// 10) the explicit retry path the app takes after a lost first create:
+// fetch the now-existing document and write through Revision CAS.
+const retryCreated = await rpc('editor', 'save_document_content_cas', {
+  p_document_id: raceDoc.id,
+  p_expected_revision: raceDoc.content_revision,
+  p_content: 'explicit retry after lost create',
+})
+assert(retryCreated.ok, 'CAS retry after lost create failed: ' + JSON.stringify(retryCreated.data))
+assert.equal(retryCreated.data.content, 'explicit retry after lost create')
+console.log('PASS explicit retry after lost create succeeds through CAS')
+
 console.log('SUCCESS C-03 Revision CAS over genuine Supabase Auth/JWT/PostgREST')

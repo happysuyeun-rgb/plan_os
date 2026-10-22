@@ -76,7 +76,29 @@ export async function saveDocumentContentCas(
   return unwrap(data as Document | null, error)
 }
 
-export async function upsertDocument(
+// First-creation race: another request created the document first. The
+// stored document is never overwritten; the caller keeps the generated
+// draft and retries explicitly after reloading the latest document.
+export class DocumentAlreadyExistsError extends Error {
+  constructor() {
+    super('문서가 이미 다른 요청에서 생성되었습니다. 생성된 내용은 보존되며, 최신 문서를 확인한 뒤 다시 시도하세요.')
+    this.name = 'DocumentAlreadyExistsError'
+  }
+}
+
+/** PostgreSQL unique_violation as reported by PostgREST / supabase-js. */
+export function isUniqueViolationError(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === '23505'
+}
+
+/**
+ * INSERT-only first creation. The previous upsert on
+ * (project_id, type) silently replaced a document that a concurrent
+ * request had just created, so first creation must never use it: a
+ * unique violation (23505) surfaces as DocumentAlreadyExistsError and
+ * the existing document stays untouched.
+ */
+export async function insertDocument(
   doc: Omit<Document, 'id' | 'created_at' | 'updated_at' | 'content_revision'> &
     Partial<Pick<Document, 'id' | 'created_at' | 'updated_at'>>,
 ): Promise<Document> {
@@ -89,8 +111,11 @@ export async function upsertDocument(
 
   const { data, error } = await supabase
     .from('documents')
-    .upsert(row, { onConflict: 'project_id,type' })
+    .insert(row)
     .select()
     .single()
+  if (isUniqueViolationError(error)) {
+    throw new DocumentAlreadyExistsError()
+  }
   return unwrap(data, error)
 }
