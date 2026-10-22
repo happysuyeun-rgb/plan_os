@@ -30,7 +30,7 @@
 ### 미완료 체크 — 다음 실제 작업
 
 - [ ] **P0 / Cursor:** PR #36의 V5-01/02 직접 JWT/PostgREST 경로를 재현·차단하고 P1 최초 생성 원자성/plan+step CAS/승인 상태/동시 link/FK/문자 인코딩을 코드에 수정. Owner/editor/viewer/outsider 공격·브라우저 및 CI 증거를 PR에 추가.
-- [ ] **P0 / G1 출시 선행 조건:** PR #30 8개 CI 통과를 운영 적용 완료로 취급하지 않고 운영 DB 객체/read-only 비교, 백업·복구, Vercel Git 자동배포/기존 클라이언트 호환성, 순차 SQL(011/013~020, 신규 022) 재검증. 021 컷오버 별도 승인. [전환 계획](../plans/DEPLOYMENT_TRANSITION_PLAN_2026-10-22.md) 참조(원문은 PR #30 쪽).
+- [ ] **P0 / G1 출시 선행 조건:** PR #30 8개 CI 통과를 운영 적용 완료로 취급하지 않고 운영 DB 객체/read-only 비교, 백업·복구, Vercel Git 자동배포/기존 클라이언트 호환성, 순차 SQL(011/013~020, 신규 022) 재검증. 021 컷오버 별도 승인. [전환 계획](https://github.com/happysuyeun-rgb/plan_os/blob/feat/planos-g1-integration-stage-a-20261021/docs/plans/DEPLOYMENT_TRANSITION_PLAN_2026-10-22.md) 참조(원문은 PR #30 쪽).
 - [ ] **P0/P1 / 데이터·인가:** 과거 오픈된 [#10](https://github.com/happysuyeun-rgb/plan_os/issues/10), [#12](https://github.com/happysuyeun-rgb/plan_os/issues/12), [#16](https://github.com/happysuyeun-rgb/plan_os/issues/16)은 PR #30의 새 코드/CI로 해결 여부를 점검하되 실운영 확인 전 임의 close 금지.
 - [ ] **P1 / Cursor:** 별도 Draft PR에서 C04 프로젝트별 업무 완료 x/y·진행/차단/승인/필터/최근동기화/RLS 통합 조회 실구현. 진행률은 *등록 업무 완료율*; 업무 0개=N/A, S1 서버 OFF=지표 미연결.
 - [ ] **P1 / 검수·상품:** 실제 LLM 기획/감사 및 근거 신뢰성. 현 `src/lib/generation/placeholderContent.ts`은 템플릿. 실제 AI PM 자동 계획·worker/queue·계약·예산·검증/수락은 미구현.
