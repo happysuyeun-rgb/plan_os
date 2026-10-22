@@ -81,6 +81,8 @@ jobs:
         run: node tests/rls/test_local_supabase_cas.mjs
       - name: Test task version conflict fails fast over JWT and PostgREST
         run: node tests/rls/test_local_supabase_task_conflict.mjs
+      - name: Test guest transfer resume semantics over JWT and PostgREST
+        run: node tests/rls/test_local_supabase_guest_transfer.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |
