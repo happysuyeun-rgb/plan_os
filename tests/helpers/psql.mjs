@@ -23,7 +23,9 @@ export function runPsqlSeed(statements, { dbPort } = {}) {
     env: {
       ...process.env,
       PGHOST: '127.0.0.1',
-      PGPORT: String(dbPort ?? process.env.PLANOS_LOCAL_DB_PORT ?? '55322'),
+      // 54322 is the stack default (and the CI runner value); local runs
+      // that remap the stack port set PLANOS_LOCAL_DB_PORT explicitly.
+      PGPORT: String(dbPort ?? process.env.PLANOS_LOCAL_DB_PORT ?? '54322'),
       PGUSER: 'postgres',
       PGPASSWORD: 'postgres',
       PGDATABASE: 'postgres',
