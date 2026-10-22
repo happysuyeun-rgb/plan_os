@@ -1,0 +1,43 @@
+﻿---
+description: PlanOS 3.0 ??mandatory F/TF/N screen-and-function evidence loop for Cursor coding
+alwaysApply: true
+---
+
+# PlanOS 3.0 ??Spec-first, code-first execution rule (2026-10-22)
+
+Apply this rule **to PlanOS work only**. This file is a Cursor configuration rule, not a claim that the product features exist. Before acting, verify you are in `happysuyeun-rgb/plan_os` and compare your current branch to remote `main` and open PRs.
+
+## Documents to read before implementing a feature
+
+1. `docs/plans/CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md`
+2. `docs/quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md`
+3. `docs/product/FUNCTIONAL_SPEC_V1_2026-10-20.md` for F-ID and STAFF-ID
+4. `docs/product/TASK_FLOWS.md` for TF-01~46
+5. `docs/ux/IA.md`, `docs/ux/SCREEN_SPEC.md`, `docs/ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md` and `docs/ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md` for C01~C11/N01~N32, user fields and UI states
+6. `docs/engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md`, `docs/product/PERMISSIONS_POLICY.md`, `docs/quality/TEST_PLAN_2026-10-20.md` for authorization/server contracts/tests
+7. GitHub Issue #32 for the **next code slice**: F-401 server plan draft ??F-402 owner approval ??S1 task link; G1 Issue #29/PR #30 for the release safety gate.
+
+Do not assume all these files are in your local checkout. They currently live on Draft PR #28 branch `docs/planos-ai-staff-pm-hiring-20261021`; use a safe read-only `git fetch` and `git show origin/docs/planos-ai-staff-pm-hiring-20261021:<path>` to read if they have not been merged. **Never overwrite current uncommitted files to obtain reference documentation.**
+
+## Before coding
+
+- Define ONE slice with F/STAFF ID, TF-ID, C/N-ID, route, actual current code, state/CTA, input validation, owner/editor/viewer/outsider, API/DB/DDL current vs target, acceptance tests and rollback impact.
+- Preserve old `/projects/:projectId` and `/projects/:projectId/:docType` DocumentPage routes; work with existing S1/S2 implementation and PR #25 S3/PR #27 F401 Mock rather than duplicate.
+- Human F401 draft can be written by owner/editor in TARGET; **only owner** may approve a PM plan, hire/assign an AI employee, consent to provider/paid execution, accept final artifacts, authorize public customer evidence.
+- A `plan.approved` state does **not** mean an AI run is queued or paid. Execution status, approval status, contract status, human artifact acceptance and consent status are distinct state machines.
+- Current `src/lib/api/generation.ts` produces template content via `placeholderContent.ts`; do not label it a verified LLM output. Internal document types = 6, visible tabs = 5 (`screen_list` hidden).
+- STAFF-API-01~15 are **TARGET** URL proposals, not already running backend endpoints. Staff role, agreement, per-project assignment and consent tables are **TARGET**, not in the currently inspected main DDL.
+- Do not blindly change historical SQL migrations already applied to a DB or apply `supabase/drafts` SQL.
+
+## Implement, test, and report
+
+- Actually write code, tests, and a focused draft PR; do not stop at generating a roadmap.
+- Use isolated fixtures and disposable local Supabase first. Check build, lint, real JWT/RLS and Chromium; report each PASS/FAIL/NOT RUN with SHA and workflow URL.
+- Do not treat source existence/Mock or CI static success as completed live PM hiring, AI execution or billing. Avoid any false performance/career/grade displays.
+- G1 CAS write behavior and stored document revisions must be respected, including initial-create race, 409-style stale conflict and draft preservation.
+- Before advancing, read unresolved items from the V4 audit and issue #32; correct F/TF/N/spec/QA references in the same PR when implementation changes the contract.
+- Preserve unrelated branches and customer data. **Do not merge main, run hosted DB migrations, trigger production deployments, transmit customer data to a paid/provider model, or make payments without explicit user approval.** Main merge must be reviewed with deployment coupling/backup/rollback, not permanently forbidden.
+
+## Exit report (required)
+
+Provide: source SHA + branch/PR, F-ID/TF-ID/N-ID, changes and evidence, test matrix including real DB/browser, defects fixed and outstanding P0/P1/P2, user approval required, and **next one code change**. Never report 'done' when only documents were written.
