@@ -1,12 +1,18 @@
 name: RLS Auth/JWT/PostgREST - disposable local Supabase
 
 on:
+  # Stacked PRs (PM on G1, dashboard on PM) do not target main, so the
+  # branch filter must not hide them: run for every pull request that
+  # touches the database, tests, client data layer or this workflow.
   pull_request:
-    branches: [main]
     paths:
       - 'supabase/migrations/**'
       - 'tests/rls/**'
+      - 'tests/e2e/**'
+      - 'src/lib/**'
+      - 'src/pages/**'
       - '.github/workflows/rls-auth-integration.yml'
+  workflow_dispatch:
   push:
     branches: [fix/planos-rls-member-recursion-20261016, fix/planos-rls-content-hardening-20261016, test/planos-phase0-integrated-20261016]
     paths:
@@ -87,6 +93,8 @@ jobs:
         run: node tests/rls/test_local_supabase_pm_plans.mjs
       - name: Test PM plan integrity hardening negatives (Issue 32 review fixes)
         run: node tests/rls/test_local_supabase_pm_hardening.mjs
+      - name: Test PM plan final integrity negatives (migration 024)
+        run: node tests/rls/test_local_supabase_pm_final.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |
