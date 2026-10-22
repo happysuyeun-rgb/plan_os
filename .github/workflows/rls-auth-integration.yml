@@ -83,6 +83,8 @@ jobs:
         run: node tests/rls/test_local_supabase_task_conflict.mjs
       - name: Test guest transfer resume semantics over JWT and PostgREST
         run: node tests/rls/test_local_supabase_guest_transfer.mjs
+      - name: Test PM plan review loop over JWT and PostgREST (Issue 32)
+        run: node tests/rls/test_local_supabase_pm_plans.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |
