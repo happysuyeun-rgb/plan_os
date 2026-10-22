@@ -4,11 +4,50 @@
 
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-19  
-**문서 버전:** v4.3  
+**최종 수정일:** 2026-10-22  
+**문서 버전:** v4.4  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
+
+## 2026-10-22 재검수 최신 스냅샷 — 이전 진행 로그보다 우선
+
+> **정본:** [통합 진행·완료 검수 체크리스트 Issue #41](https://github.com/happysuyeun-rgb/plan_os/issues/41). 최신 원격 확인: `main` `3e3fc660`, G1 [PR #30](https://github.com/happysuyeun-rgb/plan_os/pull/30) `f74481e`, PM [PR #36](https://github.com/happysuyeun-rgb/plan_os/pull/36) `dd64d72`, 설계 [PR #28](https://github.com/happysuyeun-rgb/plan_os/pull/28) + 후속 [PR #40](https://github.com/happysuyeun-rgb/plan_os/pull/40). 모든 상태는 **증거의 적용 범위**에 한정한다. 아래 과거 10/16~10/22 기록은 당시의 로그로 남겨 두되 최신 작업 완료 판정으로 쓰지 않는다.
+
+### 완료 체크 — 문서·코드·CI (출시 완료와 분리)
+
+- [x] **서비스기획 v2.0/AI 인력사무소 정책, 기능/화면·Task Flow, V4 교차감사:** 문서 작성·link CI 성공(PR #28). **Draft, main 미병합, 구현 아님**.
+- [x] **사업 개선안 9개/90일 매출 전략:** 문서 작성·Docs CI 성공(PR #31/#33). 실사업 매출 검증 전.
+- [x] **샘플 검수·상품제안·잠재고객 조사키트 6종:** 가상 샘플 작성/Docs CI 성공(PR #35). 실 자동 AI 감사 결과 아님.
+- [x] **영업사원·마케터 확장 역할 설계 이슈 등록:** [#37](https://github.com/happysuyeun-rgb/plan_os/issues/37)/[#38](https://github.com/happysuyeun-rgb/plan_os/issues/38). 실제 직원 실행 미구현.
+- [x] **프로젝트 통합 C04 대시보드 설계/기능정의:** DASH-01~08, 화면·IA·TF·권한/QA 수용기준 [#39](https://github.com/happysuyeun-rgb/plan_os/issues/39)/[PR #40](https://github.com/happysuyeun-rgb/plan_os/pull/40). Draft 문서·Docs CI 성공, UI/집계 서버 미구현.
+- [x] **main 코드에서 S1 기본 업무보드 일부 존재:** PR #20 병합, `VITE_S1_SERVER_TASKS` default OFF(localStorage). 운영 서버 업무 영속 보증 아님.
+- [x] **G1 안정화 코드/테스트:** PR #30 `f74481e` 최신 Draft, Actions 8/8 PASS, 게스트 이전/문서 CAS/복원 코드 확인. **운영 적용 완료 아님**.
+- [x] **첫 PM 사람 계획→owner 승인→S1 업무 연결 서버 코드:** PR #36 `dd64d72` SQL 022+화면+테스트 소스 작성. 개발 브랜치의 S1 CI 1개 PASS, 로컬 JWT/Chromium PASS는 Cursor 보고와 소스로 확인. **P0/P1 보완 필요**.
+- [x] **PR #36 독립 검수:** [검수 코멘트](https://github.com/happysuyeun-rgb/plan_os/pull/36#issuecomment-6332797665), [V5 문서](quality/PLANOS_PM_DASHBOARD_CROSS_AUDIT_V5_2026-10-22.md): 승인 상태 직접 변경, 미승인 출처 위조 위험·첫 저장 원자성·step-only 감사·재요청 불일치·병렬 멱등성 등 확인.
+- [x] **실제 고객 확보 활동:** 연구 목적 인터뷰 제안 이메일 2건, 첫 이메일 정성 회신 1건(실제 재작업 무경험 대조군). [비식별 고객 조사 기록 #34](https://github.com/happysuyeun-rgb/plan_os/issues/34). **정식 심층 인터뷰 0건/파일럿 0건/매출 0건**.
+
+### 미완료 체크 — 다음 실제 작업
+
+- [ ] **P0 / Cursor:** PR #36의 V5-01/02 직접 JWT/PostgREST 경로를 재현·차단하고 P1 최초 생성 원자성/plan+step CAS/승인 상태/동시 link/FK/문자 인코딩을 코드에 수정. Owner/editor/viewer/outsider 공격·브라우저 및 CI 증거를 PR에 추가.
+- [ ] **P0 / G1 출시 선행 조건:** PR #30 8개 CI 통과를 운영 적용 완료로 취급하지 않고 운영 DB 객체/read-only 비교, 백업·복구, Vercel Git 자동배포/기존 클라이언트 호환성, 순차 SQL(011/013~020, 신규 022) 재검증. 021 컷오버 별도 승인. [전환 계획](../plans/DEPLOYMENT_TRANSITION_PLAN_2026-10-22.md) 참조(원문은 PR #30 쪽).
+- [ ] **P0/P1 / 데이터·인가:** 과거 오픈된 [#10](https://github.com/happysuyeun-rgb/plan_os/issues/10), [#12](https://github.com/happysuyeun-rgb/plan_os/issues/12), [#16](https://github.com/happysuyeun-rgb/plan_os/issues/16)은 PR #30의 새 코드/CI로 해결 여부를 점검하되 실운영 확인 전 임의 close 금지.
+- [ ] **P1 / Cursor:** 별도 Draft PR에서 C04 프로젝트별 업무 완료 x/y·진행/차단/승인/필터/최근동기화/RLS 통합 조회 실구현. 진행률은 *등록 업무 완료율*; 업무 0개=N/A, S1 서버 OFF=지표 미연결.
+- [ ] **P1 / 검수·상품:** 실제 LLM 기획/감사 및 근거 신뢰성. 현 `src/lib/generation/placeholderContent.ts`은 템플릿. 실제 AI PM 자동 계획·worker/queue·계약·예산·검증/수락은 미구현.
+- [ ] **P1 / 고객:** 실제 구매문제 인터뷰 5건, 유효 파일럿 2~3명, 오탐·변경영향/사용자 승인에 대한 실사용 반응과 제안 가격·원가 확인. **회신 1건 ≠ 구매 의향**.
+- [ ] **P2 / 후속 직원:** 직원 채용·N29 복수 프로젝트 PM·검증 경력/등급/가격·마케터/영업사원은 기존 MVP/보안/유료 실증 후.
+
+### 병합/릴리스 의존과 책임
+
+1. **Cursor(코드):** PR #36 결함 수정 + JWT/Chromium/CI 근거 → **노바(감리):** P0 재검수(운영 변경 승인 아님).
+2. **Cursor(코드):** C04 읽기 전용 대시보드 별도 PR → **노바(감리):** DASH-01~08 + 기존 인터뷰/문서/업무 회귀 검수.
+3. **운영 승인 대기:** G1 PR #30 DB-first 배포 전환 + 백업·Vercel 설정, 이후 PR #36 base/main 순차 결정. 실제 승인은 사용자에게 별도 받고 실행.
+4. **노바(사업):** 실제 인터뷰 회신 분류·고통/대체재/오탐·구매 조건, 파일럿 후보 찾기. 정성 답변을 매출로 오인하지 않음.
+5. **독립 문서 PR 정리:** #28→#40 종속, #30→#36 종속. #31/#33/#35 독립. Mock #25/#27은 통합 중복 구현 여부 점검 후 재사용/정리.
+
+**현재 출시 판정:** G1 Draft 테스트 상당수 PASS / 실제 PM Draft 서버 기능 일부 존재 / C04 운영 대시보드와 실제 AI 직원은 아직 없음 / 운영 DB+Vercel+고객 검증 미완. **main 병합·운영 DB 마이그레이션·배포·외부 데이터 전송/유료 AI 실행 승인 없음**.
+
+---
 
 ## 2026-10-19 최신 검수 스냅샷 (과거 아래 로그보다 우선)
 
