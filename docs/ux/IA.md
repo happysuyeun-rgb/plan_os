@@ -1,7 +1,7 @@
 # PlanOS 3.0 × AI 인력사무소 — IA 및 화면 목록
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-21  
+**최종 수정일:** 2026-10-22  
 **문서 버전:** v0.3 (N01~32 정본)  
 **진행 상태:** TARGET IA/화면 ID 초안 — 제품·개발 검토 전  
 **상위 기준:** [PRD](../product/PRD.md) · [TF-01~30](../product/TASK_FLOWS.md)  
@@ -33,7 +33,11 @@
 | C10 | `/projects/:projectId/:docType` | DocumentPage | KEEP | 기존 문서 유형 URL 보존 |
 | C11 | `*` | NotFoundPage | KEEP | 권한/404 응답 구분 필요 |
 
+**추가 CURRENT 구현 경로 (N-ID와 중복 선언하지 않음):** `/projects/:projectId/tasks` → `ProjectTasksPage` (N03 일부, 기본 localStorage/격리 서버 플래그); `/projects/:projectId/audits/new` → `AuditSourceSelectionPage` (F201/F202 일부, manifest 개발 플래그). `/projects/:projectId/plans/new`은 PR #27 Draft Mock에만 존재하고 **main의 라우트가 아님**. 신규 직원/PM 경로는 여전히 TARGET.
+
 **확인 범위:** 라우트 선언 및 컴포넌트 연결만 확인. 모든 화면의 런타임 동작, 모바일 접근성, RLS 정상 작동을 확인했다는 뜻은 아니다.
+
+**2026-10-22 개발 연결:** [전체 화면·기능 감사 V4](../quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md) + [Cursor 실행전략](../plans/CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md). 기존 C09/C10 deep link를 유지하고 N03/S1, N08/F401 계획, N09/F402 승인부터 연결한다.
 
 ## 3. TARGET 정보 구조
 
