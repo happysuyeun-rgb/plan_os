@@ -44,3 +44,11 @@ test('too many steps and empty objective rejected', () => {
   }))
   assert.ok(validateHumanPlan({ ...base, objective: ' ' }))
 })
+
+test('validation messages are readable Korean (P2 encoding regression)', () => {
+  const message = validateHumanPlan({ ...base, objective: 'x' })
+  assert.equal(typeof message, 'string')
+  // The mojibake regression shipped '?' runs instead of Korean glyphs.
+  assert.ok(!message.includes('?'), 'validation message still contains encoding damage: ' + message)
+  assert.ok(/[가-힣]/.test(message), 'validation message must be Korean: ' + message)
+})
