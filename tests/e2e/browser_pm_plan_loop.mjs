@@ -4,24 +4,13 @@
 // S1 task on the server-backed board. Nothing invokes AI or billing.
 // Disposable local Supabase + local Vite dev server only.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
 import { createAdminClient, loopbackUrl, assertUuid } from '../helpers/rest.mjs'
 import { runPsqlSeed } from '../helpers/psql.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
-assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
-for (const key of ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD']) {
-  assert(!process.env[key], 'Hosted Supabase credentials are not allowed')
-}
-const raw = execFileSync('supabase', ['status', '-o', 'env'], {
-  cwd: localDir, encoding: 'utf8', timeout: 30000,
-})
-const variables = Object.fromEntries(raw.split('\n').flatMap((line) => {
-  const match = line.match(/^([A-Z_]+)=(.*)$/)
-  return match ? [[match[1], match[2].replace(/^["']|["']$/g, '')]] : []
-}))
-assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
+const variables = readLocalSupabaseEnv(localDir)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 const site = 'http://127.0.0.1:5173'
