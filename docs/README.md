@@ -1,19 +1,27 @@
-# PlanOS 3.0 문서 가이드 (2026-10-21 정리)
+# PlanOS 3.0 문서 가이드 (2026-10-22 Cursor 인계 보완)
 
 > 이 페이지는 최신 문서를 찾아가기 위한 **색인**입니다. 설계·코드·테스트·운영 반영은 서로 다른 완료 단계입니다.
 
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
+
+## 2026-10-22 Cursor 개발 착수용 2개 정본 (새 기능을 실제로 구현하기 위한 최신 인계)
+
+1. **[Cursor 기능정의·화면명세 기반 실행전략](plans/CURSOR_SPEC_DRIVEN_EXECUTION_STRATEGY_2026-10-22.md)** — G1 마무리→F401 계획 서버 저장→F402 owner 승인→S1 업무 연결, 매 슬라이스의 F/TF/N/API·CI 보고 계약.
+2. **[전체 화면/기능 교차감사 V4 — A4-01~22](quality/PLANOS_SCREEN_FUNCTION_CROSS_AUDIT_V4_2026-10-22.md)** — 기존 C01~11/목표 N01~32/기능 F-001~801·STAFF-01~11, 실제 코드/Mock/TARGET 상태, 22개 누락·상충 및 첫 PM 화면 구체 테스트.
+
+> **실제 기준:** `main`과 열린 PR의 최신 SHA/CI가 코드 진행 사실의 기준이다. 이 문서들은 Draft PR #28에 작성된 설계·감사 결과이며 실행·실 DB 반영 완료가 아니다. [Issue #32](https://github.com/happysuyeun-rgb/plan_os/issues/32)가 다음 실제 기능 개발 단위다. 아래 이전 2026-10-21 색인의 TF-01~30·STAFF-API-01~14 표기는 역사적 문맥이며 새 기능 구현은 TF-01~46 / STAFF-API-01~15 기준.
+
 
 ## 2026-10-21 docs 53개 전수 재감사·화면/권한 구현 정본 (Draft PR #28)
 
 1. [**53개 문서 전수 재감사 V3 — 중복 ID/명세·P0/P1 V3-01~18**](quality/PLANOS_FULL_DOC_REAUDIT_V3_2026-10-21.md)
 2. [**AI 직원/PM 화면별 상세 스토리보드 v1.0**](ux/AI_STAFF_SCREEN_STORYBOARD_V1_2026-10-21.md) — N01~32 기본 화면 연계, 채용·PM 다중·경력/평가·철회
 3. [**전체 기존·신규 32개 화면과 C01~11 라우트 수용 매트릭스**](ux/PLANOS_ALL_SCREENS_ACCEPTANCE_MATRIX_2026-10-21.md)
-4. [**직원 데이터·권한·API 단일 구현 계약 v1.0**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) — 고용·배정/동의/경력일수 원장·권한/STAFF-API-01~14
+4. [**직원 데이터·권한·API 단일 구현 계약 v1.0**](engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md) — 고용·배정/동의/경력일수 원장·권한/STAFF-API-01~15
 5. [**남은 제품·기술 결정에 대한 권고안**](product/AI_STAFF_OPEN_DESIGN_DECISIONS_V1_2026-10-21.md) — 기본 AI·유료 PM 차별, 모델, 초급 가격, 공유 경력/평가·보안
 6. [**통합 서비스기획서 v2.0**](product/SERVICE_PLAN_V1_2026-10-20.md) — 파일 경로는 기존 링크 호환으로 보존
 
-> `TF-31~46`은 정식 추가 Task Flow, `TF-S`는 구 별칭. 개발 화면 ID `N01~32`; `ST-UI/P`는 별칭. 직원 API `STAFF-API-01~14` (prefix `/api/v1`) 정본. 기술 선택은 **Draft 설계 기준**, SQL/RLS/실 UI·실공급자/가격/운영 적용 완료 아님.
+> `TF-31~46`은 정식 추가 Task Flow, `TF-S`는 구 별칭. 개발 화면 ID `N01~32`; `ST-UI/P`는 별칭. 직원 API `STAFF-API-01~15` (prefix `/api/v1`) 정본. 기술 선택은 **Draft 설계 기준**, SQL/RLS/실 UI·실공급자/가격/운영 적용 완료 아님.
 
 ## 현재 작업에서 먼저 확인할 문서
 1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
