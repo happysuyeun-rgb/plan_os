@@ -24,7 +24,7 @@ assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 const site = 'http://127.0.0.1:5173'
-const email = 'browser-guest-transfer@example.test'
+const email = `browser-guest-transfer-${Date.now()}@example.test`
 const password = 'Synthetic-guest-transfer-password-123!'
 
 const TYPES = ['prd', 'ia', 'screen_list', 'policy', 'wireframe', 'cursor_prompt']

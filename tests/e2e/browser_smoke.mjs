@@ -1,4 +1,4 @@
-// Disposable browser smoke test for the *integrated* Phase 0 branch.
+﻿// Disposable browser smoke test for the *integrated* Phase 0 branch.
 // Uses LOCAL Supabase Auth + PostgREST and the REAL Vite frontend.
 // Does not connect to live Plan OS or deploy anything.
 import assert from 'node:assert/strict'
@@ -25,9 +25,12 @@ const dbPort=process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 assert(!variables.API_URL || variables.API_URL===api, 'Unexpected nonlocal API URL')
 const site='http://127.0.0.1:5173'
-const loginEmail='browser-smoke@example.test'
+const runId=Date.now()
+const loginEmail=`browser-smoke-${runId}@example.test`
 const loginPassword='Synthetic-browser-smoke-password-123!'
-const projectId='77777777-7777-4777-8777-777777777777'
+import { randomUUID } from 'node:crypto'
+
+const projectId=randomUUID()
 
 async function localAdmin(path,method,body){
   const r=await fetch(api+path,{
@@ -48,6 +51,7 @@ const created=await localAdmin('/auth/v1/admin/users','POST',{
 assert(created.id,'Local Auth synthetic account could not be created')
 execFileSync('psql',[
   '-X','-v','ON_ERROR_STOP=1','-v','user_id='+created.id,
+  '-v','project_id='+projectId,
   '-f',process.cwd()+'/tests/e2e/seed_browser.sql',
 ],{
   env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
@@ -368,7 +372,7 @@ try{
   // AUTHZ-01: RPC runs with SECURITY DEFINER, so caller permissions must be
   // checked explicitly. Neither an authenticated viewer nor anonymous client
   // may restore. The source version must belong to the requested document.
-  const viewerEmail='viewer-restoration@example.test'
+  const viewerEmail=`viewer-restoration-${runId}@example.test`
   const viewerPassword='Synthetic-viewer-test-password-123!'
   const viewer=await localAdmin('/auth/v1/admin/users','POST',{
     email:viewerEmail,password:viewerPassword,email_confirm:true,
@@ -394,7 +398,7 @@ try{
   const viewerToken=(await viewerTokenResponse.json()).access_token
   const authzBody=JSON.stringify({p_document_id:documentId,
     p_version_id:retriedHistory[0].id,
-    p_operation_id:'88888888-8888-4888-8888-888888888881'})
+    p_operation_id:randomUUID()})
   const viewerDenied=await fetch(api+'/rest/v1/rpc/restore_document_version',{
     method:'POST',
     headers:{apikey:variables.ANON_KEY,Authorization:'Bearer '+viewerToken,
@@ -430,7 +434,7 @@ try{
         'Content-Type':'application/json'},
       body:JSON.stringify({p_document_id:documentId,
         p_version_id:foreignSnapshot.id,
-        p_operation_id:'88888888-8888-4888-8888-888888888882'}),
+        p_operation_id:randomUUID()}),
       signal:AbortSignal.timeout(12000),
     })
   assert(!invalidVersionResponse.ok,
@@ -440,10 +444,7 @@ try{
 
   // CONC-01: Two authenticated restores with separate IDs must serialize on
   // the parent document row without version-number collisions.
-  const competingOperations=[
-    '88888888-8888-4888-8888-888888888883',
-    '88888888-8888-4888-8888-888888888884',
-  ]
+  const competingOperations=[randomUUID(),randomUUID()]
   const concurrentReplies=await Promise.all(competingOperations.map(operationId=>
     fetch(api+'/rest/v1/rpc/restore_document_version',{
       method:'POST',
@@ -726,7 +727,7 @@ try{
   const c10AuthBody={
     p_project_id:projectId,p_document_id:c10DocId,
     p_content:'C10-UNAUTHORIZED',
-    p_operation_id:'77777777-7777-4777-8777-777777777781',
+    p_operation_id:randomUUID(),
   }
   async function c10RpcAs(token,body){
     return fetch(api+'/rest/v1/rpc/commit_chat_document_edit',{
@@ -740,8 +741,8 @@ try{
   const c10Anon=await c10RpcAs(variables.ANON_KEY,c10AuthBody)
   assert(!c10Anon.ok,'C-10 anonymous could write chat document')
   const c10Cross=await c10RpcAs(userToken,{
-    ...c10AuthBody,p_project_id:'88888888-8888-4888-8888-888888888888',
-    p_operation_id:'77777777-7777-4777-8777-777777777782',
+    ...c10AuthBody,p_project_id:randomUUID(),
+    p_operation_id:randomUUID(),
   })
   assert(!c10Cross.ok,'C-10 accepted mismatched document/project')
   const c10ReplayCollision=await c10RpcAs(userToken,{

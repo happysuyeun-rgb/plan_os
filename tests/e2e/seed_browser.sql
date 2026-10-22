@@ -8,7 +8,7 @@ where id = :'user_id'::uuid;
 
 insert into public.projects (id,user_id,title,description,memory_summary)
 values (
-  '77777777-7777-4777-8777-777777777777',
+  :'project_id'::uuid,
   :'user_id'::uuid,
   'Phase0 E2E Smoke Project',
   'Synthetic disposable browser QA project',
@@ -17,14 +17,14 @@ values (
 
 insert into public.documents(project_id,type,content)
 values (
-  '77777777-7777-4777-8777-777777777777',
+  :'project_id'::uuid,
   'prd',
   '# Phase0 E2E Document\n\nBrowser smoke fixture; not production data.'
 );
 
 insert into public.documents(project_id,type,content)
 values (
-  '77777777-7777-4777-8777-777777777777',
+  :'project_id'::uuid,
   'ia',
   '# Phase0 IA Fixture\n\nSecond independent synthetic document.'
 );
