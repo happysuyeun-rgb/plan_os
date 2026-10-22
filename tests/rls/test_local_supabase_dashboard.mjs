@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict'
 import { people, projectOne, projectTwo, anonKey, API_URL } from './test_local_supabase_auth.mjs'
 
-const dbUrl = process.env.PLANOS_LOCAL_DB_URL
-const skip = process.argv.includes('--skip-seed')
-
 const bearer = (person, extra = {}) => ({
   Authorization: `Bearer ${person.access_token}`,
   apikey: anonKey,
@@ -94,7 +91,6 @@ async function createTask(person, projectId, title, targetStatus) {
 }
 
 console.log('test_local_supabase_dashboard starting...')
-if (!dbUrl) throw new Error('PLANOS_LOCAL_DB_URL 필요')
 
 // 소유자 프로젝트(projectOne) + 두 번째 프로젝트(projectTwo, 소유자는 otherOwner)
 // 수용 fixture: A 업무 10 (done 4, blocked 2, todo 4), B 업무 2(done 2), C 업무 0
