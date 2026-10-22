@@ -30,6 +30,9 @@ export default function PmPlanNewPage() {
   const [steps, setSteps] = useState<PlanStep[]>([newStep()])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  // One request id per draft being composed: retrying after a lost
+  // response returns the already-created plan instead of duplicating it.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
 
   useEffect(() => {
     let mounted = true
@@ -67,7 +70,8 @@ export default function PmPlanNewPage() {
     }
     setSaving(true)
     try {
-      const plan = await createPmPlan(projectId, objective, steps)
+      const plan = await createPmPlan(projectId, objective, steps, requestId)
+      setRequestId(crypto.randomUUID())
       navigate(`/projects/${projectId}/plans/${plan.id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : '계획 저장에 실패했습니다.')

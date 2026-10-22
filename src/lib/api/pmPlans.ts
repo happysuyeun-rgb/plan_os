@@ -93,63 +93,36 @@ export async function fetchPmPlan(planId: string): Promise<{ plan: PmPlan; steps
 }
 
 /**
- * Creates a human-authored plan draft (F-401 server persistence).
- * client-generated step ids keep a partial retry from duplicating steps:
- * an already-written step answers 23505 and is skipped.
+ * Creates a human-authored plan draft (F-401 server persistence) in one
+ * database transaction. `requestId` makes retries after a lost response
+ * return the already-created plan instead of duplicating it; the caller
+ * keeps one request id per editing session and rotates it only after a
+ * confirmed creation.
  */
 export async function createPmPlan(
   projectId: string,
   objective: string,
   steps: PlanStep[],
+  requestId: string,
 ): Promise<PmPlan> {
-  const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) throw new Error('로그인이 필요합니다.')
-
-  const { data: plan, error } = await supabase
-    .from('pm_plans')
-    .insert({
-      project_id: projectId,
-      objective: objective.trim(),
-      source: 'human',
-      created_by: auth.user.id,
+  const payload = steps.map((step, index) => ({
+    title: step.title.trim(),
+    acceptance_criteria: step.acceptanceCriteria.trim(),
+    depends_on_position: step.dependsOn
+      ? steps.findIndex((candidate) => candidate.id === step.dependsOn) + 1 || null
+      : null,
+    position: index + 1,
+  }))
+  const { data, error } = await supabase
+    .rpc('create_pm_plan', {
+      p_project_id: projectId,
+      p_objective: objective.trim(),
+      p_steps: payload,
+      p_client_request_id: requestId,
     })
-    .select('*')
     .single()
   if (error) throwPlanError(error)
-  const created = plan as PmPlan
-
-  const idByClientId = new Map<string, string>()
-  for (const [index, step] of steps.entries()) {
-    const row = {
-      id: step.id,
-      plan_id: created.id,
-      position: index + 1,
-      title: step.title.trim(),
-      acceptance_criteria: step.acceptanceCriteria.trim(),
-    }
-    const { data, error: insertError } = await supabase
-      .from('pm_plan_steps')
-      .insert(row)
-      .select('id')
-      .single()
-    if (insertError && (insertError as { code?: string }).code !== '23505') {
-      throwPlanError(insertError)
-    }
-    idByClientId.set(step.id, data?.id ?? step.id)
-  }
-  for (const step of steps) {
-    if (!step.dependsOn) continue
-    const dependsId = idByClientId.get(step.dependsOn)
-    const ownId = idByClientId.get(step.id)
-    if (!dependsId || !ownId) continue
-    const { error: linkError } = await supabase
-      .from('pm_plan_steps')
-      .update({ depends_on_step_id: dependsId })
-      .eq('id', ownId)
-    if (linkError) throwPlanError(linkError)
-  }
-
-  return created
+  return unwrap(data as PmPlan | null, error)
 }
 
 /** Atomic draft save (objective + steps) guarded by the plan version. */

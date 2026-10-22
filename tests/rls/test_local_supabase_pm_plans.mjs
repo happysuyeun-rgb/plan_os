@@ -79,10 +79,14 @@ const viewerCreate = await rest('viewer', 'POST', 'pm_plans', {
 assert(!viewerCreate.ok, 'viewer plan create must be denied')
 console.log('PASS viewer/outsider boundaries hold (member read only, editor write only)')
 
-// 3) atomic draft save with the right version; dependencies come back wired.
+// 3) atomic draft save with the right version; dependencies come back
+// wired. Direct step inserts (step 1) already advanced the plan version
+// (migration 023 step-touch trigger), so read the current version first.
+const planBeforeSave = await rest('editor', 'GET', 'pm_plans', null, '?id=eq.' + plan.id)
+const versionBeforeSave = planBeforeSave.data[0].version
 const savedDraft = await rpc('editor', 'save_pm_plan_draft', {
   p_plan_id: plan.id,
-  p_expected_version: 1,
+  p_expected_version: versionBeforeSave,
   p_objective: 'PM plan E2E objective revised',
   p_steps: [
     { title: 'Step one revised', acceptance_criteria: 'first criteria met', depends_on_position: null, position: 1 },
@@ -90,7 +94,7 @@ const savedDraft = await rpc('editor', 'save_pm_plan_draft', {
   ],
 })
 assert(savedDraft.ok, 'draft save failed: ' + JSON.stringify(savedDraft.data))
-assert.equal(savedDraft.data.version, 2)
+assert.equal(savedDraft.data.version, versionBeforeSave + 1)
 const stepsAfterSave = await rest('editor', 'GET', 'pm_plan_steps', null,
   '?plan_id=eq.' + plan.id + '&order=position')
 assert.equal(stepsAfterSave.data.length, 2)
@@ -111,47 +115,49 @@ assert.equal(afterStale.data[0].objective, 'PM plan E2E objective revised')
 console.log('PASS stale draft save conflicts (P4001), stored plan untouched')
 
 // 5) editor cannot decide; owner approval is required.
+const planNow1 = await rest('editor', 'GET', 'pm_plans', null, '?id=eq.' + plan.id)
+const vNow1 = planNow1.data[0].version
 const requested = await rpc('editor', 'transition_pm_plan', {
-  p_plan_id: plan.id, p_expected_version: 2, p_action: 'request_approval', p_comment: 'please review',
+  p_plan_id: plan.id, p_expected_version: vNow1, p_action: 'request_approval', p_comment: 'please review',
 })
-assert(requested.ok && requested.data.status === 'pending_owner_approval' && requested.data.version === 3,
+assert(requested.ok && requested.data.status === 'pending_owner_approval' && requested.data.version === vNow1 + 1,
   'approval request failed: ' + JSON.stringify(requested.data))
 const editorApprove = await rpc('editor', 'transition_pm_plan', {
-  p_plan_id: plan.id, p_expected_version: 3, p_action: 'approve', p_comment: null,
+  p_plan_id: plan.id, p_expected_version: vNow1 + 1, p_action: 'approve', p_comment: null,
 })
 assert(!editorApprove.ok && editorApprove.data?.code === '42501',
   'editor approval must be owner-only: ' + JSON.stringify(editorApprove.data))
 const decisions = await rpc('owner', 'transition_pm_plan', {
-  p_plan_id: plan.id, p_expected_version: 3, p_action: 'needs_revision', p_comment: 'tighten step two',
+  p_plan_id: plan.id, p_expected_version: vNow1 + 1, p_action: 'needs_revision', p_comment: 'tighten step two',
 })
-assert(decisions.ok && decisions.data.status === 'needs_revision' && decisions.data.version === 4,
+assert(decisions.ok && decisions.data.status === 'needs_revision' && decisions.data.version === vNow1 + 2,
   'owner revision request failed: ' + JSON.stringify(decisions.data))
 console.log('PASS editor approval request recorded; editor decision denied; owner can ask for revision')
 
 // 6) revision returns to draft through a save, re-request, then approve.
 const revisedSave = await rpc('editor', 'save_pm_plan_draft', {
   p_plan_id: plan.id,
-  p_expected_version: 4,
+  p_expected_version: vNow1 + 2,
   p_objective: 'PM plan E2E objective revised',
   p_steps: [
     { title: 'Step one revised', acceptance_criteria: 'first criteria met', depends_on_position: null, position: 1 },
     { title: 'Step two revised', acceptance_criteria: 'second criteria met tighter', depends_on_position: 1, position: 2 },
   ],
 })
-assert(revisedSave.ok && revisedSave.data.status === 'draft' && revisedSave.data.version === 5,
+assert(revisedSave.ok && revisedSave.data.status === 'draft' && revisedSave.data.version === vNow1 + 3,
   'revision save must reopen the draft: ' + JSON.stringify(revisedSave.data))
 const requestedAgain = await rpc('editor', 'transition_pm_plan', {
-  p_plan_id: plan.id, p_expected_version: 5, p_action: 'request_approval', p_comment: null,
+  p_plan_id: plan.id, p_expected_version: vNow1 + 3, p_action: 'request_approval', p_comment: null,
 })
-assert(requestedAgain.ok && requestedAgain.data.version === 6)
+assert(requestedAgain.ok && requestedAgain.data.version === vNow1 + 4)
 const staleApprove = await rpc('owner', 'transition_pm_plan', {
-  p_plan_id: plan.id, p_expected_version: 5, p_action: 'approve', p_comment: null,
+  p_plan_id: plan.id, p_expected_version: vNow1 + 3, p_action: 'approve', p_comment: null,
 })
 assert(!staleApprove.ok && staleApprove.data?.code === 'P4001', 'stale decision must conflict')
 const approved = await rpc('owner', 'transition_pm_plan', {
-  p_plan_id: plan.id, p_expected_version: 6, p_action: 'approve', p_comment: 'looks good',
+  p_plan_id: plan.id, p_expected_version: vNow1 + 4, p_action: 'approve', p_comment: 'looks good',
 })
-assert(approved.ok && approved.data.status === 'approved' && approved.data.version === 7,
+assert(approved.ok && approved.data.status === 'approved' && approved.data.version === vNow1 + 5,
   'owner approval failed: ' + JSON.stringify(approved.data))
 console.log('PASS revision loop reopens draft; stale decision conflicts; owner approval lands')
 
