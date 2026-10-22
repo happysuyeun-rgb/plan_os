@@ -86,6 +86,7 @@
 | 감사 소스 선택 | `/projects/:projectId/audits/new` | F-201~202 | 미저장, 삭제·타 프로젝트, stale |
 | 역할·계약 | `/projects/:projectId/contracts/:contractId` | F-301~303 | 동의 전 불가, 비용/만료 |
 | PM 계획 | `/projects/:projectId/plans/:planId` | F-401~402 | 버전 충돌, 반려 사유 |
+| **프로젝트 통합 업무 현황(C04)** | **`/dashboard`(기존)** | **DASH-01~08, F-002/F-101~105, F-401~402** | 업무 없는 프로젝트는 진척률 N/A, S1 서버 OFF는 미연결, 권한·갱신 실패 |
 | 실행 | `/projects/:projectId/runs/:runId` | F-501~504 | 취소/재시도/재접속 |
 | 결과 보고서 | `/projects/:projectId/artifacts/:artifactId` | F-601~603 | 근거 없음, 구버전 수락 금지 |
 
@@ -146,3 +147,31 @@
 - 모델·도구 실행/과금, 기획/산출물 최종 승인, 직원 경력 적립/공개/후기 마케팅 동의는 별도의 행위이다. editor는 계획 초안만.
 - [데이터·권한·API 단일 계약](../engineering/AI_STAFF_DATA_AUTH_CONTRACT_V1_2026-10-21.md)의 메인 SQL 사실표 참조: agent_ 관련 테이블은 **현재 main migration에 없음**. 실제 DDL/RLS/JWT/브라우저 검증 전 STATUS 미구현.
 - TF 정본 **TF-01~46**. 이전 TF-S 별칭은 중복 기능 ID로 개발하지 않는다. IA 화면 정본 N01~32; 이전 ST-UI/P 화면 번호는 문서 별칭.
+
+## 2026-10-22 V5 추가 — C04 대시보드 기능정의 / PR #36 구현 계약 교정 (TARGET)
+
+**출처:** [독립 PM·대시보드 교차감사 V5](../quality/PLANOS_PM_DASHBOARD_CROSS_AUDIT_V5_2026-10-22.md), [Issue #39](https://github.com/happysuyeun-rgb/plan_os/issues/39), [PR #36 코드 리뷰](https://github.com/happysuyeun-rgb/plan_os/pull/36#issuecomment-6332797665). `DASH-01~08`은 기존 F-001~801의 **하위 보완 추적 ID**이며 번호를 덮어쓰지 않는다. PR #36의 PM 기능은 별도 Draft이고 `main`과 운영 서비스에 미반영.
+
+| 추적 ID | 우선 | 사용자 행동/처리 | 입력·권한·데이터 수용 기준 | 예외·테스트 | 현황 |
+|---|---|---|---|---|---|
+| **DASH-01** | P1 | 전체 접근 가능 프로젝트 목록/요약 | 프로젝트 owner + 활성 프로젝트 멤버별 접근 허용, 삭제 프로젝트 제외, 중복 제거. 서버 RLS 필수 | 비활성 멤버·outsider 프로젝트 이름/수치 0건 노출; owner-only `fetchProjects` 제한 보완 | 현재 main 카드만 존재, 통합 조회 미구현 |
+| **DASH-02** | P1 | 등록 업무 기준 완료율 표시 | `project_tasks.deleted_at IS NULL` 중 `status=done`/유효 업무 수. 예: 4/10 → 40%. 전체 프로젝트 '완성도' 표시 금지 | 분모 0이면 **업무 미등록/N/A**, 100% 오인 금지 | 미구현 |
+| **DASH-03** | P1 | 상태별 차단·진행·검토 요약 | todo/in_progress/in_review/blocked/done 별 실제 서버 집계, 차단 원인 drill-down | 상태 전이/삭제/권한철회/동시 탭 후 갱신 | 미구현 |
+| **DASH-04** | P1 | owner 승인 대기 요약·이동 | `pm_plans.pending_owner_approval` 등 **실재하는 서버 승인 리소스만** owner에게 행동 표시, editor/viewer는 '검토 대기' 등 역할에 맞게 표시 | RPC/DB/라우트 미적용이면 '미연결' 상태, 가짜 승인 0개 금지 | PR #36 계획 상세 승인 코드 일부, 통합 집계 미구현 |
+| **DASH-05** | P1 | 최신화·일부 로딩 실패·미지원 환경 안내 | 마지막 확인 시각, 갱신 버튼, loading/empty/no_tasks/partial_error/forbidden/feature_disabled 구분 | 서버 모드 OFF면 localStorage와 합산하지 않고 **통계 미연결** 표시 | 미구현 |
+| **DASH-06** | P1 | 정렬·필터와 다음 액션 | 차단/승인 우선, 최근 수정, 프로젝트 별 업무보드 실제 경로로 이동; 검색/필터 | 키보드·모바일·동시 업데이트, 잘못된 미구현 경로 금지 | 미구현 |
+| **DASH-07** | P1 | 서버 집계 API 성능·RLS | 허용된 projectIds만 집계, batched API/읽기 전용 view/RPC 등 N+1 방지, 결과의 projectId·count·snapshot 명시 | 3개+프로젝트, 대량 업무 성능, role/JWT 접근 검사 | 미구현 |
+| **DASH-08** | P2 | AI PM 전담 운영실 N29에 동일 요약 재사용 | AI PM 명시 배정된 프로젝트만; **사용자 C04와 PM N29의 권한 범위 별도** | 미배정 C/신규 프로젝트 제외·정식 PM 미구현 동안 fake worker 요약 금지 | 후속 |
+
+**필수 UI 실제 사용자 수용:** C04에서 프로젝트별 `업무 4/10 완료 (40%)`, 차단 2개, owner 승인 대기 1개, 해당 업무보드로 이동이 실제 서버 데이터로 가능해야 한다. 등록 업무가 없으면 **'업무 미등록'**, DB 비활성/미연결이면 **'서버 업무 현황을 연결할 수 없음'**. 5개 노출 문서 탭/6개 내부 생성 타입 수와 업무 완성률은 합산하지 않는다.
+
+**기존 F-401/402 및 S1 서버 병합 차단 추가 — V5-01~07:**
+1. `pending_owner_approval`의 목표·단계 편집을 direct JWT UPDATE로 **불가능**하게 하고, 수정한 내용은 재승인 받는 정책 강제 (**V5-01 P0 후보**).
+2. `project_tasks.source_plan_id/source_plan_step_id`의 **미승인/교차 프로젝트/다른 계획/직접 쓰기 우회** 차단; 수동 업무는 유지 (**V5-02 P0 후보**).
+3. 최초 `createPmPlan`의 계획+모든 단계+의존성 **트랜잭션 및 멱등 요청 ID**. 오류 시 중복/부분 저장 없이 입력 보존 (**V5-03 P1**).
+4. rejected/needs_revision 재요청 **UI·RPC·트리거 동일 상태 그래프** (**V5-04 P1**).
+5. 스텝 단독 변경도 plan revision/CAS와 감사 이벤트 기록; direct CRUD 우회 제한 (**V5-05 P1**).
+6. 동일 step에 대한 **실제 병렬** 업무 반영 2건은 둘 다 같은 task ID 성공, unique 위반이 사용자 오류로 노출되지 않음 (**V5-06 P1**).
+7. 선행 step 연결은 **같은 계획 내부**로 제한, 순환·구버전 및 타 프로젝트 차단 (**V5-07 P1**).
+
+**PR #36 구현 판정:** F-401/402/업무 연결 **코드가 존재하는 Draft**, 실제 local JWT/Chromium 테스트 코드 존재. 신규 우회 테스트·릴리스 게이트 미통과이므로 '완료'로 승격하지 않음. 특히 마이그레이션 022 운영 적용/업무보드 실서버 flag 활성화/CI 전체 통과는 별도 결정.
