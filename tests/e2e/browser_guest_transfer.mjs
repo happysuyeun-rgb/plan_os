@@ -30,7 +30,7 @@ if (leftover) await admin('/auth/v1/admin/users/' + leftover.id, 'DELETE')
 const created = await admin('/auth/v1/admin/users', 'POST', {
   email, password, email_confirm: true, user_metadata: { full_name: 'Guest Transfer E2E' },
 })
-console.log('PASS fresh account for guest transfer E2E: ' + created.id)
+console.log('PASS fresh account for guest transfer E2E')
 
 const session = await fetch(api + '/auth/v1/token?grant_type=password', {
   method: 'POST',

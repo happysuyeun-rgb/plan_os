@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install Supabase CLI for disposable LOCAL test stack
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.84.2
       - name: Install PostgreSQL client
