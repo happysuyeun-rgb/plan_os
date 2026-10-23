@@ -1,8 +1,25 @@
 # 배포 전환 계획 — PlanOS G1 통합 브랜치 (PR #30)
 
-작성일: 2026-10-22
-대상 브랜치: `feat/planos-g1-integration-stage-a-20261021`
-상태: **계획만 작성. 운영 DB 적용·main 병합·Vercel 배포는 이 문서로 실행되지 않았다.**
+작성일: 2026-10-22  
+**갱신:** 2026-10-23 — PM(022~024)·C04(025)·026 및 Preview는  
+[`PLANOS_MASTER_DEVELOPMENT_PLAN_2026-10-23.md`](./PLANOS_MASTER_DEVELOPMENT_PLAN_2026-10-23.md) ·  
+[`PLANOS_RELEASE_TEST_GATES_2026-10-23.md`](./PLANOS_RELEASE_TEST_GATES_2026-10-23.md) 정본을 따른다.  
+대상 브랜치: `feat/planos-g1-integration-stage-a-20261021` (+ 스택 tip `preview/planos-integrated-20261023`)  
+상태: **계획만 작성. 운영 DB 적용·main 병합·Vercel Production 배포는 사용자 승인 전 실행하지 않는다.**
+
+### 2026-10-23 추가 — 운영 적용 시 G1 이후 순서 (승인 후)
+
+| 순서 | 마이그레이션 | 비고 |
+|---|---|---|
+| … | (기존 §3의 013~020) | G1 |
+| 9 | `022_pm_plan_review_loop.sql` | 사람 PM |
+| 10 | `023_pm_plan_integrity_hardening.sql` | |
+| 11 | `024_pm_plan_final_integrity.sql` | |
+| 12 | `025_dashboard_aggregation_rpcs.sql` | C04 |
+| 13 | `026_reassert_document_versions_append_only.sql` | append-only 재선언 |
+
+`supabase/drafts/*` (017, 021)는 계속 **적용 금지**.  
+Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **main 자동배포와 무관**.
 
 ## 1. 확인된 현황 (저장소 기준, 변경 없음)
 
