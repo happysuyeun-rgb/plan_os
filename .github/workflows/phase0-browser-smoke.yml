@@ -34,7 +34,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Install Supabase CLI (no hosted project)
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.84.2
       - name: Install PostgreSQL client
@@ -76,12 +76,12 @@ jobs:
           done
       - name: Install app and configure LOCAL Supabase URL for Vite
         run: |
-          npm ci
+          npm ci --ignore-scripts
           node tests/e2e/local_browser_env.mjs
       - name: Install temporary Chromium browser test runner
         run: |
-          npm install --no-save --package-lock=false playwright@1.58.2
-          npx playwright install --with-deps chromium
+          npm install --ignore-scripts --no-save --package-lock=false playwright@1.58.2
+          node node_modules/playwright/cli.js install --with-deps chromium
       - name: Start local Vite development server
         run: |
           (npm run dev -- --host 127.0.0.1 > /tmp/planos-vite.log 2>&1 & echo $! > /tmp/planos-vite.pid)

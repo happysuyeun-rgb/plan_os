@@ -2,62 +2,45 @@
 // Uses LOCAL Supabase Auth + PostgREST and the REAL Vite frontend.
 // Does not connect to live Plan OS or deploy anything.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
-import { mkdirSync } from 'node:fs'
-import { chromium } from 'playwright'
-
-const localDir=process.env.PLANOS_LOCAL_SUPABASE_DIR
-assert(localDir,'PLANOS_LOCAL_SUPABASE_DIR is required')
-for(const key of ['SUPABASE_ACCESS_TOKEN','SUPABASE_DB_URL','SUPABASE_DB_PASSWORD']){
-  assert(!process.env[key],'Hosted Supabase credentials are not allowed')
-}
-const raw=execFileSync('supabase',['status','-o','env'],{
-  cwd:localDir,encoding:'utf8',timeout:30000,
-})
-const variables=Object.fromEntries(raw.split('\n').flatMap(line=>{
-  const match=line.match(/^([A-Z_]+)=(.*)$/)
-  return match?[[match[1],match[2].replace(/^["']|["']$/g,'')]]:[]
-}))
-assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
-// Defaults match CI; local runs may override when 54321/54322 are taken.
-const api=process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
-const dbPort=process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
-assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
-assert(!variables.API_URL || variables.API_URL===api, 'Unexpected nonlocal API URL')
-const site='http://127.0.0.1:5173'
-const runId=Date.now()
-const loginEmail=`browser-smoke-${runId}@example.test`
-const loginPassword='Synthetic-browser-smoke-password-123!'
 import { randomUUID } from 'node:crypto'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { chromium } from 'playwright'
+import { assertUuid, createAdminClient } from '../helpers/rest.mjs'
+import { runPsqlSeed, runPsqlStatements } from '../helpers/psql.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
-const projectId=randomUUID()
+const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
+assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
+const variables = readLocalSupabaseEnv(localDir)
+// Defaults match CI; local runs may override when 54321/54322 are taken.
+const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
+const dbPort = process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
+assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
+assert(!variables.API_URL || variables.API_URL === api, 'Unexpected nonlocal API URL')
+const site = 'http://127.0.0.1:5173'
+const loginEmail = `browser-smoke-${Date.now()}@example.test`
+const loginPassword = 'Synthetic-browser-smoke-password-123!'
+const projectId = randomUUID()
 
-async function localAdmin(path,method,body){
-  const r=await fetch(api+path,{
-    method,headers:{
-      apikey:variables.SERVICE_ROLE_KEY,
-      Authorization:'Bearer '+variables.SERVICE_ROLE_KEY,
-      'Content-Type':'application/json',
-    },body:JSON.stringify(body),signal:AbortSignal.timeout(15000),
-  })
-  const result=await r.json()
-  assert(r.ok,'Local admin auth operation failed HTTP '+r.status)
-  return result
+function expandPsqlVars(sql, vars) {
+  let out = sql
+  for (const [key, value] of Object.entries(vars)) {
+    assertUuid(value, key)
+    out = out.replaceAll(`:'${key}'`, `'${value}'`)
+  }
+  return out
 }
-const created=await localAdmin('/auth/v1/admin/users','POST',{
-  email:loginEmail,password:loginPassword,email_confirm:true,
-  user_metadata:{full_name:'E2E Test User'},
+
+const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
+const created = await admin('/auth/v1/admin/users', 'POST', {
+  email: loginEmail, password: loginPassword, email_confirm: true,
+  user_metadata: { full_name: 'E2E Test User' },
 })
-assert(created.id,'Local Auth synthetic account could not be created')
-execFileSync('psql',[
-  '-X','-v','ON_ERROR_STOP=1','-v','user_id='+created.id,
-  '-v','project_id='+projectId,
-  '-f',process.cwd()+'/tests/e2e/seed_browser.sql',
-],{
-  env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
-    PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
-  stdio:['ignore','pipe','pipe'],timeout:30000,
-})
+assertUuid(created.id, 'created user id')
+runPsqlSeed(expandPsqlVars(readFileSync('tests/e2e/seed_browser.sql', 'utf8'), {
+  user_id: created.id,
+  project_id: projectId,
+}), { dbPort })
 console.log('PASS local Auth synthetic user and private browser QA project seeded')
 
 let browser
@@ -230,14 +213,7 @@ try{
 
   // FAULT-01: Failure INSIDE the server RPC, after version INSERT and before
   // document UPDATE, must roll back all writes (not leave phantom history).
-  execFileSync('psql',[
-    '-X','-v','ON_ERROR_STOP=1',
-    '-f',process.cwd()+'/tests/e2e/inject_restore_update_failure.sql',
-  ],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
-      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
-    stdio:['ignore','pipe','pipe'],timeout:30000,
-  })
+  runPsqlSeed(readFileSync('tests/e2e/inject_restore_update_failure.sql', 'utf8'), { dbPort })
   await page.getByRole('button',{name:/^v2 \(B05-current\)$/}).first().click()
   await page.waitForFunction(expected=>
     document.querySelector('main textarea')?.value===expected,beforeRestore,{timeout:12000})
@@ -278,14 +254,7 @@ try{
 
   // Drop the ONLY-LOCAL fault trigger, then retry the same modal confirmation.
   // The store must retain the operation UUID after the ambiguous error.
-  execFileSync('psql',[
-    '-X','-v','ON_ERROR_STOP=1',
-    '-c','drop trigger qa_reject_document_restore on public.documents',
-  ],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
-      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
-    stdio:['ignore','pipe','pipe'],timeout:30000,
-  })
+  runPsqlStatements('drop trigger qa_reject_document_restore on public.documents', { dbPort })
   const retryRpcResponse=page.waitForResponse(response=>
     response.request().method()==='POST' &&
     response.url().includes('/rest/v1/rpc/restore_document_version'),{
@@ -636,12 +605,7 @@ try{
   const c10BeforeDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
   const c10OpsQuery='document_id=eq.'+c10DocId
   const c10BeforeOps=await c10Read('document_chat_operations','id',c10OpsQuery)
-  execFileSync('psql',['-X','-v','ON_ERROR_STOP=1',
-    '-f',process.cwd()+'/tests/e2e/inject_chat_update_failure.sql'],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
-      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
-    stdio:['ignore','pipe','pipe'],timeout:30000,
-  })
+  runPsqlSeed(readFileSync('tests/e2e/inject_chat_update_failure.sql', 'utf8'), { dbPort })
   const c10Marker='C10-ATOMIC-FAULT-'+created.id
   const c10ChatInput=page.locator('aside textarea[placeholder*="@"]')
   const c10FailedRpc=page.waitForResponse(reply=>
@@ -662,12 +626,7 @@ try{
     'C-10 left operation record after failed transaction')
   console.log('PASS C-10 FAULT: injected DB UPDATE failure rolls back user/assistant messages, document and request log')
 
-  execFileSync('psql',['-X','-v','ON_ERROR_STOP=1',
-    '-c','drop trigger qa_fail_chat_document_update on public.documents'],{
-    env:{...process.env,PGHOST:'127.0.0.1',PGPORT:dbPort,
-      PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},
-    stdio:['ignore','pipe','pipe'],timeout:30000,
-  })
+  runPsqlStatements('drop trigger qa_fail_chat_document_update on public.documents', { dbPort })
   // A retry with the unchanged input must reuse its original operation UUID.
   await c10ChatInput.press('Enter')
   await page.waitForFunction(marker=>

@@ -5,22 +5,13 @@
 // duplicating the project or any of the six documents.
 // Runs only against the disposable local Supabase + local Vite dev server.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import { createAdminClient } from '../helpers/rest.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
-for (const key of ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD']) {
-  assert(!process.env[key], 'Hosted Supabase credentials are not allowed')
-}
-const raw = execFileSync('supabase', ['status', '-o', 'env'], {
-  cwd: localDir, encoding: 'utf8', timeout: 30000,
-})
-const variables = Object.fromEntries(raw.split('\n').flatMap((line) => {
-  const match = line.match(/^([A-Z_]+)=(.*)$/)
-  return match ? [[match[1], match[2].replace(/^["']|["']$/g, '')]] : []
-}))
-assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
+const variables = readLocalSupabaseEnv(localDir)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 const site = 'http://127.0.0.1:5173'
@@ -30,21 +21,7 @@ const password = 'Synthetic-guest-transfer-password-123!'
 const TYPES = ['prd', 'ia', 'screen_list', 'policy', 'wireframe', 'cursor_prompt']
 const bodyOf = (type) => '# Guest ' + type + '\n\nGUEST-TRANSFER-BODY-' + type
 
-async function admin(path, method, body) {
-  const r = await fetch(api + path, {
-    method,
-    headers: {
-      apikey: variables.SERVICE_ROLE_KEY,
-      Authorization: 'Bearer ' + variables.SERVICE_ROLE_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
-  })
-  const result = await r.json()
-  assert(r.ok, 'admin auth operation failed HTTP ' + r.status + ': ' + JSON.stringify(result))
-  return result
-}
+const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
 
 // Remove a leftover account from an aborted earlier run (seed idempotency).
 const listed = await admin('/auth/v1/admin/users?per_page=100', 'GET')
@@ -53,7 +30,7 @@ if (leftover) await admin('/auth/v1/admin/users/' + leftover.id, 'DELETE')
 const created = await admin('/auth/v1/admin/users', 'POST', {
   email, password, email_confirm: true, user_metadata: { full_name: 'Guest Transfer E2E' },
 })
-console.log('PASS fresh account for guest transfer E2E: ' + created.id)
+console.log('PASS fresh account for guest transfer E2E')
 
 const session = await fetch(api + '/auth/v1/token?grant_type=password', {
   method: 'POST',
