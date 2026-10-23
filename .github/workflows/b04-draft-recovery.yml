@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: node --test tests/unsaved-draft.test.mjs
       - run: npm run build
-      - run: npx eslint src/lib/unsavedDraft.ts src/store/documentStore.ts src/pages/DocumentPage.tsx
+      - run: node node_modules/eslint/bin/eslint.js src/lib/unsavedDraft.ts src/store/documentStore.ts src/pages/DocumentPage.tsx

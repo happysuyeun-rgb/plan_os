@@ -1,51 +1,47 @@
 // Genuine LOCAL Supabase Auth -> JWT -> PostgREST RLS integration tests.
 // Talks ONLY to localhost. Never provide production tokens or credentials.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { assertUuid, createAdminClient } from '../helpers/rest.mjs'
+import { runPsqlSeed } from '../helpers/psql.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
 // Defaults match CI. Local runs may override both when port 54321/54322 are
 // already taken by another disposable stack; the values must stay loopback.
 const API_URL = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 const DB_PORT = process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
 const TEST_PASSWORD = 'Test-only-password-123!'
-const repository = process.cwd()
 const localStackDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localStackDir, 'PLANOS_LOCAL_SUPABASE_DIR required')
-for (const name of ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_PASSWORD', 'SUPABASE_DB_URL']) {
-  assert(!process.env[name], 'Hosted Supabase environment variables must be absent: ' + name)
-}
 
-const output = execFileSync('supabase', ['status', '-o', 'env'], {
-  cwd: localStackDir, encoding: 'utf8', timeout: 30000,
-})
-const variables = Object.fromEntries(
-  output.split('\n').flatMap(line => {
-    const parsed = line.match(/^([A-Z_]+)=(.*)$/)
-    return parsed ? [[parsed[1], parsed[2].replace(/^["']|["']$/g, '')]] : []
-  }),
-)
+const variables = readLocalSupabaseEnv(localStackDir)
 const anonKey = variables.ANON_KEY
 const serviceKey = variables.SERVICE_ROLE_KEY
-assert(anonKey && serviceKey, 'Local Supabase API keys were not returned')
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(API_URL), 'API URL must be loopback: ' + API_URL)
 assert(!variables.API_URL || variables.API_URL === API_URL, 'Unexpected nonlocal API URL')
 
-function db(sqlFile, vars = []) {
-  return execFileSync('psql', [
-    '-X', '-v', 'ON_ERROR_STOP=1',
-    ...vars.flatMap(([key, value]) => ['-v', key + '=' + value]),
-    '-f', repository + '/' + sqlFile,
-  ], {
-    env: {
-      ...process.env, PGHOST: '127.0.0.1', PGPORT: DB_PORT,
-      PGUSER: 'postgres', PGPASSWORD: 'postgres',
-      PGDATABASE: 'postgres', PGSSLMODE: 'disable',
-    },
-    encoding: 'utf8', timeout: 40000,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
+function expandPsqlVars(sql, vars) {
+  let out = sql
+  for (const [key, value] of Object.entries(vars)) {
+    assertUuid(value, key)
+    out = out.replaceAll(`:'${key}'`, `'${value}'`)
+  }
+  return out
 }
+
+function db(sqlFile, vars = {}) {
+  // Callers historically passed [[key, value], ...]; object form is also accepted.
+  const map = Array.isArray(vars)
+    ? Object.fromEntries(vars)
+    : vars
+  return runPsqlSeed(
+    expandPsqlVars(readFileSync(sqlFile, 'utf8'), map),
+    { dbPort: DB_PORT },
+  )
+}
+
+const admin = createAdminClient({ apiUrl: API_URL, serviceKey })
 
 async function call(path, { key = anonKey, bearer = key, method = 'GET', body } = {}) {
   const response = await fetch(API_URL + path, {
@@ -69,12 +65,11 @@ async function call(path, { key = anonKey, bearer = key, method = 'GET', body } 
 }
 
 async function account(role) {
-  const email = 'planos-' + role + '-' + randomUUID().slice(0,8) + '@example.test'
-  const created = await call('/auth/v1/admin/users', {
-    key: serviceKey, method: 'POST',
-    body: { email, password: TEST_PASSWORD, email_confirm: true },
+  const email = 'planos-' + role + '-' + randomUUID().slice(0, 8) + '@example.test'
+  const created = await admin('/auth/v1/admin/users', 'POST', {
+    email, password: TEST_PASSWORD, email_confirm: true,
   })
-  assert.match(created.id, /^[0-9a-f-]{36}$/)
+  assertUuid(created.id, role + ' user id')
   const session = await call('/auth/v1/token?grant_type=password', {
     method: 'POST', body: { email, password: TEST_PASSWORD },
   })
@@ -84,18 +79,18 @@ async function account(role) {
 }
 
 const people = {}
-for (const name of ['owner','editor','viewer','pending','otherOwner','otherEditor','outsider']) {
+for (const name of ['owner', 'editor', 'viewer', 'pending', 'otherOwner', 'otherEditor', 'outsider']) {
   people[name] = await account(name)
 }
 const ids = Object.fromEntries(Object.entries(people).map(([name, person]) => [name, person.id]))
-db('tests/rls/seed_auth_rest.sql', [
-  ['owner_id', ids.owner],
-  ['editor_id', ids.editor],
-  ['viewer_id', ids.viewer],
-  ['pending_id', ids.pending],
-  ['other_owner_id', ids.otherOwner],
-  ['other_editor_id', ids.otherEditor],
-])
+db('tests/rls/seed_auth_rest.sql', {
+  owner_id: ids.owner,
+  editor_id: ids.editor,
+  viewer_id: ids.viewer,
+  pending_id: ids.pending,
+  other_owner_id: ids.otherOwner,
+  other_editor_id: ids.otherEditor,
+})
 console.log('PASS local Supabase Auth users, real JWTs and public.users trigger')
 
 const projectOne = '11111111-1111-1111-1111-111111111111'
@@ -107,7 +102,7 @@ async function queryRows(role, resource, projectId) {
   assert(Array.isArray(data), role + ' ' + resource + ' response must be an array')
   return data
 }
-for (const role of ['owner','editor','viewer']) {
+for (const role of ['owner', 'editor', 'viewer']) {
   assert.equal((await queryRows(role, 'project_members', projectOne)).length, 3)
   assert.equal((await queryRows(role, 'project_members', projectTwo)).length, 0)
   assert.equal((await queryRows(role, 'documents', projectOne)).length, 1)
@@ -123,14 +118,14 @@ assert.equal((await queryRows('pending', 'project_members', projectTwo)).length,
 console.log('PASS pending: own invitation only, no project document access')
 
 // Project owners live in projects.user_id; only invited members occupy project_members.
-for (const [role, ownCount] of [['otherOwner',1],['otherEditor',1]]) {
-  assert.equal((await queryRows(role,'project_members',projectOne)).length, 0)
-  assert.equal((await queryRows(role,'project_members',projectTwo)).length, ownCount)
+for (const [role, ownCount] of [['otherOwner', 1], ['otherEditor', 1]]) {
+  assert.equal((await queryRows(role, 'project_members', projectOne)).length, 0)
+  assert.equal((await queryRows(role, 'project_members', projectTwo)).length, ownCount)
 }
-for (const role of ['outsider','anon']) {
-  assert.equal((await queryRows(role,'project_members',projectOne)).length, 0)
-  assert.equal((await queryRows(role,'project_members',projectTwo)).length, 0)
-  assert.equal((await queryRows(role,'documents',projectOne)).length, 0)
+for (const role of ['outsider', 'anon']) {
+  assert.equal((await queryRows(role, 'project_members', projectOne)).length, 0)
+  assert.equal((await queryRows(role, 'project_members', projectTwo)).length, 0)
+  assert.equal((await queryRows(role, 'documents', projectOne)).length, 0)
 }
 console.log('PASS other-project user, outsider and anon access denied')
 
@@ -147,7 +142,7 @@ const viewerWrite = await fetch(API_URL + '/rest/v1/documents?project_id=eq.' + 
 })
 const text = await viewerWrite.text()
 assert(!viewerWrite.ok || text === '[]', 'Viewer unexpectedly updated document')
-const ownerDocs = await queryRows('owner','documents',projectOne)
+const ownerDocs = await queryRows('owner', 'documents', projectOne)
 assert.equal(ownerDocs[0].content, 'One Project PRD')
 console.log('PASS viewer document UPDATE denied, original content preserved')
 console.log('SUCCESS: isolated Supabase Auth -> JWT -> PostgREST member policy integration')
