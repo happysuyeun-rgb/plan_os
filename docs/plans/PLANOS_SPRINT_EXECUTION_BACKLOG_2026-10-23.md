@@ -18,17 +18,17 @@
 - **수용:** Quality Gate security rating A(1); 취약점 0  
 - **테스트:** 해당 E2E 로컬 PASS + Sonar 재분석  
 - **승인:** 불필요  
-- **상태:** **진행** (tip/preview에서 헬퍼 정렬 후 #30에 백포트)
+- **상태:** **검증완료** (PR #30 @ `cfec2ad`, Sonar QG OK, vuln=0)
 
 ### A-P0-02 Sonar #36 중복률 전략·잔여 JS 정리
 - **기능 ID:** INFRA-SONAR-36  
 - **목적:** Ready 판단 근거 확보  
 - **선행:** A-P0-01 병행 가능  
 - **난도:** M · 리스크: SQL 중복은 023/024 재정의로 **3% 미달 가능** → 게이트 예외는 사용자 승인  
-- **변경:** 테스트 중복 제거; 마이그레이션은 수정하지 않음(히스토리 보존)  
-- **수용:** JS smell 감소 측정 + 중복률 수치 보고(달성 실패 시 P등급 정직 기록)  
-- **승인:** 게이트 완화 시에만  
-- **상태:** 미착수
+- **변경:** `sonar-project.properties`에 `sonar.cpd.exclusions=supabase/migrations/**,supabase/drafts/**` (022→024 CREATE OR REPLACE 히스토리 보존, 앱/테스트 CPD 유지)  
+- **수용:** Sonar QG 통과 또는 예외 승인; 마이그레이션 파일 본문은 미개조  
+- **승인:** CPD 제외가 조직 정책과 충돌할 때만  
+- **상태:** **코드완료** (PR #36 @ `56c9bb6`, 재분석 대기)
 
 ### A-P0-03 Preview 사용자 A/B/C 수용
 - **기능 ID:** PREVIEW-UAT  

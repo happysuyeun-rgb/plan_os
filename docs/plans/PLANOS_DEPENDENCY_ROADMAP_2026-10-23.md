@@ -13,14 +13,15 @@ flowchart TB
   pr31[PR31_business] -.-> design
 ```
 
-| 순서 | PR | HEAD(보고시점) | base | 비고 |
+| 순서 | PR | HEAD(V1.1 보고) | base | 비고 |
 |---|---|---|---|---|
-| 1 | #30 | `f74481e` | main | Sonar security 차단 |
-| 2 | #36 | `cb32c91` | #30 브랜치 | Sonar 중복 차단 |
-| 3 | #42 | `716f9e6`+ | #36 브랜치 | CI·Sonar OK; 026 포함 |
-| tip | preview | `7460e5b` | (통합 tip) | Preview 배포 소스 |
+| 1 | #30 | `cfec2ad` | main | Sonar security QG **통과** (A-P0-01) |
+| 2 | #36 | `56c9bb6` | #30 브랜치 | CPD: migrations 제외 적용 (A-P0-02) |
+| 3 | #42 | tip 계보 | #36 브랜치 | CI·Sonar OK; 025·026 포함 |
+| tip | preview | `c695411`+ | (통합 tip) | Preview 배포 소스 |
 
 **규칙:** tip만 고쳐 Sonar #30/#36 게이트가 자동 해소되지 않음. 각 PR 브랜치에 수정 커밋 필요.  
+**운영 병합 전제(V1.1):** DB 001~026 적용·검증 **후** #30→#36→#42.  
 구 Draft #22~#27 G1/Mock은 #30/#36에 흡수·대체된 항목이 많음 → 중복 병합 금지.
 
 ## 2. DB 마이그레이션 의존
@@ -65,13 +66,13 @@ flowchart LR
 | LLM | 서버 사이드 키; 브라우저에 service_role·provider secret 금지 |
 | 컷오버 021 | 전 클라이언트 신코드 확인 전 금지 |
 
-## 5. 실행 순서 (고정)
+## 5. 실행 순서 (고정, V1.1)
 
-1. Phase A: Sonar #30/#36 → Preview 수용 → (승인) 운영 read-only → 백업 → mig → main  
+1. Phase A: Sonar #30/#36 → Preview 수용 → (승인) 운영 read-only → 백업 → **mig 001~026** → **그다음** main(#30→#36→#42)  
 2. Phase B: S1 상세·이력·플래그 정책  
 3. Phase C: LLM 어댑터 (격리 키·예산 캡)  
 4. Phase D: 기획 검수 AI 세로 슬라이스  
 5. Phase E: AI PM · 채용 · 경력 · 가격  
 6. Phase F: 통합 게이트 · Production  
 
-병렬 허용: 문서 동기화(#28+#40), Preview E2E, Sonar 테스트헬퍼, S1 UI 스케치(스키마 확정 전 stub).
+병렬 허용: 문서 동기화(#28+#40), Preview E2E, Sonar 테스트헬퍼, S1 UI 스케치(스키마 확정 전 stub), Phase C/D 인터페이스(유료 호출 없이).
