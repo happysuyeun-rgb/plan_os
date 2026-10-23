@@ -36,9 +36,10 @@ Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **mai
 
 | 항목 | 확인 결과 | 비고 |
 |---|---|---|
-| 운영 Supabase 마이그레이션 적용 상태 | **미확인** | 운영 DB에 접속하지 않았다. 적용 여부는 §2의 사전 점검 절차로 배포 승인 후 확인한다. 이 저장소는 `schema_migrations` 테이블에 의존하지 않고 마이그레이션 파일을 psql로 직접 적용하는 방식이라, 적용 여부는 객체 존재 여부로 확인해야 한다. |
-| Vercel 자동 배포 | **저장소만으로는 확정 불가** | `vercel.json`이 없고 GitHub Actions에 배포 워크플로가 없다. Vercel 프로젝트가 GitHub 저장소와 연동돼 있으면 main 병합 시 자동 배포될 수 있으므로, 병합 승인 전에 Vercel 대시보드(Settings → Git)에서 연동·자동 배포 설정을 확인할 것. |
-| 코드 ↔ DB 의존성 | **DB가 코드보다 먼저** | PR #30 코드는 `documents.content_revision` 컬럼과 `save_document_content_cas` RPC(마이그레이션 018)를 전제로 한다. 코드가 먼저 배포되면 운영 DB에서 문서 읽기/쓰기가 깨진다. §3의 순서를 반드시 지킨다. |
+| 운영 Supabase 마이그레이션 적용 상태 | **미확인** | 운영 DB에 접속하지 않았다. 절차 정본: [`OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md`](./OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md). 적용 여부는 객체 존재 SELECT로 확인 (schema_migrations 미사용). |
+| GitHub Actions 배포 | **없음** | `.github/workflows`에 Production/Vercel deploy 워크플로 없음 → **Actions만으로 main 병합 시 자동 배포되지 않음**. |
+| Vercel Production 자동 배포 | **대시보드 확인 필수 (미확정)** | 저장소에 `vercel.json`(SPA rewrite·보안 헤더만) 존재. **Production 프로젝트가 GitHub `main`에 연결돼 있으면** 병합 즉시 빌드될 수 있음. Preview(`planos-preview`)는 Git disconnect 상태(보고). 병합 승인 전 Production Settings → Git에서 Production Branch·Auto Deploy 확인. |
+| 코드 ↔ DB 의존성 | **DB가 코드보다 먼저** | PR #30 코드는 `documents.content_revision` + `save_document_content_cas`(018) 전제. §V1.1 표 적용 후 병합. |
 
 ## 2. 배포 전 사전 점검 (운영 DB, 읽기 전용)
 
@@ -52,7 +53,9 @@ Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **mai
    - 함수 `public.validate_project_task_change` 본문에 `P4001` 포함 여부 — 없으면 020 미적용 (011 자체가 없으면 `public.project_tasks` 테이블도 없다)
    - 정책 `documents_update_editor` 존재 여부 — 021 컷오버 draft는 **이번 배포에서 적용하지 않으므로 남아 있어야 정상**
 
-3. `select table_name from information_schema.tables where table_schema='public'`로 011(project_tasks)·012(audit_source_manifests) 적용 여부도 확인한다. 011 파일 상단 주석은 "운영 검토 전 적용 금지"로 돼 있어 미적용일 수 있다.
+3. `select table_name from information_schema.tables where table_schema='public'`로 011(project_tasks)·012(audit_source_manifests)·022(`pm_plans`) 적용 여부도 확인한다. 011 파일 상단 주석은 "운영 검토 전 적용 금지"로 돼 있어 미적용일 수 있다.
+
+4. C04/무결성: `025` dashboard RPC·`026` append-only 재선언 여부는 [`OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md`](./OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md) A1 표를 채운다.
 
 ## 3. 적용 순서 (승인 후, 운영 DB)
 
