@@ -1,0 +1,37 @@
+-- DRAFT ONLY — do not apply to Preview ops or production without approval.
+-- Phase D persistence for AI planning-review jobs + citation findings.
+-- Complements in-memory ReviewJobStore; RLS mirrors project member access.
+
+-- create table public.ai_review_jobs (
+--   id uuid primary key default gen_random_uuid(),
+--   project_id uuid not null references public.projects(id) on delete cascade,
+--   status text not null check (status in (
+--     'queued','running','awaiting_human','accepted','rejected','failed'
+--   )),
+--   linked_task_id uuid references public.project_tasks(id) on delete set null,
+--   error_message text,
+--   created_by uuid references auth.users(id) on delete set null,
+--   created_at timestamptz not null default now(),
+--   updated_at timestamptz not null default now()
+-- );
+--
+-- create table public.ai_review_findings (
+--   id uuid primary key default gen_random_uuid(),
+--   job_id uuid not null references public.ai_review_jobs(id) on delete cascade,
+--   severity text not null check (severity in ('info','warning','blocker')),
+--   summary text not null,
+--   document_id uuid not null,
+--   document_type text not null,
+--   version_number integer,
+--   start_offset integer,
+--   end_offset integer,
+--   quote text not null,
+--   rationale text not null,
+--   created_at timestamptz not null default now()
+-- );
+--
+-- alter table public.ai_review_jobs enable row level security;
+-- alter table public.ai_review_findings enable row level security;
+-- -- Policies (sketch): members SELECT; editors INSERT/UPDATE jobs; no client DELETE.
+--
+-- Status: DRAFT. Apply only after Preview rehearsal + user approval.

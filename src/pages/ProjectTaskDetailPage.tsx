@@ -55,6 +55,11 @@ export default function ProjectTaskDetailPage() {
   }, [projectId, taskId, userId, setCurrentProject, fetchMembers])
 
   const activeMembers = members.filter((m) => m.project_id === projectId && m.status === 'active' && m.user_id)
+  const membership = members.find((m) => m.project_id === projectId && m.user_id === userId && m.status === 'active')
+  const isOwner = Boolean(currentProject && userId && currentProject.user_id === userId)
+  const roleLabel = isOwner ? 'owner' : (membership?.role ?? 'none')
+  const canEditTasks = isOwner || membership?.role === 'owner' || membership?.role === 'editor'
+  const canViewTasks = canEditTasks || membership?.role === 'viewer'
   const assigneeLabel = (id: string | null) => {
     if (!id) return '미지정'
     const member = activeMembers.find((m) => m.user_id === id)
@@ -72,9 +77,18 @@ export default function ProjectTaskDetailPage() {
             ? '서버 저장 업무의 담당자·이력(project_task_events)을 표시합니다.'
             : '브라우저 시안 모드에서는 이력이 없습니다. VITE_S1_SERVER_TASKS=true 에서 이력을 확인하세요.'}
         </p>
+        <p className="mt-1 text-xs text-gray-500" data-testid="task-detail-role">
+          현재 역할: {roleLabel}
+          {canEditTasks ? ' (편집 가능)' : canViewTasks ? ' (읽기 전용)' : ' (접근 없음)'}
+        </p>
       </header>
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
-      {!ready ? <p>불러오는 중…</p> : !task ? null : (
+      {ready && !canViewTasks && !error && (
+        <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900">
+          이 프로젝트 업무를 볼 권한이 없습니다. Owner/Editor/Viewer만 조회할 수 있습니다.
+        </p>
+      )}
+      {!ready ? <p>불러오는 중…</p> : !task || !canViewTasks ? null : (
         <>
           <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="업무 본문">
             <h2 className="text-xl font-semibold">{task.title}</h2>
