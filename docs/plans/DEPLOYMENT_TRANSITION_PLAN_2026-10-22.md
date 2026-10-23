@@ -7,19 +7,30 @@
 대상 브랜치: `feat/planos-g1-integration-stage-a-20261021` (+ 스택 tip `preview/planos-integrated-20261023`)  
 상태: **계획만 작성. 운영 DB 적용·main 병합·Vercel Production 배포는 사용자 승인 전 실행하지 않는다.**
 
-### 2026-10-23 추가 — 운영 적용 시 G1 이후 순서 (승인 후)
+### 2026-10-23 / V1.1 — 운영 적용 전체 순서 (승인 후, §3과 단일 표로 정합)
 
-| 순서 | 마이그레이션 | 비고 |
+아래가 **유일한 적용 순서**다. §3 표와 이 표가 어긋나면 **이 표(V1.1)가 우선**한다.
+
+| 순서 | 마이그레이션 | 대역 |
 |---|---|---|
-| … | (기존 §3의 013~020) | G1 |
+| 1 | `013_fix_project_members_select_recursion.sql` | G1 |
+| 2 | `014_harden_comments_notifications_versions.sql` | G1 |
+| 3 | `015_atomic_document_version_restore.sql` | G1 |
+| 4 | `016_atomic_chat_document_edit.sql` | G1 |
+| 5 | `018_document_revision_cas.sql` | G1 |
+| 6 | `019_harden_can_edit_null_check.sql` | G1 |
+| 7 | `011_project_tasks.sql` (**운영 미적용인 경우에만**) | S1 |
+| 8 | `020_task_conflict_sqlstate.sql` | S1 |
 | 9 | `022_pm_plan_review_loop.sql` | 사람 PM |
-| 10 | `023_pm_plan_integrity_hardening.sql` | |
-| 11 | `024_pm_plan_final_integrity.sql` | |
+| 10 | `023_pm_plan_integrity_hardening.sql` | 사람 PM |
+| 11 | `024_pm_plan_final_integrity.sql` | 사람 PM |
 | 12 | `025_dashboard_aggregation_rpcs.sql` | C04 |
-| 13 | `026_reassert_document_versions_append_only.sql` | append-only 재선언 |
+| 13 | `026_reassert_document_versions_append_only.sql` | 무결성 |
 
 `supabase/drafts/*` (017, 021)는 계속 **적용 금지**.  
 Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **main 자동배포와 무관**.
+
+**병합 vs DB (V1.1):** 운영에서는 **위 표 적용·검증 → 그다음** main에 PR **#30 → #36 → #42** 순 병합. “코드 먼저 병합 후 DB”는 금지.
 
 ## 1. 확인된 현황 (저장소 기준, 변경 없음)
 
@@ -45,18 +56,8 @@ Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **mai
 
 ## 3. 적용 순서 (승인 후, 운영 DB)
 
-운영에 이미 적용된 마이그레이션은 건너뛰고, 누락분만 아래 상대 순서를 지켜 적용한다.
-
-| 순서 | 마이그레이션 | 내용 | 선행 조건 |
-|---|---|---|---|
-| 1 | `013_fix_project_members_select_recursion.sql` | 멤버 RLS 재귀 수정 | — |
-| 2 | `014_harden_comments_notifications_versions.sql` | 댓글·알림·버전 강화 | 013 |
-| 3 | `015_atomic_document_version_restore.sql` | 원자적 복원 RPC | 014 |
-| 4 | `016_atomic_chat_document_edit.sql` | 원자적 채팅 편집 RPC | 015 |
-| 5 | `018_document_revision_cas.sql` | content_revision + CAS RPC | 016 (`documents` 존재) |
-| 6 | `019_harden_can_edit_null_check.sql` | `can_edit_project_content` NULL 방어 | 018 |
-| 7 | `011_project_tasks.sql` | 업무 테이블+트리거 (**운영 미적용인 경우에만**) | — |
-| 8 | `020_task_conflict_sqlstate.sql` | 업무 충돌 코드 P4001 교체 | 011 (함수가 있어야 교체 가능) |
+운영에 이미 적용된 마이그레이션은 건너뛰고, 누락분만 **문서 상단 V1.1 전체 표(순서 1~13)** 를 지킨다.  
+(구 §3이 013~020만 나열해 022~026과 표가 둘로 갈라져 있던 모순은 V1.1에서 해소.)
 
 적용 금지:
 
