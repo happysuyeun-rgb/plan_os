@@ -23,14 +23,16 @@
 
 ## 2. 테스트 계정 (가상 데이터만)
 
-| 역할 | 이메일 | 비밀번호 | 용도 |
-|---|---|---|---|
-| Owner | `preview-owner@planos.test` | `Preview-Owner-2026!` | 프로젝트 생성·문서·PM 승인·업무·대시보드 |
-| Editor | `preview-editor@planos.test` | `Preview-Editor-2026!` | 멤버 초대 후 편집 권한 확인 |
-| Viewer | `preview-viewer@planos.test` | `Preview-Viewer-2026!` | 읽기 전용 확인 |
+| 역할 | 이메일 | 용도 |
+|---|---|---|
+| Owner | `preview-owner@planos.test` | 프로젝트 생성·문서·PM 승인·업무·대시보드 |
+| Editor | `preview-editor@planos.test` | 멤버 초대 후 편집 권한 확인 |
+| Viewer | `preview-viewer@planos.test` | 읽기 전용 확인 |
 
-로그인 페이지의 **「개발용 임시 로그인」** 폼에 위 계정을 입력합니다.  
-Google 로그인은 Preview 프로젝트에 OAuth를 연결하지 않았으므로 사용하지 않습니다.
+**비밀번호는 GitHub·공개 문서에 기록하지 않습니다.** 검수자에게는 별도 채널(채팅/안전한 전달)로만 공유합니다.  
+로그인 페이지의 **「개발용 임시 로그인」** 폼에 이메일·비밀번호를 입력합니다.  
+Google 로그인은 Preview 프로젝트에 OAuth를 연결하지 않았으므로 사용하지 않습니다.  
+`VITE_ENABLE_DEV_LOGIN` / `VITE_S1_SERVER_TASKS`는 **Preview 빌드 환경변수로만** 켜지며, 운영 Production 빌드에는 넣지 않습니다.
 
 ---
 
