@@ -6,44 +6,21 @@
 // explicit retry, and complete through CAS on the retry.
 // Runs only against the disposable local Supabase + local Vite dev server.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import { createAdminClient } from '../helpers/rest.mjs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
 
 const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
 assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
-for (const key of ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD']) {
-  assert(!process.env[key], 'Hosted Supabase credentials are not allowed')
-}
-const raw = execFileSync('supabase', ['status', '-o', 'env'], {
-  cwd: localDir, encoding: 'utf8', timeout: 30000,
-})
-const variables = Object.fromEntries(raw.split('\n').flatMap((line) => {
-  const match = line.match(/^([A-Z_]+)=(.*)$/)
-  return match ? [[match[1], match[2].replace(/^["']|["']$/g, '')]] : []
-}))
-assert(variables.SERVICE_ROLE_KEY && variables.ANON_KEY)
+const variables = readLocalSupabaseEnv(localDir)
 const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
 assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
 const site = 'http://127.0.0.1:5173'
-const email = 'browser-create-conflict@example.test'
+const email = `browser-create-conflict-${Date.now()}@example.test`
 const password = 'Synthetic-create-conflict-password-123!'
 const TITLE = 'First create A02 ' + Date.now()
 
-async function admin(path, method, body) {
-  const r = await fetch(api + path, {
-    method,
-    headers: {
-      apikey: variables.SERVICE_ROLE_KEY,
-      Authorization: 'Bearer ' + variables.SERVICE_ROLE_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15000),
-  })
-  const result = await r.json()
-  assert(r.ok, 'admin auth operation failed HTTP ' + r.status)
-  return result
-}
+const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
 
 const listed = await admin('/auth/v1/admin/users?per_page=100', 'GET')
 const leftover = (listed.users ?? []).find((u) => u.email === email)
