@@ -21,6 +21,29 @@ export function runPsqlStatements(statements, options = {}) {
   return runPsqlSeed(statements, options)
 }
 
+// Runs one read-only scalar query over stdin and returns the trimmed value.
+// Used by suites that must verify the disposable stack's schema preconditions
+// (for example: a table must not expose an UPDATE policy) before trusting
+// their HTTP-level denials.
+export function queryPsqlScalar(sql, { dbPort } = {}) {
+  const out = execFileSync(resolvePsqlExecutable(), ['-X', '-t', '-A', '-q', '-v', 'ON_ERROR_STOP=1'], {
+    input: String(sql).trim().replace(/;?$/, ';'),
+    env: {
+      ...process.env,
+      PGHOST: '127.0.0.1',
+      PGPORT: String(dbPort ?? process.env.PLANOS_LOCAL_DB_PORT ?? '54322'),
+      PGUSER: 'postgres',
+      PGPASSWORD: 'postgres',
+      PGDATABASE: 'postgres',
+      PGSSLMODE: 'disable',
+    },
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: 30000,
+  })
+  return out.trim()
+}
+
 export function runPsqlSeed(statements, { dbPort } = {}) {
   const list = Array.isArray(statements) ? statements : [String(statements)]
   const sql = list.map((statement) => statement.trim().replace(/;?$/, ';')).join('\n')
