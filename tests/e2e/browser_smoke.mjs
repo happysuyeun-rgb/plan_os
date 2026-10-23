@@ -53,7 +53,7 @@ try{
   await page.goto(site+'/login',{waitUntil:'domcontentloaded',timeout:30000})
   await page.locator('input[type=email]').fill(loginEmail)
   await page.locator('input[type=password]').fill(loginPassword)
-  await page.getByRole('button',{name:'임시 로그인'}).click()
+  await page.getByRole('button',{name:'?�시 로그??}).click()
   await page.waitForURL(url=>url.pathname==='/dashboard',{timeout:30000})
   console.log('PASS real browser login through local Supabase Auth JWT')
 
@@ -76,16 +76,16 @@ try{
   const prdContent='# Phase0 E2E Document\\n\\nPRD-PENDING-B01-'+created.id
   const iaContent='# Phase0 IA Fixture\\n\\nIA-PENDING-B01-'+created.id
   await mainEditor.fill(prdContent)
-  await page.getByRole('navigation',{name:'산출물 탭'})
-    .getByRole('button',{name:/기능명세서/}).click()
+  await page.getByRole('navigation',{name:'?�출�???})
+    .getByRole('button',{name:/기능명세??}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
   await mainEditor.fill(iaContent)
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:20000})
   await page.reload({waitUntil:'domcontentloaded'})
   await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
   await mainEditor.waitFor({state:'visible',timeout:20000})
   assert.equal(await mainEditor.inputValue(),iaContent,'B-01 IA autosave was lost')
-  await page.getByRole('navigation',{name:'산출물 탭'})
+  await page.getByRole('navigation',{name:'?�출�???})
     .getByRole('button',{name:/PRD/}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
   await mainEditor.waitFor({state:'visible',timeout:20000})
@@ -108,7 +108,7 @@ try{
     last=prdContent+'\\nLAST-REVISION-B02-'+i
     await mainEditor.fill(last)
   }
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:20000})
   page.off('request',countCommentGets)
   assert.equal(repeatedCommentGets,0,'B-02 content edits triggered unnecessary comment thread refetches')
   console.log('PASS B-02 content edits do not refetch comment threads')
@@ -124,9 +124,9 @@ try{
   const chatInput=page.locator('aside textarea[placeholder*="@"]')
   await chatInput.fill('CHAT-REQUEST-C01')
   await chatInput.press('Enter')
-  await page.getByText('요청하신 내용을 문서에 반영했습니다.',{exact:true})
+  await page.getByText('?�청?�신 ?�용??문서??반영?�습?�다.',{exact:true})
     .waitFor({state:'visible',timeout:25000})
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:20000})
   const merged=await mainEditor.inputValue()
   assert(merged.includes('UNSAVED-HUMAN-DRAFT-C01'),'C-01 lost unsaved human text')
   assert(merged.includes('CHAT-REQUEST-C01'),'C-01 missing chat placeholder edit')
@@ -150,21 +150,21 @@ try{
   // B-05: A historical snapshot can be previewed in read-only mode,
   // restored as a new snapshot, and the prior current snapshot remains
   // readable/unchanged. Verify BOTH browser and durable local DB rows.
-  await page.getByRole('button',{name:'버전 저장',exact:true}).click()
+  await page.getByRole('button',{name:'버전 ?�??,exact:true}).click()
   const versionDialog=page.getByRole('dialog')
   await versionDialog.locator('input').fill('B05-old')
-  await versionDialog.getByRole('button',{name:'저장',exact:true}).click()
+  await versionDialog.getByRole('button',{name:'?�??,exact:true}).click()
   await page.getByRole('button',{name:/^v1 \(B05-old\)$/}).first()
     .waitFor({state:'visible',timeout:20000})
   console.log('PASS B-05 initial historical snapshot created')
 
   const beforeRestore=merged+'\\nB05-CURRENT-MUST-BE-PRESERVED'
   await mainEditor.fill(beforeRestore)
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
-  await page.getByRole('button',{name:'버전 저장',exact:true}).click()
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByRole('button',{name:'버전 ?�??,exact:true}).click()
   const currentVersionDialog=page.getByRole('dialog')
   await currentVersionDialog.locator('input').fill('B05-current')
-  await currentVersionDialog.getByRole('button',{name:'저장',exact:true}).click()
+  await currentVersionDialog.getByRole('button',{name:'?�??,exact:true}).click()
   await page.getByRole('button',{name:/^v2 \(B05-current\)$/}).first()
     .waitFor({state:'visible',timeout:20000})
 
@@ -172,9 +172,9 @@ try{
   await page.waitForFunction(expected=>
     document.querySelector('main textarea')?.value===expected,merged,{timeout:12000})
   assert.notEqual(await mainEditor.getAttribute('readonly'),null,'B-05 historical version is editable')
-  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
+  await page.getByRole('button',{name:'??버전?�로 복원'}).click()
   const restoreDialog=page.getByRole('dialog')
-  await restoreDialog.getByRole('button',{name:'확인'}).click()
+  await restoreDialog.getByRole('button',{name:'?�인'}).click()
   await page.getByRole('button',{name:/^v3 \(복원\)$/}).first()
     .waitFor({state:'visible',timeout:20000})
   await page.waitForFunction(expected=>
@@ -221,10 +221,10 @@ try{
     response.request().method()==='POST' &&
     response.url().includes('/rest/v1/rpc/restore_document_version') &&
     !response.ok(),{timeout:22000})
-  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
-  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await page.getByRole('button',{name:'??버전?�로 복원'}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'?�인'}).click()
   await errorResult
-  await page.getByText('복원 결과를 확인하지 못했습니다.',{exact:false})
+  await page.getByText('복원 결과�??�인?��? 못했?�니??',{exact:false})
     .waitFor({state:'visible',timeout:15000})
 
   async function readLocalRows(table,select,query){
@@ -260,7 +260,7 @@ try{
     response.url().includes('/rest/v1/rpc/restore_document_version'),{
       timeout:20000,
     })
-  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'?�인'}).click()
   const retryReply=await retryRpcResponse
   const retryRows=await readLocalRows(
     'document_versions','id,version_number,version_name,content',queryVersions)
@@ -316,10 +316,10 @@ try{
   // a version MUST be checkpointed before restoring an older snapshot.
   const unsnapshotted=beforeRestore+'\\nB05-UNSNAPSHOTTED-PRE-RESTORE'
   await mainEditor.fill(unsnapshotted)
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:20000})
   await page.getByRole('button',{name:/^v1 \(B05-old\)$/}).first().click()
-  await page.getByRole('button',{name:'이 버전으로 복원'}).click()
-  await page.getByRole('dialog').getByRole('button',{name:'확인'}).click()
+  await page.getByRole('button',{name:'??버전?�로 복원'}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'?�인'}).click()
   await page.getByRole('button',{name:/^v6 \(복원\)$/}).first()
     .waitFor({state:'visible',timeout:20000})
   await page.reload({waitUntil:'domcontentloaded'})
@@ -330,7 +330,7 @@ try{
   const preserved=await readLocalRows('document_versions',
     'version_number,version_name,content',queryVersions)
   assert.deepEqual(preserved.map(v=>v.version_number),[1,2,3,4,5,6])
-  assert.equal(preserved[4].version_name,'복원 전 자동 보관')
+  assert.equal(preserved[4].version_name,'복원 ???�동 보�?')
   assert.equal(preserved[4].content,unsnapshotted,
     'Unsnapshotted current text not checkpointed prior to restoration')
   assert.equal(preserved[5].content,merged)
@@ -343,7 +343,7 @@ try{
   // may restore. The source version must belong to the requested document.
   const viewerEmail='viewer-restoration@example.test'
   const viewerPassword='Synthetic-viewer-test-password-123!'
-  const viewer=await localAdmin('/auth/v1/admin/users','POST',{
+  const viewer=await admin('/auth/v1/admin/users','POST',{
     email:viewerEmail,password:viewerPassword,email_confirm:true,
   })
   assert(viewer.id,'Synthetic viewer user not created')
@@ -459,18 +459,18 @@ try{
     slowSaveStarted,
     page.waitForTimeout(14000).then(()=>{throw Error('B-03 PRD CAS save never started')}),
   ])
-  await page.getByRole('navigation',{name:'산출물 탭'})
-    .getByRole('button',{name:/기능명세서/}).click()
+  await page.getByRole('navigation',{name:'?�출�???})
+    .getByRole('button',{name:/기능명세??}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
   await mainEditor.fill(b03Ia)
   releaseSlowSave()
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:20000})
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:20000})
   assert.equal(await mainEditor.inputValue(),b03Ia,'B-03 delayed PRD response contaminated IA')
   await page.unrouteAll({behavior:'wait'})
   await page.reload({waitUntil:'domcontentloaded'})
   await mainEditor.waitFor({state:'visible',timeout:20000})
   assert.equal(await mainEditor.inputValue(),b03Ia,'B-03 IA value was lost after reload')
-  await page.getByRole('navigation',{name:'산출물 탭'})
+  await page.getByRole('navigation',{name:'?�출�???})
     .getByRole('button',{name:/PRD/}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
   assert.equal(await mainEditor.inputValue(),b03Prd,'B-03 delayed PRD save did not persist')
@@ -490,21 +490,21 @@ try{
   })
   const b04Draft=b03Prd+'\nB04-UNSAVED-ON-503'
   await mainEditor.fill(b04Draft)
-  await page.getByText('저장 실패',{exact:true}).waitFor({state:'visible',timeout:22000})
+  await page.getByText('?�???�패',{exact:true}).waitFor({state:'visible',timeout:22000})
   assert.equal(failedSaveInjected,1,'B-04 did not inject CAS failure')
   await page.unrouteAll({behavior:'wait'})
-  await page.getByRole('navigation',{name:'산출물 탭'})
-    .getByRole('button',{name:/기능명세서/}).click()
+  await page.getByRole('navigation',{name:'?�출�???})
+    .getByRole('button',{name:/기능명세??}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
   assert.equal(await mainEditor.inputValue(),b03Ia)
-  await page.getByRole('navigation',{name:'산출물 탭'})
+  await page.getByRole('navigation',{name:'?�출�???})
     .getByRole('button',{name:/PRD/}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
   assert.equal(await mainEditor.inputValue(),b04Draft,'B-04 failed-save draft was discarded on tab return')
-  await page.getByText('저장 실패',{exact:true}).waitFor({state:'visible',timeout:5000})
+  await page.getByText('?�???�패',{exact:true}).waitFor({state:'visible',timeout:5000})
   const b04Recovered=b04Draft+'\nB04-RETRY-AFTER-RECOVERY'
   await mainEditor.fill(b04Recovered)
-  await page.getByText('저장됨',{exact:true}).waitFor({state:'visible',timeout:22000})
+  await page.getByText('?�?�됨',{exact:true}).waitFor({state:'visible',timeout:22000})
   await page.reload({waitUntil:'domcontentloaded'})
   await mainEditor.waitFor({state:'visible',timeout:20000})
   assert.equal(await mainEditor.inputValue(),b04Recovered,'B-04 recovered content missing after reload')
@@ -533,8 +533,8 @@ try{
     slowChatStarted,
     page.waitForTimeout(14000).then(()=>{throw Error('C-03 chat RPC never started')}),
   ])
-  await page.getByRole('navigation',{name:'산출물 탭'})
-    .getByRole('button',{name:/기능명세서/}).click()
+  await page.getByRole('navigation',{name:'?�출�???})
+    .getByRole('button',{name:/기능명세??}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/ia'),{timeout:15000})
   releaseSlowChat()
   await page.unrouteAll({behavior:'wait'})
@@ -579,7 +579,7 @@ try{
       row.document_id===serverRows.find(doc=>doc.type==='ia')?.id &&
       row.content.includes(c03Marker)),
     'C-03 delayed PRD chat was misattributed to the IA document in DB')
-  await page.getByRole('navigation',{name:'산출물 탭'})
+  await page.getByRole('navigation',{name:'?�출�???})
     .getByRole('button',{name:/PRD/}).click()
   await page.waitForURL(url=>url.pathname.endsWith('/prd'),{timeout:15000})
   await page.waitForFunction(marker=>
@@ -617,7 +617,7 @@ try{
   await c10ChatInput.fill(c10Marker)
   await c10ChatInput.press('Enter')
   await c10FailedRpc
-  await page.getByText('채팅 요청을 문서에 반영하지 못했습니다.',{exact:false})
+  await page.getByText('채팅 ?�청??문서??반영?��? 못했?�니??',{exact:false})
     .waitFor({state:'visible',timeout:15000})
   const c10RolledBack=await c10Read('chat_messages','id,role,content',c10ChatQuery)
   const c10RolledBackDoc=(await c10Read('documents','content','id=eq.'+c10DocId))[0].content
@@ -664,7 +664,7 @@ try{
   })
   await c10ChatInput.fill(c10AmbiguousMarker)
   await c10ChatInput.press('Enter')
-  await page.getByText('채팅 요청을 문서에 반영하지 못했습니다.',{exact:false})
+  await page.getByText('채팅 ?�청??문서??반영?��? 못했?�니??',{exact:false})
     .waitFor({state:'visible',timeout:18000})
   await page.unrouteAll({behavior:'wait'})
   assert.equal(c10ResponseSwallowed,1,'C-10 did not inject ambiguous transport response')
