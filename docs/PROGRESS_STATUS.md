@@ -4,13 +4,40 @@
 
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-22  
-**문서 버전:** v4.4  
+**최종 수정일:** 2026-10-23  
+**문서 버전:** v4.5  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
 
-## 2026-10-22 재검수 최신 스냅샷 — 이전 진행 로그보다 우선
+## 2026-10-23 최신 실행 현황 · 검증 완료와 운영 완료 분리
+
+> **최신 정본:** [통합 관리 Issue #41](https://github.com/happysuyeun-rgb/plan_os/issues/41). 아래의 10/22 이전 스냅샷은 당일 기록(역사적 로그)으로만 읽는다. 2026-10-23 원격 점검에서 모든 Draft PR은 OPEN/미병합이며, 운영 DB·Vercel Production에 변경하지 않았다.
+
+| 분류 | 완료 처리한 **범위** | 최신 근거 | 남은 완료 조건 |
+|---|---|---|---|
+| 제품/UX 설계 | [x] 통합 서비스 v2.0, 기능·화면·AI 직원 정책, DASH-01~08 문서화 | Draft [#28](https://github.com/happysuyeun-rgb/plan_os/pull/28), [#40](https://github.com/happysuyeun-rgb/plan_os/pull/40) | 코드 전부 구현/실사용 검증 별개 |
+| 사업화/고객 검증 준비 | [x] 개선안, 90일 계획, 가상 PRD·화면·감사 샘플·상품 소개 | Draft #31/#33/#35 | 고객 파일럿/유료 전환 0 |
+| G1 안정화 | [x] 개발 브랜치와 격리 CI 8개 PASS | Draft [#30](https://github.com/happysuyeun-rgb/plan_os/pull/30) `f74481e` | 마이그레이션·운영 회귀·병합 |
+| 사람 PM 서버 계획 | [x] SQL 022·023·024/승인·단계 업무 링크 코드, GHA S1+JWT/RLS PASS | Draft [#36](https://github.com/happysuyeun-rgb/plan_os/pull/36) `cb32c91` | SonarCloud **FAIL**, final browser/security QA, rollout |
+| C04 대시보드 | [x] 서버 집계 SQL 025/API/UI/테스트 코드, GHA JWT/RLS PASS + SonarCloud PASS | Draft [#42](https://github.com/happysuyeun-rgb/plan_os/pull/42) `f4e0446`; [CI run 39790887472](https://github.com/happysuyeun-rgb/plan_os/actions/runs/39790887472) | 운영 통계 연결·배포·브라우저 검증 |
+| 문서 버전 불변성 | [x] 로컬 변조 조사·GitHub 소스 원인 가설 기록 | [PR #42 조사](https://github.com/happysuyeun-rgb/plan_os/pull/42#issuecomment-6342766725) | **[ ] 로컬/CI 차이 최종 원인 확정, 별도 깨끗한 환경 재현, 안전한 회귀** |
+| 고객 모집 | [x] 5팀 아웃리치/회신 2팀(정성 답변 1, 통화 가능 1) | [Issue #34](https://github.com/happysuyeun-rgb/plan_os/issues/34) | **[ ] 실 인터뷰·파일럿·매출 (전부 0), 사용자 판단까지 인터뷰 보류** |
+
+### 우선 실행계획 (완료될 때까지 미체크)
+- [ ] **게이트 1 / Cursor:** document_versions 기존 로컬 증거 읽기 확보 → 깨끗한 일회용 DB 001~025 동일 적용 → 006/014 정책 차이·테스트 seed UPDATE GRANT·고정 ID 오염 판정 → 최소 변경/회귀 → 최종 PR CI. **기존 DB reset·운영 DB 변경 금지.**
+- [ ] **게이트 2 / Cursor:** PR #36 SonarCloud 실패 이슈/중복 해결; 양쪽 PR 최신 HEAD에서 PM 우회·대시보드 대량 집계·권한·계정 전환/오류를 검증, JWT/RLS + 브라우저 E2E와 기존 31 스모크를 별도 근거로 제출.
+- [ ] **게이트 3 / 노바 QA:** 각 PR의 PR base·migration 024/025 포함 관계·CI/테스트 최종 SHA를 독립 확인, 문서 설계(#28/#40)와 코드(#36/#42)의 화면·권한 일치 대조. P0/P1 해결 후 Ready 검토.
+- [ ] **게이트 4 / 배포 사전준비:** 운영 schema 읽기 전용 인벤토리, 013~025 적용 순서·백업/복구/롤백, Vercel Git/feature flag 확인 후 사용자에게 별도 승인 요청. **병합·배포·운영 DB migration 승인 전 금지.**
+- [ ] **게이트 5 / 핵심제품:** 실제 AI 검수(근거→영향→승인→수정업무→재검수) 구현·품질 시험. 지금 샘플은 수작업 가상 시나리오.
+- [ ] **게이트 6 / 사업:** 사용자 인터뷰 진행 결정 시 적합 고객 서면/통화·파일럿·가격/데이터 안전 검증. 현재 인터뷰 진행 보류.
+- [ ] **후속 확장:** 실제 AI 인력 채용/PM 업무 실행·모델/원가/요금/승급, 마케팅·영업, N29 PM 운영실.
+
+**주의:** Cursor 로컬 단위·Chromium PASS 보고를 GitHub에서 검증된 실제 CI PASS로 바꿔 쓰지 않는다. #42 CI 통과는 문서 이력 로컬 문제 해결 증거가 아니다.
+
+---
+
+## 2026-10-22 재검수 과거 스냅샷 — 이전 진행 로그보다 우선
 
 > **정본:** [통합 진행·완료 검수 체크리스트 Issue #41](https://github.com/happysuyeun-rgb/plan_os/issues/41). 최신 원격 확인: `main` `3e3fc660`, G1 [PR #30](https://github.com/happysuyeun-rgb/plan_os/pull/30) `f74481e`, PM [PR #36](https://github.com/happysuyeun-rgb/plan_os/pull/36) `dd64d72`, 설계 [PR #28](https://github.com/happysuyeun-rgb/plan_os/pull/28) + 후속 [PR #40](https://github.com/happysuyeun-rgb/plan_os/pull/40). 모든 상태는 **증거의 적용 범위**에 한정한다. 아래 과거 10/16~10/22 기록은 당시의 로그로 남겨 두되 최신 작업 완료 판정으로 쓰지 않는다.
 
