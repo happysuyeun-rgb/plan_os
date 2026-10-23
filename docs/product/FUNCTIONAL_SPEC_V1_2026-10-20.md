@@ -175,3 +175,12 @@
 7. 선행 step 연결은 **같은 계획 내부**로 제한, 순환·구버전 및 타 프로젝트 차단 (**V5-07 P1**).
 
 **PR #36 구현 판정:** F-401/402/업무 연결 **코드가 존재하는 Draft**, 실제 local JWT/Chromium 테스트 코드 존재. 신규 우회 테스트·릴리스 게이트 미통과이므로 '완료'로 승격하지 않음. 특히 마이그레이션 022 운영 적용/업무보드 실서버 flag 활성화/CI 전체 통과는 별도 결정.
+
+## 2026-10-23 V6 최신 구현 상태/수용 추적 (이전 TARGET 기록보다 우선)
+
+- **F-401/F-402**: 사람 작성 계획 저장·승인·반려·S1 업무 연결은 Draft [PR #36](https://github.com/happysuyeun-rgb/plan_os/pull/36) `cb32c91`에 구현. 정식 AI PM 직원 채용/계약/지속 실행은 별도 TARGET.
+- **DASH-01~08 / C04**: Draft [PR #42](https://github.com/happysuyeun-rgb/plan_os/pull/42) `716f9e6`에 서버 RPC 025·UI·권한 상태·테스트 코드 존재. RLS CI와 Sonar 통과. **Preview 사용자 수용, 운영 마이그레이션·main 병합은 미완**.
+- **아직 수용검수 필요:** 필터(전체/차단/진행/완료), 차단·승인에 대한 직접 행동 CTA, 문서 기반 AI 기획 진행 상태를 업무 완료율과 별도 표시, 권한 변경·account stale, 1,001+ server aggregate 및 서버 모드 OFF. 구현 여부 확인 없이 전 항목 완료 처리 금지.
+- 기존 AI 인터뷰→문서 생성·채팅 편집 방식은 **'직접 기획' 경로**이며 사람 PM 계획 CRUD와 구별. 사용자는 진행 도중 AI 직원을 **단발 투입/추가/교체**할 수 있어야 하나 실제 직원 작업·계약·검수 엔진은 미구현.
+- 버전 불변성: 드리프트 복구용 `026_reassert_document_versions_append_only.sql` 추가는 운영에 적용되지 않음.
+- 누락/불일치와 추적: [교차감사 V6](../quality/PLANOS_SERVICE_DESIGN_CROSS_AUDIT_V6_2026-10-23.md).
