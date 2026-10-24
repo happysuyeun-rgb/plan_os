@@ -1,33 +1,46 @@
 # 배포 전환 계획 — PlanOS G1 통합 브랜치 (PR #30)
 
 작성일: 2026-10-22  
-**갱신:** 2026-10-23 — PM(022~024)·C04(025)·026 및 Preview는  
-[`PLANOS_MASTER_DEVELOPMENT_PLAN_2026-10-23.md`](./PLANOS_MASTER_DEVELOPMENT_PLAN_2026-10-23.md) ·  
-[`PLANOS_RELEASE_TEST_GATES_2026-10-23.md`](./PLANOS_RELEASE_TEST_GATES_2026-10-23.md) 정본을 따른다.  
-대상 브랜치: `feat/planos-g1-integration-stage-a-20261021` (+ 스택 tip `preview/planos-integrated-20261023`)  
-상태: **계획만 작성. 운영 DB 적용·main 병합·Vercel Production 배포는 사용자 승인 전 실행하지 않는다.**
+**갱신:** 2026-10-24 — Phase A(#30/#36/#42)는 GitHub `main` @ `527e042`에 **병합 완료**.  
+운영 DB 추가 쓰기·027·Production·유료 LLM은 **별도 승인 전 금지**.  
+정본: [`PLANOS_MASTER_DEVELOPMENT_PLAN_2026-10-23.md`](./PLANOS_MASTER_DEVELOPMENT_PLAN_2026-10-23.md) ·  
+[`PLANOS_RELEASE_TEST_GATES_2026-10-23.md`](./PLANOS_RELEASE_TEST_GATES_2026-10-23.md) ·  
+[`OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md`](./OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md) ·  
+[`PHASE_A_PREVIEW_AUTO_VS_MANUAL_2026-10-23.md`](./PHASE_A_PREVIEW_AUTO_VS_MANUAL_2026-10-23.md).
 
-### 2026-10-23 추가 — 운영 적용 시 G1 이후 순서 (승인 후)
+상태: **Phase A 코드는 main 반영됨. Production 배포·운영 추가 mig·BCD(#45) main 병합은 사용자 승인 전 실행하지 않는다.**
 
-| 순서 | 마이그레이션 | 비고 |
+### 운영 적용 시 단일 순서 (V1.1 · 승인 후 · §3과 동일 경로)
+
+아래가 **유일한 적용 순서**다. 문서 하단과 어긋나면 **이 표(V1.1)가 우선**한다.
+
+| 순서 | 마이그레이션 | 역할 |
 |---|---|---|
-| … | (기존 §3의 013~020) | G1 |
+| 1 | `013_fix_project_members_select_recursion.sql` | G1 |
+| 2 | `014_harden_comments_notifications_versions.sql` | G1 |
+| 3 | `015_atomic_document_version_restore.sql` | G1 |
+| 4 | `016_atomic_chat_document_edit.sql` | G1 |
+| 5 | `018_document_revision_cas.sql` | G1 |
+| 6 | `019_harden_can_edit_null_check.sql` | G1 |
+| 7 | `011_project_tasks.sql` (**운영 미적용인 경우에만**) | S1 |
+| 8 | `020_task_conflict_sqlstate.sql` | S1 |
 | 9 | `022_pm_plan_review_loop.sql` | 사람 PM |
-| 10 | `023_pm_plan_integrity_hardening.sql` | |
-| 11 | `024_pm_plan_final_integrity.sql` | |
+| 10 | `023_pm_plan_integrity_hardening.sql` | 사람 PM |
+| 11 | `024_pm_plan_final_integrity.sql` | 사람 PM |
 | 12 | `025_dashboard_aggregation_rpcs.sql` | C04 |
-| 13 | `026_reassert_document_versions_append_only.sql` | append-only 재선언 |
+| 13 | `026_reassert_document_versions_append_only.sql` | 무결성 |
 
-`supabase/drafts/*` (017, 021)는 계속 **적용 금지**.  
-Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **main 자동배포와 무관**.
+`supabase/drafts/*` (017, 021) · `supabase/local_only/027_*` · `supabase/drafts/027_*` 는 **운영/Preview 적용 금지** (027은 일회용 로컬만).  
+Preview Vercel(`planos-preview`)은 Git disconnect 보고 — **main 자동배포와 무관**.
 
-## 1. 확인된 현황 (저장소 기준, 변경 없음)
+## 1. 확인된 현황 (저장소 기준)
 
 | 항목 | 확인 결과 | 비고 |
 |---|---|---|
-| 운영 Supabase 마이그레이션 적용 상태 | **미확인** | 운영 DB에 접속하지 않았다. 적용 여부는 §2의 사전 점검 절차로 배포 승인 후 확인한다. 이 저장소는 `schema_migrations` 테이블에 의존하지 않고 마이그레이션 파일을 psql로 직접 적용하는 방식이라, 적용 여부는 객체 존재 여부로 확인해야 한다. |
-| Vercel 자동 배포 | **저장소만으로는 확정 불가** | `vercel.json`이 없고 GitHub Actions에 배포 워크플로가 없다. Vercel 프로젝트가 GitHub 저장소와 연동돼 있으면 main 병합 시 자동 배포될 수 있으므로, 병합 승인 전에 Vercel 대시보드(Settings → Git)에서 연동·자동 배포 설정을 확인할 것. |
-| 코드 ↔ DB 의존성 | **DB가 코드보다 먼저** | PR #30 코드는 `documents.content_revision` 컬럼과 `save_document_content_cas` RPC(마이그레이션 018)를 전제로 한다. 코드가 먼저 배포되면 운영 DB에서 문서 읽기/쓰기가 깨진다. §3의 순서를 반드시 지킨다. |
+| 운영 Supabase 마이그레이션 | **읽기 전용 감사용** | 절차·SELECT: [`OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md`](./OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md). 추가 쓰기·027 금지. |
+| GitHub Actions 배포 | **없음** | `.github/workflows`에 Production/Vercel deploy 워크플로 없음 → **Actions만으로 main 병합 ≠ 자동 배포**. |
+| Vercel Production 자동 배포 | **대시보드 확인 필수 (미확정)** | 저장소 `vercel.json`은 SPA rewrite·보안 헤더만. Production이 GitHub `main`에 묶여 있으면 병합 시 빌드될 수 있음 → 병합 승인 전 Settings → Git 확인. |
+| 코드 ↔ DB 의존성 | **DB가 코드보다 먼저** | CAS(018)·PM(022+)·C04(025)는 DB 객체 전제. **027 없이도** 기존 G1/PM/C04·브라우저 Mock 검수 경로는 동작 (서버 스토어·`VITE_AI_REVIEW_STORE=server`만 027 필요). |
 
 ## 2. 배포 전 사전 점검 (운영 DB, 읽기 전용)
 
@@ -41,27 +54,20 @@ Preview Vercel 프로젝트(`planos-preview`)는 Git disconnect 상태 — **mai
    - 함수 `public.validate_project_task_change` 본문에 `P4001` 포함 여부 — 없으면 020 미적용 (011 자체가 없으면 `public.project_tasks` 테이블도 없다)
    - 정책 `documents_update_editor` 존재 여부 — 021 컷오버 draft는 **이번 배포에서 적용하지 않으므로 남아 있어야 정상**
 
-3. `select table_name from information_schema.tables where table_schema='public'`로 011(project_tasks)·012(audit_source_manifests) 적용 여부도 확인한다. 011 파일 상단 주석은 "운영 검토 전 적용 금지"로 돼 있어 미적용일 수 있다.
+3. `select table_name from information_schema.tables where table_schema='public'`로 011(project_tasks)·012(audit_source_manifests)·022(`pm_plans`) 적용 여부도 확인한다. 011 파일 상단 주석은 "운영 검토 전 적용 금지"로 돼 있어 미적용일 수 있다.
+
+4. C04/무결성: `025` dashboard RPC·`026` append-only 재선언 여부는 [`OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md`](./OPS_DB_READONLY_AUDIT_AND_BACKUP_2026-10-23.md) A1 표로 채운다.
 
 ## 3. 적용 순서 (승인 후, 운영 DB)
 
-운영에 이미 적용된 마이그레이션은 건너뛰고, 누락분만 아래 상대 순서를 지켜 적용한다.
-
-| 순서 | 마이그레이션 | 내용 | 선행 조건 |
-|---|---|---|---|
-| 1 | `013_fix_project_members_select_recursion.sql` | 멤버 RLS 재귀 수정 | — |
-| 2 | `014_harden_comments_notifications_versions.sql` | 댓글·알림·버전 강화 | 013 |
-| 3 | `015_atomic_document_version_restore.sql` | 원자적 복원 RPC | 014 |
-| 4 | `016_atomic_chat_document_edit.sql` | 원자적 채팅 편집 RPC | 015 |
-| 5 | `018_document_revision_cas.sql` | content_revision + CAS RPC | 016 (`documents` 존재) |
-| 6 | `019_harden_can_edit_null_check.sql` | `can_edit_project_content` NULL 방어 | 018 |
-| 7 | `011_project_tasks.sql` | 업무 테이블+트리거 (**운영 미적용인 경우에만**) | — |
-| 8 | `020_task_conflict_sqlstate.sql` | 업무 충돌 코드 P4001 교체 | 011 (함수가 있어야 교체 가능) |
+운영에 이미 적용된 마이그레이션은 건너뛰고, 누락분만 **문서 상단 V1.1 전체 표(순서 1~13)** 를 지킨다.  
+(옛 §3이 013~020만 나열하고 022~026을 위로만 올려 두던 모순은 V1.1에서 해소.)
 
 적용 금지:
 
 - `supabase/drafts/017_document_revision_cas_DRAFT.sql` — 격리된 초안. 어떤 경우에도 운영에 적용하지 않는다 (018과 중복·충돌).
 - `supabase/drafts/021_cutover_deny_direct_document_update_DRAFT.sql` — 직접 UPDATE 컷오버. 구버전 클라이언트 확인 전까지 적용 금지.
+- `supabase/local_only/027_ai_review_jobs.sql` · `supabase/drafts/027_*` — AI 검수 영속. **운영·Preview 금지**, 일회용 로컬만.
 
 각 파일은 `psql -v ON_ERROR_STOP=1`로 하나씩 적용하고, 실패 시 즉시 중단한다. 적용 직후 §2의 확인 쿼리를 다시 실행해 의도한 상태가 됐는지 검증한다.
 
