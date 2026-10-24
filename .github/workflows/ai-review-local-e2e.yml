@@ -1,0 +1,107 @@
+name: AI review local E2E + 027 disposable
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/ai/**'
+      - 'src/pages/ProjectAiReviewPage.tsx'
+      - 'src/server/ai/**'
+      - 'api/ai/**'
+      - 'supabase/local_only/**'
+      - 'tests/e2e/browser_ai_review.mjs'
+      - 'tests/e2e/seed_ai_review.sql'
+      - 'tests/rls/test_local_supabase_ai_review.mjs'
+      - 'scripts/apply-027-local-only.mjs'
+      - '.github/workflows/ai-review-local-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: planos-ai-review-local-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-ai-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-ai-review-supabase
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.84.2
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -qq -y postgresql-client
+          fi
+      - name: Refuse hosted credentials
+        run: |
+          for variable in SUPABASE_ACCESS_TOKEN SUPABASE_DB_URL SUPABASE_DB_PASSWORD; do
+            if [ -n "$(printenv "$variable" || true)" ]; then
+              echo "::error::Unexpected hosted Supabase configuration"
+              exit 1
+            fi
+          done
+      - name: Start disposable local Supabase
+        run: |
+          set -euo pipefail
+          mkdir -p "$PLANOS_LOCAL_SUPABASE_DIR"
+          cd "$PLANOS_LOCAL_SUPABASE_DIR"
+          supabase init
+          if ! supabase start --exclude realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta,mailpit > /tmp/planos-ai-start.log 2>&1; then
+            grep -Ei 'error|failed' /tmp/planos-ai-start.log | head -40 || true
+            exit 1
+          fi
+      - name: Apply repo migrations (excludes local_only/027)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/*.sql; do
+            psql -X -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Apply 027 local_only only
+        run: node scripts/apply-027-local-only.mjs
+      - name: RLS/CAS/idempotency for AI review
+        run: |
+          npm ci --ignore-scripts
+          node tests/rls/test_local_supabase_ai_review.mjs
+      - name: Configure Vite for local Supabase
+        run: node tests/e2e/local_browser_env.mjs
+      - name: Install Playwright Chromium
+        run: |
+          npm install --ignore-scripts --no-save --package-lock=false playwright@1.58.2
+          node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Start Vite
+        run: |
+          (npm run dev -- --host 127.0.0.1 > /tmp/planos-vite-ai.log 2>&1 & echo $! > /tmp/planos-vite-ai.pid)
+          for attempt in $(seq 1 50); do
+            if curl -fsS -o /dev/null http://127.0.0.1:5173/login; then exit 0; fi
+            sleep 1
+          done
+          tail -n 80 /tmp/planos-vite-ai.log || true
+          exit 1
+      - name: Playwright Mock AI review E2E
+        run: node tests/e2e/browser_ai_review.mjs
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f /tmp/planos-vite-ai.pid ]; then kill "$(cat /tmp/planos-vite-ai.pid)" || true; fi
+          rm -f .env.local
+          if [ -d "$PLANOS_LOCAL_SUPABASE_DIR/supabase" ]; then
+            ( cd "$PLANOS_LOCAL_SUPABASE_DIR" && supabase stop --no-backup ) || true
+          fi

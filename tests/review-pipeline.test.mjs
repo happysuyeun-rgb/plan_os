@@ -15,7 +15,7 @@ test('pipeline source wires citation → human → task → re-review', () => {
   assert.match(src, /requestReReview/)
   assert.match(src, /acceptedFindingTaskIds|reusedExistingTask/)
   assert.match(src, /parentReviewJobId|sourceTaskId/)
-  assert.match(src, /createDefaultReviewStore|BROWSER|MOCK/i)
+  assert.match(src, /createReviewStore|BROWSER|MOCK|SERVER/i)
 })
 
 test('state machine supports the vertical-slice transitions', () => {
@@ -48,9 +48,11 @@ test('state machine supports the vertical-slice transitions', () => {
   assert.equal(job.findings[0].citation.quote.includes('기업'), true)
 })
 
-test('draft persistence SQL remains DRAFT and unapplied', () => {
-  const sql = readFileSync('supabase/drafts/027_ai_review_jobs_DRAFT.sql', 'utf8')
-  assert.match(sql, /DRAFT ONLY/)
-  assert.match(sql, /ai_review_jobs/)
-  assert.match(sql, /do not apply/i)
+test('027 executable SQL is local_only; draft is pointer only', () => {
+  const draft = readFileSync('supabase/drafts/027_ai_review_jobs_DRAFT.sql', 'utf8')
+  const local = readFileSync('supabase/local_only/027_ai_review_jobs.sql', 'utf8')
+  assert.match(draft, /local_only\/027_ai_review_jobs\.sql/)
+  assert.match(draft, /FORBIDDEN|forbidden|승인/i)
+  assert.match(local, /create table if not exists public\.ai_review_jobs/)
+  assert.match(local, /cas_ai_review_job/)
 })

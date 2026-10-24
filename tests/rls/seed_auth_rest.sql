@@ -24,6 +24,12 @@ insert into public.documents(project_id,type,content) values
 
 -- The local PostgREST roles must be granted SQL privileges for RLS testing.
 -- These grants are strictly in disposable PostgreSQL containers.
+-- projects SELECT is required because project_members_manage_owner (ALL)
+-- evaluates EXISTS(... FROM projects ...) as the invoking role; without it
+-- PostgREST returns 42501 even when the member SELECT policy would allow.
 grant usage on schema public to authenticated, anon;
-grant select on public.project_members, public.documents to authenticated, anon;
-grant update on public.documents to authenticated;
+grant select on public.users, public.projects, public.project_members, public.documents
+  to authenticated, anon;
+grant update on public.users, public.documents to authenticated;
+-- S1 / AI-review bind path (disposable local only)
+grant select, insert, update on public.project_tasks to authenticated;

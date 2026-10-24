@@ -96,9 +96,9 @@ test('listByProject survives sequential puts (reconnect)', () => {
   assert.equal(listed[0].status, 'awaiting_human')
 })
 
-test('pipeline wires idempotent accept and browser store default', () => {
+test('pipeline wires idempotent accept and store factory default', () => {
   const src = readFileSync('src/lib/ai/reviewPipeline.ts', 'utf8')
   assert.match(src, /acceptedFindingTaskIds|reusedExistingTask/)
   assert.match(src, /putCas|expectedVersion/)
-  assert.match(src, /createDefaultReviewStore/)
+  assert.match(src, /createReviewStore/)
 })

@@ -10,12 +10,8 @@ import {
   InMemoryReviewJobStore,
   transitionReviewJob,
 } from './reviewJob'
-import {
-  createDefaultReviewStore,
-  REVIEW_STORE_MODE_BROWSER,
-  REVIEW_STORE_MODE_MEMORY,
-  type ReviewJobStoreBag,
-} from './browserReviewJobStore'
+import { type ReviewJobStoreBag } from './browserReviewJobStore'
+import { createReviewStore, resolveReviewStoreMode } from './reviewStoreFactory'
 import { assertFindingsMatchDocuments, type CitationDocument } from './citationVerify'
 
 export type ReviewJobStore = ReviewJobStoreBag
@@ -160,12 +156,15 @@ export async function rejectReview(
   return store.put(transitionReviewJob(job, 'rejected', { errorMessage: reason }))
 }
 
-export const defaultReviewStore: ReviewJobStore = createDefaultReviewStore()
-
-export const REVIEW_STORE_MODE =
-  typeof localStorage !== 'undefined' ? REVIEW_STORE_MODE_BROWSER : REVIEW_STORE_MODE_MEMORY
+const resolved = createReviewStore()
+export const defaultReviewStore: ReviewJobStore = resolved.store
+export const REVIEW_STORE_MODE = resolved.mode
 
 /** @deprecated Prefer defaultReviewStore; kept for tests that need a fresh memory map. */
 export function createMemoryReviewStore(): ReviewJobStore {
   return new InMemoryReviewJobStore()
+}
+
+export function activeReviewStoreMode() {
+  return resolveReviewStoreMode()
 }

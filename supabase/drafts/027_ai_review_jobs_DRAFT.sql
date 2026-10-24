@@ -1,61 +1,10 @@
--- DRAFT ONLY — do not apply to Preview ops or production without approval.
--- Phase D persistence for AI planning-review jobs + citation findings.
--- Complements browser-local ReviewJobStore; RLS mirrors project member access.
+-- DRAFT POINTER — executable SQL lives at:
+--   supabase/local_only/027_ai_review_jobs.sql
 --
--- Contract audit 2026-10-24 (code ↔ SQL):
---   ReviewJob.parentReviewJobId  → parent_review_job_id
---   ReviewJob.sourceTaskId       → source_task_id
---   ReviewJob.acceptedFindingTaskIds → accepted_finding_task_ids jsonb
---   ReviewJob.version            → row_version (CAS)
---   Citation offsets must equal quote length on document body at version_number
+-- Apply ONLY via scripts/apply-027-local-only.mjs against disposable loopback Postgres.
+-- FORBIDDEN: supabase/migrations auto-apply, Preview hosted DB, ops/production, db push.
 --
--- Isolation: apply only on disposable/Preview after explicit approval.
--- Ops/Production: FORBIDDEN until Gate E + user approval.
-
--- create table public.ai_review_jobs (
---   id uuid primary key default gen_random_uuid(),
---   project_id uuid not null references public.projects(id) on delete cascade,
---   status text not null check (status in (
---     'queued','running','awaiting_human','accepted','rejected','failed'
---   )),
---   linked_task_id uuid references public.project_tasks(id) on delete set null,
---   parent_review_job_id uuid references public.ai_review_jobs(id) on delete set null,
---   source_task_id uuid references public.project_tasks(id) on delete set null,
---   accepted_finding_task_ids jsonb not null default '{}'::jsonb,
---   row_version integer not null default 0,
---   error_message text,
---   created_by uuid references auth.users(id) on delete set null,
---   created_at timestamptz not null default now(),
---   updated_at timestamptz not null default now()
--- );
+-- Contract: RLS (can_access / can_edit), CAS (cas_ai_review_job P4001),
+-- idempotent bind_ai_review_finding_task, parent/source task links.
 --
--- create table public.ai_review_findings (
---   id uuid primary key default gen_random_uuid(),
---   job_id uuid not null references public.ai_review_jobs(id) on delete cascade,
---   severity text not null check (severity in ('info','warning','blocker')),
---   summary text not null,
---   document_id uuid not null,
---   document_type text not null,
---   version_number integer,
---   start_offset integer,
---   end_offset integer,
---   quote text not null,
---   rationale text not null,
---   created_at timestamptz not null default now(),
---   constraint ai_review_findings_offsets_chk check (
---     start_offset is null or end_offset is null or end_offset >= start_offset
---   )
--- );
---
--- -- Idempotency: one S1 task per (job_id, finding_id) when persisted as rows later.
--- -- create unique index ai_review_finding_task_uniq
--- --   on public.ai_review_jobs ((accepted_finding_task_ids)); -- prefer side table when promoting
---
--- alter table public.ai_review_jobs enable row level security;
--- alter table public.ai_review_findings enable row level security;
--- -- Policies (sketch):
--- --   SELECT: can_access_project(project_id)  -- owner/editor/viewer
--- --   INSERT/UPDATE jobs: can_edit_project_content(project_id)  -- owner/editor
--- --   findings insert with job; no client DELETE
---
--- Status: DRAFT. Apply only after Preview rehearsal + user approval.
+-- Status: executable local_only; Preview/ops application still requires explicit approval.

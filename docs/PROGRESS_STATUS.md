@@ -2,7 +2,7 @@
 
 **최초 작성일:** 2026-10-14  
 **최종 수정일:** 2026-10-24  
-**문서 버전:** v4.5  
+**문서 버전:** v4.6  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 아래 **2026-10-24 정본 스냅샷**이 현시점 우선. 그 이하 역사 섹션은 보존용이며 당시 표현을 덮어쓰지 않는다.
@@ -14,10 +14,11 @@
 | 레이어 | 상태 | 증거 |
 |---|---|---|
 | **GitHub main 병합** | Phase A 관련 **완료** | main tip `527e042` · PR [#30](https://github.com/happysuyeun-rgb/plan_os/pull/30)·[#36](https://github.com/happysuyeun-rgb/plan_os/pull/36)·[#42](https://github.com/happysuyeun-rgb/plan_os/pull/42) merged 2026-10-24 |
-| **코드 완료 (기능 브랜치)** | Phase B·C·D **부분~Mock** | PR [#45](https://github.com/happysuyeun-rgb/plan_os/pull/45) tip `e5d44ac`+ · 브랜치 `feat/planos-bcd-mock-review-20261024` |
-| **단위·RLS CI** | #45에서 검증 중 | S1/RLS/Sonar 통과 이력 있음; lint 회귀는 후속 커밋으로 수정 |
-| **Preview 검증** | **미완료** (전수 E2E·수동 스모크 미증빙) | — |
-| **운영 DB 스키마** | Phase A V1.1 통합 **적용됨** (별도 백업·승인 절차 후) · **009/010 파일명 없음→013/014** | 운영 추가 쓰기·027 적용 **금지** |
+| **코드 완료 (기능 브랜치)** | Phase B·C·D **부분~Mock** | PR [#45](https://github.com/happysuyeun-rgb/plan_os/pull/45) tip `4f0a232`+ · 브랜치 `feat/planos-bcd-mock-review-20261024` |
+| **단위·RLS CI** | #45 Baseline lint 통과(`4f0a232`) · 로컬 027 RLS/CAS 통과 | Preview/ops DB에 027 **미적용** |
+| **로컬 Playwright E2E** | **일회용 스택에서 통과** (Mock 검수→수락→S1→재검수·RBAC·API) | `tests/e2e/browser_ai_review.mjs` · workflow `ai-review-local-e2e.yml` |
+| **Preview 검증** | **미완료** (호스티드 Preview 전수·수동 스모크 미증빙) | — |
+| **운영 DB 스키마** | Phase A V1.1 통합 **적용됨** · **009/010 파일명 없음→013/014** | 운영 추가 쓰기·027 적용 **금지** |
 | **Production 출시** | **미완료** | 배포 승인 없음 |
 
 ### Phase 요약
@@ -25,22 +26,22 @@
 | Phase | 코드 | 테스트 | Preview | 운영 DB | Production |
 |---|---|---|---|---|---|
 | **A** G1·PM·C04 | main 병합 완료 | CI 당시 통과 | Preview 가이드 있음 | V1.1 스키마 통합 (추가 mig 금지) | 미배포 |
-| **B** S1 상세·권한·PM→S1·C04 | PR #45 코드 부분 완료 | 단위·S1·RLS | 통합 E2E 미완료 | 011 등 기존 | 미배포 |
-| **C** LLM | Provider·BFF·budget·Preview `/api` 기반 | 단위 | 유료 미연결 | n/a | 미배포 |
-| **D** 기획 검수 | Mock UI·브라우저 영속·인용 | 단위·node E2E | Preview 전수 미증빙 | 027 **DRAFT 미적용** | 미배포 |
+| **B** S1 상세·권한·PM→S1·C04 | PR #45 코드 부분 완료 | 단위·S1·RLS·로컬 Playwright | 통합 Preview E2E 미완료 | 011 등 기존 | 미배포 |
+| **C** LLM | Provider·BFF·budget·Preview `/api` 기반 | 단위·BFF placeholder E2E | 유료 미연결 | n/a | 미배포 |
+| **D** 기획 검수 | Mock UI·브라우저/서버 스토어 전환·027 `local_only` | 단위·로컬 RLS·Playwright | Preview 전수 미증빙 | 027 **migrations 밖·호스티드 미적용** | 미배포 |
 | **E/F** AI PM·출시 | 미구현 | — | — | — | 미완료 |
 
 ### 브랜치 계보
 
 - **#44** `feat/planos-bcd-foundation-20261023-wip` — foundation WIP (OPEN). **#45가 후속 정본**.
-- **#45** `feat/planos-bcd-mock-review-20261024` — foundation 포함 + Preview API·영속·권한·인용 E2E. **BCD 작업 기준 브랜치**.
+- **#45** `feat/planos-bcd-mock-review-20261024` — Mock 검수 + 로컬 027/ServerReviewJobStore/Playwright. **BCD 작업 기준 브랜치**.
 - main에 #45 **미병합** (승인 전).
 
-### 남은 P0/P1 (감사 2026-10-24)
+### 남은 P0/P1 (감사 2026-10-24 + 로컬 E2E 후)
 
-- **P0:** #45 CI lint 안정화 · Preview E2E 전수 · 운영 009/010≡013/014 동등성 **읽기 전용** 확인(쓰기 금지)
-- **P1:** 027 격리 DB 검증(승인 후) · 실 LLM · AI PM/직원 채용(E)
-- **P2:** Playwright 브라우저 E2E · 인력사무소
+- **P0:** Preview 호스티드 E2E 전수 · 운영 009/010≡013/014 동등성 **읽기 전용** 확인(쓰기 금지)
+- **P1:** 027 Preview DB 적용 승인 게이트 · `VITE_AI_REVIEW_STORE=server` Preview 전환 · 실 LLM · AI PM(E)
+- **P2:** 인력사무소 · 서버 스토어 프로덕션 경로
 
 ## 2026-10-19 최신 검수 스냅샷 (역사 보존 · 위 정본보다 우선하지 않음)
 
