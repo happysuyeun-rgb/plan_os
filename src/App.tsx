@@ -17,6 +17,9 @@ import ProjectCreatePage from './pages/ProjectCreatePage'
 import DocumentPage from './pages/DocumentPage'
 import ProjectTasksPage from './pages/ProjectTasksPage'
 import AuditSourceSelectionPage from './pages/AuditSourceSelectionPage'
+import PmPlanListPage from './pages/PmPlanListPage'
+import PmPlanNewPage from './pages/PmPlanNewPage'
+import PmPlanDetailPage from './pages/PmPlanDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import TrashPage from './pages/TrashPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -55,6 +58,9 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="/projects/:projectId/tasks" element={<ProjectTasksPage />} />
+          <Route path="/projects/:projectId/plans" element={<PmPlanListPage />} />
+          <Route path="/projects/:projectId/plans/new" element={<PmPlanNewPage />} />
+          <Route path="/projects/:projectId/plans/:planId" element={<PmPlanDetailPage />} />
           <Route path="/projects/:projectId/audits/new" element={<AuditSourceSelectionPage />} />
           <Route path="/projects/:projectId" element={<DocumentPage />} />
           <Route path="/projects/:projectId/:docType" element={<DocumentPage />} />

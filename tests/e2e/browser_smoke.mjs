@@ -343,7 +343,7 @@ try{
   // may restore. The source version must belong to the requested document.
   const viewerEmail='viewer-restoration@example.test'
   const viewerPassword='Synthetic-viewer-test-password-123!'
-  const viewer=await localAdmin('/auth/v1/admin/users','POST',{
+  const viewer=await admin('/auth/v1/admin/users','POST',{
     email:viewerEmail,password:viewerPassword,email_confirm:true,
   })
   assert(viewer.id,'Synthetic viewer user not created')
