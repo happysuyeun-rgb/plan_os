@@ -1,0 +1,10 @@
+-- DRAFT POINTER — executable SQL lives at:
+--   supabase/local_only/027_ai_review_jobs.sql
+--
+-- Apply ONLY via scripts/apply-027-local-only.mjs against disposable loopback Postgres.
+-- FORBIDDEN: supabase/migrations auto-apply, Preview hosted DB, ops/production, db push.
+--
+-- Contract: RLS (can_access / can_edit), CAS (cas_ai_review_job P4001),
+-- idempotent bind_ai_review_finding_task, parent/source task links.
+--
+-- Status: executable local_only; Preview/ops application still requires explicit approval.

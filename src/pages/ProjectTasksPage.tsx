@@ -159,6 +159,8 @@ export default function ProjectTasksPage() {
           className="text-sm text-gray-500 hover:underline">← 프로젝트 문서</Link>
         <Link to={projectId ? `/projects/${projectId}/plans` : '/projects'}
           className="text-sm text-indigo-700 hover:underline">PM 계획 →</Link>
+        <Link to={projectId ? `/projects/${projectId}/ai-review` : '/projects'}
+          className="text-sm text-violet-700 hover:underline">AI 기획 검수 (Mock) →</Link>
       </div>
       <header>
         <h1 className="text-2xl font-bold text-gray-900">프로젝트 업무 관리</h1>
@@ -231,10 +233,19 @@ export default function ProjectTasksPage() {
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-semibold">{task.title}</h3>
+                    <h3 className="font-semibold">
+                      <Link to={`/projects/${projectId}/tasks/${task.id}`} className="hover:underline">
+                        {task.title}
+                      </Link>
+                    </h3>
                     {task.objective && <p className="mt-2 whitespace-pre-wrap text-sm">{task.objective}</p>}
                     {task.acceptanceCriteria.length > 0 && <ul className="mt-2 list-disc pl-5 text-sm" aria-label="업무 완료 기준">{task.acceptanceCriteria.map((v, i) => <li key={i}>{v}</li>)}</ul>}
                     <p className="mt-1 text-xs text-gray-500">담당: {assigneeLabel(task.assigneeId)}</p>
+                    <p className="mt-1">
+                      <Link to={`/projects/${projectId}/tasks/${task.id}`} className="text-sm text-indigo-700 hover:underline">
+                        상세·이력 보기
+                      </Link>
+                    </p>
                   </>
                 )}
                 {task.blockedReason && <p className="mt-2 text-sm text-red-700">차단 사유: {task.blockedReason}</p>}
