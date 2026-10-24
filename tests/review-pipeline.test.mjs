@@ -14,6 +14,7 @@ test('pipeline source wires citation → human → task → re-review', () => {
   assert.match(src, /createTask/)
   assert.match(src, /requestReReview/)
   assert.match(src, /acceptedFindingTaskIds|reusedExistingTask/)
+  assert.match(src, /parentReviewJobId|sourceTaskId/)
   assert.match(src, /createDefaultReviewStore|BROWSER|MOCK/i)
 })
 

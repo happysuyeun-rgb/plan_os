@@ -38,7 +38,11 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-export function createReviewJob(projectId: string, findings: ReviewFinding[] = []): ReviewJob {
+export function createReviewJob(
+  projectId: string,
+  findings: ReviewFinding[] = [],
+  link?: { parentReviewJobId?: string; sourceTaskId?: string },
+): ReviewJob {
   const stamp = nowIso()
   return {
     id: crypto.randomUUID(),
@@ -46,6 +50,8 @@ export function createReviewJob(projectId: string, findings: ReviewFinding[] = [
     status: 'queued',
     findings,
     acceptedFindingTaskIds: {},
+    parentReviewJobId: link?.parentReviewJobId,
+    sourceTaskId: link?.sourceTaskId,
     version: 0,
     createdAt: stamp,
     updatedAt: stamp,
@@ -135,7 +141,12 @@ export async function acceptReviewAndOpenTask(
 
   let reReviewJob: ReviewJob | undefined
   if (opts.requestReReview !== false && !reusedExistingTask) {
-    reReviewJob = await store.put(createReviewJob(job.projectId, []))
+    reReviewJob = await store.put(
+      createReviewJob(job.projectId, [], {
+        parentReviewJobId: job.id,
+        sourceTaskId: createdTaskId,
+      }),
+    )
   }
 
   return { job: accepted, createdTaskId, reusedExistingTask, reReviewJob }

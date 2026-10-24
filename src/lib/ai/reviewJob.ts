@@ -33,6 +33,10 @@ export type ReviewJob = {
   linkedTaskId?: string
   /** findingId → taskId; prevents duplicate S1 tasks on re-accept / double-click. */
   acceptedFindingTaskIds?: Record<string, string>
+  /** Parent review job when this is a re-review enqueue. */
+  parentReviewJobId?: string
+  /** S1 task that triggered / is tied to this re-review (fix-complete loop). */
+  sourceTaskId?: string
   /** Monotonic CAS version for concurrent writers (browser/local store). */
   version?: number
   errorMessage?: string

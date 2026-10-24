@@ -2,6 +2,25 @@
 
 ## 1. Git / PR 계보
 
+### 2026-10-24 현행 (최우선)
+
+```mermaid
+flowchart TB
+  main527[main_527e042] --> pr45[PR45_BCD_OPEN]
+  pr44[PR44_foundation_OPEN] -.-> pr45
+  pr45 -.->|승인후| mainNext[main_future]
+```
+
+| 순서 | PR | 상태 (2026-10-24) | 비고 |
+|---|---|---|---|
+| 1 | #30 | **merged** | G1 |
+| 2 | #36 | **merged** | PM |
+| 3 | #42 | **merged** → main `527e042` | C04 |
+| 4 | #44 | OPEN (foundation WIP) | **#45에 흡수·후속** — 중복 병합 금지 |
+| 5 | #45 | OPEN · BCD 정본 브랜치 | Mock 검수·Preview API·영속; **main 미병합** |
+
+### 역사 계보 (2026-10-23 당시 · 보존)
+
 ```mermaid
 flowchart TB
   main[main] --> pr30[PR30_G1]
@@ -15,13 +34,12 @@ flowchart TB
 
 | 순서 | PR | HEAD(보고시점) | base | 비고 |
 |---|---|---|---|---|
-| 1 | #30 | `f74481e` | main | Sonar security 차단 |
-| 2 | #36 | `cb32c91` | #30 브랜치 | Sonar 중복 차단 |
-| 3 | #42 | `716f9e6`+ | #36 브랜치 | CI·Sonar OK; 026 포함 |
-| tip | preview | `7460e5b` | (통합 tip) | Preview 배포 소스 |
+| 1 | #30 | `f74481e` | main | 당시 Sonar security 차단 → **이후 병합** |
+| 2 | #36 | `cb32c91` | #30 브랜치 | 당시 Sonar 중복 차단 → **이후 병합** |
+| 3 | #42 | `716f9e6`+ | #36 브랜치 | CI·Sonar OK; 026 포함 → **병합** |
+| tip | preview | `7460e5b` | (통합 tip) | Preview 배포 소스 (역사) |
 
-**규칙:** tip만 고쳐 Sonar #30/#36 게이트가 자동 해소되지 않음. 각 PR 브랜치에 수정 커밋 필요.  
-구 Draft #22~#27 G1/Mock은 #30/#36에 흡수·대체된 항목이 많음 → 중복 병합 금지.
+**규칙:** #44와 #45를 동시에 main에 넣지 말 것. BCD는 **#45만** 승격 후보.
 
 ## 2. DB 마이그레이션 의존
 

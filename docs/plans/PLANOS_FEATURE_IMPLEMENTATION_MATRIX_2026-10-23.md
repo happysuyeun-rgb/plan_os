@@ -1,9 +1,22 @@
 # PlanOS 기능 구현 매트릭스 (2026-10-23)
 
-정본 코드: `preview/planos-integrated-20261023`.  
+정본 코드 (역사): `preview/planos-integrated-20261023`.  
+**2026-10-24 현행 코드:** `feat/planos-bcd-mock-review-20261024` / PR #45 · main tip `527e042`.  
 상태값: `코드완료` / `검증완료(격리)` / `병합완료` / `운영완료` / `부분` / `Mock` / `미착수` / `설계만` / `DEPRECATED`.
 
-문서완료 ≠ 코드완료. **운영완료는 현재 전 항목 해당 없음.**
+문서완료 ≠ 코드완료. **운영완료·Production은 현재 전 항목 해당 없음.**
+
+### 2026-10-24 정정 (본 표보다 우선)
+
+| ID | 이전 표기 | 정정 | 근거 |
+|---|---|---|---|
+| F-105 | 미착수/부분 | **코드완료(브랜치)** · Preview E2E 미증빙 | PR #45 상세·담당·이력 UI |
+| F-401~402 | main 미병합 | **병합완료** (main `527e042`) | PR #36 |
+| C04/DASH | 검증완료(격리) | **병합완료** + Preview 수용 미증빙 | PR #42 |
+| GEN | Mock | **Mock + BFF 계약** (유료 차단) | Vite+`api/ai/generate` |
+| AI-REV | 설계만 | **Mock 코드완료** · DB 027 미적용 · 실 LLM 미연결 | `/ai-review` |
+| main | 미착수 | Phase A **병합완료** · #45 **미병합** | GitHub |
+| Sonar #30/#36 | FAIL 차단 | **병합 후 해소/예외 처리됨** (역사 FAIL은 보존) | merged PRs |
 
 ---
 

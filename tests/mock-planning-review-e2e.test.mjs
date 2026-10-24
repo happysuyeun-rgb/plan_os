@@ -52,6 +52,8 @@ test('Mock E2E: run-accept-task-reconnect with RBAC', () => {
     projectId: 'e2e-project',
     status: 'queued',
     findings: [],
+    parentReviewJobId: job.id,
+    sourceTaskId: taskId,
     version: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -60,6 +62,8 @@ test('Mock E2E: run-accept-task-reconnect with RBAC', () => {
   assert.equal(job.status, 'accepted')
   assert.equal(job.acceptedFindingTaskIds[findingId], taskId)
   assert.equal(reReview.status, 'queued')
+  assert.equal(reReview.parentReviewJobId, job.id)
+  assert.equal(reReview.sourceTaskId, taskId)
 
   const again = store.listByProject('e2e-project')
   assert.ok(again.some((j) => j.id === job.id && j.status === 'accepted'))

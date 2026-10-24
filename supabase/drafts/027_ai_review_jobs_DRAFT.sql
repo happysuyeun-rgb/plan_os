@@ -1,6 +1,16 @@
 -- DRAFT ONLY — do not apply to Preview ops or production without approval.
 -- Phase D persistence for AI planning-review jobs + citation findings.
--- Complements in-memory ReviewJobStore; RLS mirrors project member access.
+-- Complements browser-local ReviewJobStore; RLS mirrors project member access.
+--
+-- Contract audit 2026-10-24 (code ↔ SQL):
+--   ReviewJob.parentReviewJobId  → parent_review_job_id
+--   ReviewJob.sourceTaskId       → source_task_id
+--   ReviewJob.acceptedFindingTaskIds → accepted_finding_task_ids jsonb
+--   ReviewJob.version            → row_version (CAS)
+--   Citation offsets must equal quote length on document body at version_number
+--
+-- Isolation: apply only on disposable/Preview after explicit approval.
+-- Ops/Production: FORBIDDEN until Gate E + user approval.
 
 -- create table public.ai_review_jobs (
 --   id uuid primary key default gen_random_uuid(),
@@ -9,6 +19,10 @@
 --     'queued','running','awaiting_human','accepted','rejected','failed'
 --   )),
 --   linked_task_id uuid references public.project_tasks(id) on delete set null,
+--   parent_review_job_id uuid references public.ai_review_jobs(id) on delete set null,
+--   source_task_id uuid references public.project_tasks(id) on delete set null,
+--   accepted_finding_task_ids jsonb not null default '{}'::jsonb,
+--   row_version integer not null default 0,
 --   error_message text,
 --   created_by uuid references auth.users(id) on delete set null,
 --   created_at timestamptz not null default now(),
@@ -27,11 +41,21 @@
 --   end_offset integer,
 --   quote text not null,
 --   rationale text not null,
---   created_at timestamptz not null default now()
+--   created_at timestamptz not null default now(),
+--   constraint ai_review_findings_offsets_chk check (
+--     start_offset is null or end_offset is null or end_offset >= start_offset
+--   )
 -- );
+--
+-- -- Idempotency: one S1 task per (job_id, finding_id) when persisted as rows later.
+-- -- create unique index ai_review_finding_task_uniq
+-- --   on public.ai_review_jobs ((accepted_finding_task_ids)); -- prefer side table when promoting
 --
 -- alter table public.ai_review_jobs enable row level security;
 -- alter table public.ai_review_findings enable row level security;
--- -- Policies (sketch): members SELECT; editors INSERT/UPDATE jobs; no client DELETE.
+-- -- Policies (sketch):
+-- --   SELECT: can_access_project(project_id)  -- owner/editor/viewer
+-- --   INSERT/UPDATE jobs: can_edit_project_content(project_id)  -- owner/editor
+-- --   findings insert with job; no client DELETE
 --
 -- Status: DRAFT. Apply only after Preview rehearsal + user approval.

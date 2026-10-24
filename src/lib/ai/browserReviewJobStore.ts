@@ -86,7 +86,9 @@ export class BrowserReviewJobStore implements ReviewJobStoreBag {
     return next
   }
 
-  get(_id: string): ReviewJob | undefined {
+  get(id: string): ReviewJob | undefined {
+    // localStorage is project-scoped; use getFromProject(projectId, id) instead.
+    void id
     return undefined
   }
 
