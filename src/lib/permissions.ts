@@ -25,6 +25,9 @@ export type ProjectPermission =
   | 'comment.delete_any'
   | 'comment.resolve'
   | 'comment.complete_own'
+  | 'ai.review.view'
+  | 'ai.review.run'
+  | 'ai.review.accept'
 
 const ROLE_PERMISSIONS: Record<MemberRole, ProjectPermission[]> = {
   owner: [
@@ -52,6 +55,9 @@ const ROLE_PERMISSIONS: Record<MemberRole, ProjectPermission[]> = {
     'comment.delete_any',
     'comment.resolve',
     'comment.complete_own',
+    'ai.review.view',
+    'ai.review.run',
+    'ai.review.accept',
   ],
   editor: [
     'project.view',
@@ -69,6 +75,9 @@ const ROLE_PERMISSIONS: Record<MemberRole, ProjectPermission[]> = {
     'comment.delete_own',
     'comment.resolve',
     'comment.complete_own',
+    'ai.review.view',
+    'ai.review.run',
+    'ai.review.accept',
   ],
   viewer: [
     'project.view',
@@ -80,6 +89,7 @@ const ROLE_PERMISSIONS: Record<MemberRole, ProjectPermission[]> = {
     'comment.delete_own',
     'comment.resolve',
     'comment.complete_own',
+    'ai.review.view',
   ],
 }
 

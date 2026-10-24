@@ -1,7 +1,7 @@
 /**
  * Vertical slice (Phase D): citation findings → human decision → optional S1
- * task → re-review job. Persistence adapters are injected; default is memory
- * (MOCK). DB-backed store lands with draft migration 027 — not applied to ops.
+ * task → re-review job. Default store is browser-local (survives refresh).
+ * DB-backed store (027) remains DRAFT — not applied to ops.
  */
 
 import {
@@ -10,11 +10,15 @@ import {
   InMemoryReviewJobStore,
   transitionReviewJob,
 } from './reviewJob'
+import {
+  createDefaultReviewStore,
+  REVIEW_STORE_MODE_BROWSER,
+  REVIEW_STORE_MODE_MEMORY,
+  type ReviewJobStoreBag,
+} from './browserReviewJobStore'
+import { assertFindingsMatchDocuments, type CitationDocument } from './citationVerify'
 
-export type ReviewJobStore = {
-  put(job: ReviewJob): ReviewJob | Promise<ReviewJob>
-  get(id: string): ReviewJob | undefined | Promise<ReviewJob | undefined>
-}
+export type ReviewJobStore = ReviewJobStoreBag
 
 export type CreateTaskFromFinding = (input: {
   projectId: string
@@ -25,6 +29,8 @@ export type CreateTaskFromFinding = (input: {
 export type ReviewPipelineResult = {
   job: ReviewJob
   createdTaskId?: string
+  /** True when taskId came from acceptedFindingTaskIds (no new create). */
+  reusedExistingTask?: boolean
   reReviewJob?: ReviewJob
 }
 
@@ -39,6 +45,8 @@ export function createReviewJob(projectId: string, findings: ReviewFinding[] = [
     projectId,
     status: 'queued',
     findings,
+    acceptedFindingTaskIds: {},
+    version: 0,
     createdAt: stamp,
     updatedAt: stamp,
   }
@@ -49,17 +57,19 @@ export async function submitFindingsForHumanReview(
   store: ReviewJobStore,
   job: ReviewJob,
   findings: ReviewFinding[],
+  docs?: CitationDocument[],
 ): Promise<ReviewJob> {
+  if (docs) {
+    assertFindingsMatchDocuments(findings, docs)
+  }
   let next = transitionReviewJob(job, 'running')
-  await store.put(next)
+  next = await store.put(next)
   next = transitionReviewJob(next, 'awaiting_human', { findings })
   return store.put(next)
 }
 
 /**
- * Human accepts → optionally create an S1 task from the primary finding →
- * enqueue a follow-up review job (re-review), still placeholder/MOCK until
- * a real reviewer provider is approved.
+ * Human accepts → create S1 task once per finding (idempotent) → optional re-review.
  */
 export async function acceptReviewAndOpenTask(
   store: ReviewJobStore,
@@ -68,36 +78,67 @@ export async function acceptReviewAndOpenTask(
     createTask?: CreateTaskFromFinding
     findingId?: string
     requestReReview?: boolean
+    /** When set, CAS against this version (concurrent tab protection). */
+    expectedVersion?: number
   } = {},
 ): Promise<ReviewPipelineResult> {
-  if (job.status !== 'awaiting_human') {
-    throw new Error(`accept requires awaiting_human, got ${job.status}`)
+  if (job.status !== 'awaiting_human' && job.status !== 'accepted') {
+    throw new Error(`accept requires awaiting_human|accepted, got ${job.status}`)
   }
   const finding = opts.findingId
     ? job.findings.find((f) => f.id === opts.findingId)
     : job.findings[0]
   if (!finding) throw new Error('No finding available to link to a task')
 
-  let createdTaskId: string | undefined
-  if (opts.createTask) {
+  const priorMap = { ...(job.acceptedFindingTaskIds ?? {}) }
+  const existingTaskId = priorMap[finding.id]
+  let createdTaskId: string | undefined = existingTaskId
+  let reusedExistingTask = Boolean(existingTaskId)
+
+  if (!existingTaskId && opts.createTask) {
     const created = await opts.createTask({
       projectId: job.projectId,
       finding,
       reviewJobId: job.id,
     })
     createdTaskId = created.taskId
+    priorMap[finding.id] = created.taskId
+    reusedExistingTask = false
   }
 
-  const accepted = await store.put(
-    transitionReviewJob(job, 'accepted', { linkedTaskId: createdTaskId }),
-  )
+  const patch: Partial<ReviewJob> = {
+    linkedTaskId: createdTaskId ?? job.linkedTaskId,
+    acceptedFindingTaskIds: priorMap,
+  }
+
+  let accepted: ReviewJob
+  if (job.status === 'awaiting_human') {
+    const transitioned = transitionReviewJob(job, 'accepted', patch)
+    if (opts.expectedVersion != null && store.putCas) {
+      accepted = await store.putCas(transitioned, opts.expectedVersion)
+    } else {
+      accepted = await store.put(transitioned)
+    }
+  } else {
+    // Already accepted — only update finding→task map (idempotent re-click).
+    const merged = {
+      ...job,
+      ...patch,
+      updatedAt: nowIso(),
+    }
+    if (opts.expectedVersion != null && store.putCas) {
+      accepted = await store.putCas(merged, opts.expectedVersion)
+    } else {
+      accepted = await store.put(merged)
+    }
+  }
 
   let reReviewJob: ReviewJob | undefined
-  if (opts.requestReReview !== false) {
+  if (opts.requestReReview !== false && !reusedExistingTask) {
     reReviewJob = await store.put(createReviewJob(job.projectId, []))
   }
 
-  return { job: accepted, createdTaskId, reReviewJob }
+  return { job: accepted, createdTaskId, reusedExistingTask, reReviewJob }
 }
 
 export async function rejectReview(
@@ -108,7 +149,12 @@ export async function rejectReview(
   return store.put(transitionReviewJob(job, 'rejected', { errorMessage: reason }))
 }
 
-/** Default MOCK store — not evidence of durable AI review completion. */
-export const defaultReviewStore: ReviewJobStore = new InMemoryReviewJobStore()
+export const defaultReviewStore: ReviewJobStore = createDefaultReviewStore()
 
-export const REVIEW_STORE_MODE = 'MOCK_IN_MEMORY' as const
+export const REVIEW_STORE_MODE =
+  typeof localStorage !== 'undefined' ? REVIEW_STORE_MODE_BROWSER : REVIEW_STORE_MODE_MEMORY
+
+/** @deprecated Prefer defaultReviewStore; kept for tests that need a fresh memory map. */
+export function createMemoryReviewStore(): ReviewJobStore {
+  return new InMemoryReviewJobStore()
+}

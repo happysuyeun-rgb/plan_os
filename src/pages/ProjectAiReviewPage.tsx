@@ -3,8 +3,11 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { useMemberStore } from '../store/memberStore'
+import { resolveMemberRole } from '../lib/permissions'
+import { canAiReview } from '../lib/ai/reviewAccess'
 import {
   acceptFindingAsTask,
+  loadLatestProjectReviewJob,
   requestReviewChanges,
   startMockPlanningReview,
 } from '../lib/ai/runPlanningReview'
@@ -24,12 +27,13 @@ const DOC_OPTIONS = [
 ] as const
 
 /**
- * Phase D UI: assign mock planning-review staff, run review, accept→S1 task
- * or request changes, then optional re-review. Not a paid AI path.
+ * Phase D UI: Mock planning-review staff. Vite BFF ≠ Preview api/ai/generate.
+ * Jobs persist in browser-local store (not ops DB / 027).
  */
 export default function ProjectAiReviewPage() {
   const { projectId } = useParams()
-  const userId = useAuthStore((s) => s.user?.id)
+  const user = useAuthStore((s) => s.user)
+  const userId = user?.id
   const { currentProject, setCurrentProject } = useProjectStore()
   const members = useMemberStore((s) => s.members)
   const fetchMembers = useMemberStore((s) => s.fetchMembers)
@@ -43,15 +47,34 @@ export default function ProjectAiReviewPage() {
   const [message, setMessage] = useState('')
   const [changeReason, setChangeReason] = useState('')
 
+  const role = resolveMemberRole(
+    currentProject,
+    members,
+    user ? { id: user.id, email: user.email ?? '' } : null,
+  )
+  const canView = canAiReview(role, 'view')
+  const canRun = canAiReview(role, 'run')
+  const canAccept = canAiReview(role, 'accept')
+
   useEffect(() => {
     if (!projectId) return
     void setCurrentProject(projectId)
     void fetchMembers(projectId).catch(() => undefined)
   }, [projectId, setCurrentProject, fetchMembers])
 
-  const membership = members.find((m) => m.project_id === projectId && m.user_id === userId && m.status === 'active')
-  const isOwner = Boolean(currentProject && userId && currentProject.user_id === userId)
-  const canRun = isOwner || membership?.role === 'owner' || membership?.role === 'editor'
+  useEffect(() => {
+    if (!projectId || !canView) return
+    let cancelled = false
+    void loadLatestProjectReviewJob(projectId, defaultReviewStore).then((latest) => {
+      if (cancelled || !latest) return
+      setJob(latest)
+      setHired(true)
+      setMessage(`재접속: 저장된 검수 job ${latest.id.slice(0, 8)}… (${REVIEW_STORE_MODE})`)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [projectId, canView])
 
   const toggleType = (type: string) => {
     setSelectedTypes((prev) =>
@@ -70,7 +93,12 @@ export default function ProjectAiReviewPage() {
     setError('')
     setMessage('')
     try {
-      const result = await startMockPlanningReview(projectId, defaultReviewStore, selectedTypes)
+      const result = await startMockPlanningReview(
+        projectId,
+        defaultReviewStore,
+        selectedTypes,
+        role,
+      )
       setJob(result.job)
       setMessage(
         `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode})`,
@@ -83,7 +111,7 @@ export default function ProjectAiReviewPage() {
   }
 
   const onAccept = async (findingId: string) => {
-    if (!job || !userId || !projectId) return
+    if (!job || !userId || !projectId || !canAccept) return
     setBusy(true)
     setError('')
     try {
@@ -91,13 +119,17 @@ export default function ProjectAiReviewPage() {
         findingId,
         userId,
         requestReReview: true,
+        role,
+        expectedVersion: job.version,
       })
       setJob(result.job)
       setReReviewJobId(result.reReviewJob?.id ?? null)
       setMessage(
-        result.createdTaskId
-          ? `수락됨 · S1 업무 생성: ${result.createdTaskId}${result.reReviewJob ? ` · 재검수 job=${result.reReviewJob.id}` : ''}`
-          : '수락됨',
+        result.reusedExistingTask
+          ? `중복 방지: 기존 업무 ${result.createdTaskId} 재사용`
+          : result.createdTaskId
+            ? `수락됨 · S1 업무 생성: ${result.createdTaskId}${result.reReviewJob ? ` · 재검수 job=${result.reReviewJob.id}` : ''}`
+            : '수락됨',
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : '수락 실패')
@@ -107,11 +139,11 @@ export default function ProjectAiReviewPage() {
   }
 
   const onRequestChanges = async () => {
-    if (!job) return
+    if (!job || !canAccept) return
     setBusy(true)
     setError('')
     try {
-      const next = await requestReviewChanges(defaultReviewStore, job, changeReason)
+      const next = await requestReviewChanges(defaultReviewStore, job, changeReason, role)
       setJob(next)
       setMessage(`수정 요청 처리됨: ${next.errorMessage ?? ''}`)
     } catch (e) {
@@ -126,7 +158,12 @@ export default function ProjectAiReviewPage() {
     setBusy(true)
     setError('')
     try {
-      const result = await startMockPlanningReview(projectId, defaultReviewStore, selectedTypes)
+      const result = await startMockPlanningReview(
+        projectId,
+        defaultReviewStore,
+        selectedTypes,
+        role,
+      )
       setJob(result.job)
       setReReviewJobId(null)
       setMessage(`재검수(Mock) 완료 · job=${result.job.id}`)
@@ -137,6 +174,9 @@ export default function ProjectAiReviewPage() {
     }
   }
 
+  const showAccept =
+    canAccept && (job?.status === 'awaiting_human' || job?.status === 'accepted')
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
       <Link to={projectId ? `/projects/${projectId}` : '/projects'} className="text-sm text-gray-500 hover:underline">
@@ -145,90 +185,115 @@ export default function ProjectAiReviewPage() {
       <header className="space-y-2">
         <h1 className="text-2xl font-bold text-gray-900">AI 기획 검수 (Mock)</h1>
         <p className="text-sm text-gray-600">
-          사람 PM 계획과 별도입니다. 유료 LLM·운영 DB 영속(027)은 미적용이며, Preview/로컬 Mock만 사용합니다.
+          사람 PM 계획과 별도입니다. 브라우저 로컬 저장({REVIEW_STORE_MODE}) · 027/운영 DB·유료 LLM 미적용.
+          생성 API는 Vite 개발 미들웨어와 Preview <code className="text-xs">/api/ai/generate</code> 가 분리됩니다.
         </p>
         <p className="text-xs text-gray-500" data-testid="ai-review-store-mode">
-          저장 모드: {REVIEW_STORE_MODE}
+          저장 모드: {REVIEW_STORE_MODE} · 역할: {role ?? 'none'}
         </p>
       </header>
 
-      {!canRun && (
+      {!canView && (
         <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900">
-          Owner/Editor만 Mock 검수 직원을 투입·실행할 수 있습니다.
+          이 프로젝트의 AI 검수 결과를 볼 권한이 없습니다.
         </p>
       )}
 
-      <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="직원 투입">
-        <h2 className="font-semibold">1. 직원 투입</h2>
-        <p className="text-sm text-gray-700">역할: 기획 문서 누락·충돌 휴리스틱 검수</p>
-        <button
-          type="button"
-          disabled={!canRun || hired || busy}
-          onClick={onHire}
-          className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-40"
-          data-testid="ai-review-hire"
-        >
-          {hired ? '투입됨 (Mock)' : 'Mock 기획 검수 직원 투입'}
-        </button>
-      </section>
+      {canView && !canRun && (
+        <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900" data-testid="ai-review-viewer-readonly">
+          Viewer는 검수 결과 조회만 가능합니다. 실행·수락·업무 생성은 Owner/Editor만 가능합니다.
+        </p>
+      )}
 
-      <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="범위">
-        <h2 className="font-semibold">2. 검수 문서 범위</h2>
-        <div className="flex flex-wrap gap-3">
-          {DOC_OPTIONS.map((opt) => (
-            <label key={opt.type} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selectedTypes.includes(opt.type)}
-                onChange={() => toggleType(opt.type)}
-                disabled={!hired || busy}
-              />
-              {opt.label}
-            </label>
-          ))}
-        </div>
-        <p className="text-xs text-gray-500">예상 비용: $0 (Mock · 토큰 미사용)</p>
-        <button
-          type="button"
-          disabled={!hired || !canRun || busy || selectedTypes.length === 0}
-          onClick={() => void onRun()}
-          className="rounded bg-indigo-700 px-4 py-2 text-sm text-white disabled:opacity-40"
-          data-testid="ai-review-run"
-        >
-          {busy ? '실행 중…' : '검수 실행 (Mock)'}
-        </button>
-      </section>
+      {canView && (
+        <>
+          <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="직원 투입">
+            <h2 className="font-semibold">1. 직원 투입</h2>
+            <p className="text-sm text-gray-700">역할: 기획 문서 누락·충돌 휴리스틱 검수</p>
+            <button
+              type="button"
+              disabled={!canRun || hired || busy}
+              onClick={onHire}
+              className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-40"
+              data-testid="ai-review-hire"
+            >
+              {hired ? '투입됨 (Mock)' : 'Mock 기획 검수 직원 투입'}
+            </button>
+          </section>
+
+          <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="범위">
+            <h2 className="font-semibold">2. 검수 문서 범위</h2>
+            <div className="flex flex-wrap gap-3">
+              {DOC_OPTIONS.map((opt) => (
+                <label key={opt.type} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedTypes.includes(opt.type)}
+                    onChange={() => toggleType(opt.type)}
+                    disabled={!hired || busy || !canRun}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">예상 비용: $0 (Mock · 토큰 미사용)</p>
+            <button
+              type="button"
+              disabled={!hired || !canRun || busy || selectedTypes.length === 0}
+              onClick={() => void onRun()}
+              className="rounded bg-indigo-700 px-4 py-2 text-sm text-white disabled:opacity-40"
+              data-testid="ai-review-run"
+            >
+              {busy ? '실행 중…' : '검수 실행 (Mock)'}
+            </button>
+          </section>
+        </>
+      )}
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {message && <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900" data-testid="ai-review-message">{message}</p>}
 
-      {job && (
+      {canView && job && (
         <section className="space-y-4" aria-label="검수 결과" data-testid="ai-review-job">
-          <h2 className="font-semibold">3. 결과 · job {job.id.slice(0, 8)}… · {job.status}</h2>
-          {job.findings.map((f) => (
-            <article key={f.id} className="space-y-2 rounded border border-gray-200 p-4 text-sm">
-              <p className="font-medium">
-                [{f.severity}] {f.summary}
-              </p>
-              <p className="text-gray-600">
-                근거 ({f.citation.documentType}): “{f.citation.quote}”
-              </p>
-              <p className="text-xs text-gray-500">{f.citation.rationale}</p>
-              {job.status === 'awaiting_human' && canRun && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void onAccept(f.id)}
-                  className="rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50"
-                  data-testid={`ai-review-accept-${f.id}`}
-                >
-                  수락 → S1 업무 생성
-                </button>
-              )}
-            </article>
-          ))}
+          <h2 className="font-semibold">
+            3. 결과 · job {job.id.slice(0, 8)}… · {job.status}
+            {job.version != null ? ` · v${job.version}` : ''}
+          </h2>
+          {job.findings.map((f) => {
+            const linked = job.acceptedFindingTaskIds?.[f.id]
+            return (
+              <article key={f.id} className="space-y-2 rounded border border-gray-200 p-4 text-sm">
+                <p className="font-medium">
+                  [{f.severity}] {f.summary}
+                </p>
+                <p className="text-gray-600">
+                  근거 ({f.citation.documentType}
+                  {f.citation.versionNumber != null ? ` rev=${f.citation.versionNumber}` : ''}
+                  {f.citation.startOffset != null
+                    ? ` @${f.citation.startOffset}-${f.citation.endOffset}`
+                    : ''}
+                  ): “{f.citation.quote}”
+                </p>
+                <p className="text-xs text-gray-500">{f.citation.rationale}</p>
+                {linked && (
+                  <p className="text-xs text-green-700">업무 연결됨: {linked}</p>
+                )}
+                {showAccept && !linked && job.status === 'awaiting_human' && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAccept(f.id)}
+                    className="rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50"
+                    data-testid={`ai-review-accept-${f.id}`}
+                  >
+                    수락 → S1 업무 생성
+                  </button>
+                )}
+              </article>
+            )
+          })}
 
-          {job.status === 'awaiting_human' && canRun && (
+          {job.status === 'awaiting_human' && canAccept && (
             <div className="space-y-2 rounded border border-dashed border-gray-300 p-4">
               <h3 className="text-sm font-medium">수정 요청</h3>
               <textarea

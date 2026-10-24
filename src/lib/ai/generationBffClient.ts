@@ -1,5 +1,6 @@
 /**
- * Browser client for the Vite AI BFF. Distinguishes placeholder vs paid modes.
+ * Browser client for POST /api/ai/generate.
+ * Dev: Vite middleware. Preview: api/ai/generate.ts serverless.
  * Paid mode is never requested from the client in this phase.
  */
 import type { DocumentType } from '../../types'

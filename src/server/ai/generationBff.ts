@@ -28,6 +28,8 @@ export type GenerationBffResponse = {
   content: string
   budget: ReturnType<typeof readBudgetCaps>
   attemptId: string
+  /** Set by HTTP adapters — vite-dev vs vercel-preview. */
+  runtime?: 'vite-dev' | 'vercel-preview'
 }
 
 function stamp() {

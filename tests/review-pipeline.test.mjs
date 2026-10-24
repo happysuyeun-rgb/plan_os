@@ -13,8 +13,8 @@ test('pipeline source wires citation → human → task → re-review', () => {
   assert.match(src, /acceptReviewAndOpenTask/)
   assert.match(src, /createTask/)
   assert.match(src, /requestReReview/)
-  assert.match(src, /InMemoryReviewJobStore/)
-  assert.match(src, /not evidence of durable AI review completion|MOCK/i)
+  assert.match(src, /acceptedFindingTaskIds|reusedExistingTask/)
+  assert.match(src, /createDefaultReviewStore|BROWSER|MOCK/i)
 })
 
 test('state machine supports the vertical-slice transitions', () => {

@@ -31,6 +31,10 @@ export type ReviewJob = {
   status: ReviewJobStatus
   findings: ReviewFinding[]
   linkedTaskId?: string
+  /** findingId → taskId; prevents duplicate S1 tasks on re-accept / double-click. */
+  acceptedFindingTaskIds?: Record<string, string>
+  /** Monotonic CAS version for concurrent writers (browser/local store). */
+  version?: number
   errorMessage?: string
   createdAt: string
   updatedAt: string

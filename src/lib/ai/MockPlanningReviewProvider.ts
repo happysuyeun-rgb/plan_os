@@ -1,6 +1,7 @@
 /**
  * Mock AI planning-review employee (Phase D).
- * Heuristic findings only — never calls a paid LLM. Mark results as mock.
+ * Heuristic findings only — never calls a paid LLM.
+ * Quote offsets are exact slices (no trim) so citations verify against source.
  */
 
 import type { ReviewFinding } from './reviewJob'
@@ -9,6 +10,7 @@ export type ReviewDocumentInput = {
   id: string
   type: string
   content: string
+  revision?: number
 }
 
 export const MOCK_PLANNING_REVIEWER_ID = 'mock-planning-reviewer' as const
@@ -19,15 +21,15 @@ export type MockPlanningReviewResult = {
   findings: ReviewFinding[]
 }
 
-function snippet(content: string, needle: string, radius = 40): { quote: string; start: number; end: number } {
+function windowAroundNeedle(content: string, needle: string, radius = 40) {
   const idx = content.toLowerCase().indexOf(needle.toLowerCase())
   if (idx < 0) {
-    const quote = content.slice(0, Math.min(80, content.length)).trim() || '(empty)'
-    return { quote, start: 0, end: quote.length }
+    return { start: 0, end: Math.min(80, content.length) }
   }
-  const start = Math.max(0, idx - radius)
-  const end = Math.min(content.length, idx + needle.length + radius)
-  return { quote: content.slice(start, end).trim(), start, end }
+  return {
+    start: Math.max(0, idx - radius),
+    end: Math.min(content.length, idx + needle.length + radius),
+  }
 }
 
 function finding(
@@ -37,7 +39,7 @@ function finding(
   needle: string,
   rationale: string,
 ): ReviewFinding {
-  const { quote, start, end } = snippet(doc.content, needle)
+  const { start, end } = windowAroundNeedle(doc.content, needle)
   return {
     id: crypto.randomUUID(),
     severity,
@@ -45,9 +47,10 @@ function finding(
     citation: {
       documentId: doc.id,
       documentType: doc.type,
+      versionNumber: doc.revision,
       startOffset: start,
       endOffset: end,
-      quote,
+      quote: doc.content.slice(start, end),
       rationale,
     },
   }

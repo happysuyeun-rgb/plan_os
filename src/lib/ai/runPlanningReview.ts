@@ -1,12 +1,16 @@
 /**
  * Orchestrates Mock planning review → human queue (Phase D).
- * Persistence defaults to in-memory; 027 DRAFT is not applied.
+ * Browser-local persistence by default; migration 027 DRAFT is not applied.
  */
 
+import type { MemberRole } from '../../types'
 import { fetchDocuments } from '../api/documents'
+import { fetchVersionSummaries } from '../api/versions'
 import { createServerTask } from '../api/projectTasks'
 import { prototypeTaskRepository } from '../taskPrototype'
 import { runMockPlanningReview } from './MockPlanningReviewProvider'
+import { assertCanAiReview } from './reviewAccess'
+import { assertFindingsMatchDocuments, type CitationDocument } from './citationVerify'
 import {
   acceptReviewAndOpenTask,
   createReviewJob,
@@ -27,12 +31,20 @@ export type PlanningReviewRun = {
   findingCount: number
 }
 
-export async function loadProjectReviewDocuments(projectId: string) {
+export async function loadProjectReviewDocuments(projectId: string): Promise<CitationDocument[]> {
   const docs = await fetchDocuments(projectId)
+  let summaries: Record<string, { latest_version_number: number }> = {}
+  try {
+    summaries = await fetchVersionSummaries(docs.map((d) => d.id))
+  } catch {
+    summaries = {}
+  }
   return docs.map((d) => ({
     id: d.id,
     type: d.type,
     content: d.content ?? '',
+    // Prefer L2 snapshot number when present; else L1 content_revision.
+    revision: summaries[d.id]?.latest_version_number || d.content_revision || 0,
   }))
 }
 
@@ -40,7 +52,9 @@ export async function startMockPlanningReview(
   projectId: string,
   store: ReviewJobStore = defaultReviewStore,
   documentTypes?: string[],
+  role: MemberRole | null = 'owner',
 ): Promise<PlanningReviewRun> {
+  assertCanAiReview(role, 'run')
   let docs = await loadProjectReviewDocuments(projectId)
   if (documentTypes?.length) {
     const allow = new Set(documentTypes)
@@ -51,8 +65,9 @@ export async function startMockPlanningReview(
   }
 
   const mock = runMockPlanningReview(docs)
+  assertFindingsMatchDocuments(mock.findings, docs)
   const job = createReviewJob(projectId)
-  const awaiting = await submitFindingsForHumanReview(store, job, mock.findings)
+  const awaiting = await submitFindingsForHumanReview(store, job, mock.findings, docs)
   return {
     mode: 'mock',
     job: awaiting,
@@ -64,17 +79,26 @@ export async function startMockPlanningReview(
 export async function acceptFindingAsTask(
   store: ReviewJobStore,
   job: ReviewJob,
-  opts: { findingId?: string; userId: string; requestReReview?: boolean } ,
+  opts: {
+    findingId?: string
+    userId: string
+    requestReReview?: boolean
+    role?: MemberRole | null
+    expectedVersion?: number
+  },
 ): Promise<ReviewPipelineResult> {
+  assertCanAiReview(opts.role ?? 'owner', 'accept')
   return acceptReviewAndOpenTask(store, job, {
     findingId: opts.findingId,
     requestReReview: opts.requestReReview,
+    expectedVersion: opts.expectedVersion ?? job.version,
     createTask: async ({ projectId, finding, reviewJobId }) => {
       const title = `[검수] ${finding.summary}`.slice(0, 120)
       const objective = [
         `AI 기획 검수(Mock) job=${reviewJobId}`,
+        `finding=${finding.id}`,
         `severity=${finding.severity}`,
-        `citation=${finding.citation.documentType} @${finding.citation.startOffset ?? 0}`,
+        `citation=${finding.citation.documentType} rev=${finding.citation.versionNumber ?? '?'} @${finding.citation.startOffset ?? 0}-${finding.citation.endOffset ?? 0}`,
         finding.citation.quote,
         finding.citation.rationale,
       ].join('\n')
@@ -119,6 +143,17 @@ export async function requestReviewChanges(
   store: ReviewJobStore,
   job: ReviewJob,
   reason: string,
+  role: MemberRole | null = 'owner',
 ): Promise<ReviewJob> {
+  assertCanAiReview(role, 'request_changes')
   return rejectReview(store, job, reason.trim() || '수정 요청')
+}
+
+export async function loadLatestProjectReviewJob(
+  projectId: string,
+  store: ReviewJobStore = defaultReviewStore,
+): Promise<ReviewJob | null> {
+  if (!store.listByProject) return null
+  const jobs = await store.listByProject(projectId)
+  return jobs[0] ?? null
 }

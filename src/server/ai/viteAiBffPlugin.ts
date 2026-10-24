@@ -1,15 +1,16 @@
 /**
- * Dev-only Vite middleware exposing POST /api/ai/generate → handleGenerationRequest.
- * Never enables paid calls; responses are always mode:'placeholder' unless approved later.
+ * Dev-only Vite middleware: POST /api/ai/generate → handleGenerateHttp(runtime: vite-dev).
+ * Preview deployments use api/ai/generate.ts instead — do not treat this plugin as a
+ * production/Preview BFF.
  */
 import type { Plugin } from 'vite'
-import { handleGenerationRequest } from './generationBff'
+import { AI_GENERATE_PATH, handleGenerateHttp } from './generationHttp'
 
 export function viteAiBffPlugin(): Plugin {
   return {
-    name: 'planos-ai-bff',
+    name: 'planos-ai-bff-vite-dev',
     configureServer(server) {
-      server.middlewares.use('/api/ai/generate', (req, res, next) => {
+      server.middlewares.use(AI_GENERATE_PATH, (req, res, next) => {
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('Method Not Allowed')
@@ -22,23 +23,16 @@ export function viteAiBffPlugin(): Plugin {
             try {
               const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as {
                 documentType?: string
-                vars?: Record<string, string>
+                vars?: { title?: string; targetUser?: string }
                 allowPaidCalls?: boolean
+                attemptId?: string
+                retryIndex?: number
               }
-              if (!body.documentType || !body.vars) {
-                res.statusCode = 400
-                res.setHeader('Content-Type', 'application/json')
-                res.end(JSON.stringify({ error: 'documentType and vars required' }))
-                return
-              }
-              const result = await handleGenerationRequest({
-                documentType: body.documentType as never,
-                vars: body.vars as never,
-                allowPaidCalls: false,
-              })
-              res.statusCode = 200
+              const result = await handleGenerateHttp(body, { runtime: 'vite-dev' })
+              res.statusCode = result.status
               res.setHeader('Content-Type', 'application/json')
-              res.end(JSON.stringify(result))
+              res.setHeader('X-PlanOS-AI-Runtime', 'vite-dev')
+              res.end(JSON.stringify(result.body))
             } catch (err) {
               res.statusCode = 500
               res.setHeader('Content-Type', 'application/json')

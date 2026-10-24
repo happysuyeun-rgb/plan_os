@@ -21,18 +21,22 @@ test('mock reviewer detects PRD auth vs policy gap', () => {
   assert.ok(result.findings.some((f) => /인증|정책/.test(f.summary)))
 })
 
-test('UI and orchestration mark mock / non-durable store', () => {
+test('UI and orchestration mark mock / browser-local store (not ops 027)', () => {
   const page = readFileSync('src/pages/ProjectAiReviewPage.tsx', 'utf8')
   const run = readFileSync('src/lib/ai/runPlanningReview.ts', 'utf8')
   assert.match(page, /Mock/)
   assert.match(page, /REVIEW_STORE_MODE/)
+  assert.match(page, /027/)
   assert.match(run, /createServerTask/)
   assert.match(run, /prototypeTaskRepository/)
-  assert.match(run, /allowPaidCalls|유료|Mock/i)
+  assert.match(run, /assertCanAiReview|Mock/i)
 })
 
-test('BFF plugin forces allowPaidCalls false', () => {
+test('BFF plugin and Preview API force unpaid path', () => {
   const plugin = readFileSync('src/server/ai/viteAiBffPlugin.ts', 'utf8')
-  assert.match(plugin, /allowPaidCalls:\s*false/)
-  assert.match(plugin, /\/api\/ai\/generate/)
+  const http = readFileSync('src/server/ai/generationHttp.ts', 'utf8')
+  const api = readFileSync('api/ai/generate.ts', 'utf8')
+  assert.match(plugin, /AI_GENERATE_PATH|\/api\/ai\/generate/)
+  assert.match(http, /allowPaidCalls:\s*false/)
+  assert.match(api, /allowPaidCalls:\s*false/)
 })
