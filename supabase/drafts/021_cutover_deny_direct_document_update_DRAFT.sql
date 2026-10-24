@@ -1,0 +1,25 @@
+-- DRAFT cutover (C-03 design, NOT applied anywhere; lives in supabase/drafts
+-- so no migration runner picks it up): deny direct client UPDATE on
+-- public.documents so Revision CAS becomes the only content write path.
+--
+-- Why this is safe for the server write paths: restore (015), chat (016)
+-- and CAS (018) are SECURITY DEFINER functions owned by the migration role;
+-- they do not depend on the client UPDATE policy. Client INSERT (first
+-- creation, guest transfer) uses documents_insert_editor and is untouched.
+--
+-- Preconditions verified in C-03 before this may be promoted to a numbered
+-- migration:
+--   1. Every app write path goes through CAS/RPC (autosave, regenerate and
+--      the generation pipeline were moved to CAS in src/lib/api/generation.ts;
+--      insertDocument remains only as a first-creation INSERT).
+--   2. Isolated verification (tests/rls/test_local_supabase_cutover.mjs)
+--      passes against a disposable local Supabase with this file applied.
+--   3. No legacy client version still issues unconditional document UPDATEs
+--      against the same database.
+--
+-- Rollback (restores the exact 006 policy):
+--   create policy "documents_update_editor" on public.documents
+--     for update using (public.can_edit_project_content(project_id))
+--     with check (public.can_edit_project_content(project_id));
+
+drop policy if exists "documents_update_editor" on public.documents;

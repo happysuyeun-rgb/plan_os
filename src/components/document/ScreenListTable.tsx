@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { ScreenListRow } from '../../types'
 import { parseScreenListContent, serializeScreenList } from '../../lib/documentContent'
@@ -31,10 +31,12 @@ export function ScreenListTable({ content, onChange, readOnly }: ScreenListTable
   })
   const [editing, setEditing] = useState<{ row: number; field: EditableField } | null>(null)
 
-  useEffect(() => {
+  const [previousContent, setPreviousContent] = useState(content)
+  if (previousContent !== content) {
+    setPreviousContent(content)
     const parsed = parseScreenListContent(content)
     if (parsed) setRows(parsed)
-  }, [content])
+  }
 
   const persist = useCallback(
     (next: ScreenListRow[]) => {

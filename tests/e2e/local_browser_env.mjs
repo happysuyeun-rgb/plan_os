@@ -1,0 +1,20 @@
+// For the disposable CI runner only. Never fetch hosted Supabase credentials.
+import assert from 'node:assert/strict'
+import { writeFileSync } from 'node:fs'
+import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
+
+const dir = process.env.PLANOS_LOCAL_SUPABASE_DIR
+assert(dir, 'Missing PLANOS_LOCAL_SUPABASE_DIR')
+const env = readLocalSupabaseEnv(dir)
+// Defaults match CI; local runs may override when 54321 is already taken.
+const apiUrl = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
+assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(apiUrl), 'Local API URL must be loopback')
+assert(!env.API_URL || env.API_URL === apiUrl,
+  'Remote Supabase address unexpectedly configured')
+writeFileSync('.env.local',
+  'VITE_SUPABASE_URL=' + apiUrl + '\n' +
+  'VITE_SUPABASE_ANON_KEY=' + env.ANON_KEY + '\n' +
+  'VITE_ENABLE_DEV_LOGIN=true\n',
+  { mode: 0o600 },
+)
+console.log('Created local-only Vite configuration for disposable Supabase (keys not logged)')

@@ -31,18 +31,31 @@ export default function OnboardingPage() {
   const guestPending = hasGuestSession()
 
   const handleStart = async () => {
-    try {
-      await completeOnboarding()
-
-      if (guestPending) {
-        const projectId = await transferGuestToProject(user!.id)
-        if (projectId) {
-          showToast('success', '방금 만든 기획서를 저장했습니다')
-          navigate(`/projects/${projectId}/prd`)
+    // Transfer the guest plan BEFORE completing onboarding. Completing
+    // onboarding first used to lock the user past this screen when the
+    // transfer then failed, so the guest data could never be retried.
+    if (guestPending) {
+      const projectId = await transferGuestToProject(user!.id).catch(() => {
+        showToast('error', '기획서 저장에 실패했습니다. 입력한 내용은 유지되니 다시 시도해주세요')
+        return undefined
+      })
+      if (projectId === undefined) return
+      if (projectId) {
+        try {
+          await completeOnboarding()
+        } catch {
+          // The plan is already saved; onboarding can finish next login.
+          showToast('error', '기획서는 저장됐지만 온보딩 완료 처리에 실패했습니다. 다시 로그인하면 이어서 진행됩니다')
           return
         }
+        showToast('success', '방금 만든 기획서를 저장했습니다')
+        navigate(`/projects/${projectId}/prd`)
+        return
       }
+    }
 
+    try {
+      await completeOnboarding()
       navigate('/projects/new')
     } catch {
       showToast('error', '온보딩 완료 처리에 실패했습니다')

@@ -56,6 +56,13 @@ export async function patchServerTask(
   const { data, error } = await supabase.from('project_tasks').update(updates)
     .eq('project_id', projectId).eq('id', taskId).eq('version', expectedVersion)
     .select('*').maybeSingle()
+  // The version filter normally turns a lost race into an empty result
+  // below; if the server-side trigger still raises a version conflict
+  // (P4001 since migration 020; 40001 on a pre-020 database), surface the
+  // same TaskConflictError instead of a raw database error.
+  if (error && ['P4001', '40001'].includes((error as { code?: string }).code ?? '')) {
+    throw new TaskConflictError()
+  }
   if (error) throw error
   if (!data) throw new TaskConflictError()
   return toTask(data as DbTask)

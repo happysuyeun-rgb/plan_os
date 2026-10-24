@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
 import { Input } from '../common/Input'
@@ -16,11 +16,13 @@ export function SaveVersionModal({
   onClose,
   onConfirm,
 }: SaveVersionModalProps) {
-  const [name, setName] = useState(defaultName ?? '')
+  if (!isOpen) return null
 
-  useEffect(() => {
-    if (isOpen) setName(defaultName ?? '')
-  }, [isOpen, defaultName])
+  return <SaveVersionModalContent key={defaultName ?? ''} defaultName={defaultName} onClose={onClose} onConfirm={onConfirm} />
+}
+
+function SaveVersionModalContent({ defaultName, onClose, onConfirm }: Omit<SaveVersionModalProps, 'isOpen'>) {
+  const [name, setName] = useState(defaultName ?? '')
 
   const handleConfirm = () => {
     const trimmed = name.trim()
@@ -28,7 +30,7 @@ export function SaveVersionModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="버전 저장">
+    <Modal isOpen onClose={onClose} title="버전 저장">
       <p className="text-sm text-gray-500">
         버전 이름을 입력하세요. 비워두면 자동으로 번호가 부여됩니다.
       </p>

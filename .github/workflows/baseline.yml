@@ -1,0 +1,36 @@
+name: Baseline checks
+
+on:
+  pull_request:
+    branches: [main, fix/ci-lint-baseline-20261014, fix/planos-document-autosave-safety-20261016]
+  push:
+    branches: [main, test/planos-phase0-integrated-20261016, fix/planos-version-restore-atomic-20261016, test/planos-c10-atomic-20261017, fix/planos-chat-atomic-c10-20261017]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Typecheck and production build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
+      - name: Autosave regression unit tests
+        run: npm run test:unit

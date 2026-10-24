@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useMemo } from 'react'
+import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import type { DocumentType, DocumentVersion, SidebarVersionInfo } from '../types'
@@ -34,6 +34,10 @@ import { buildSingleMarkdown } from '../lib/export/buildMarkdown'
 import { buildProjectZip } from '../lib/export/buildZip'
 import { copyToClipboard, downloadBlob, downloadText, sanitizeFilename } from '../lib/export/download'
 import { useProjectPermissions } from '../hooks/useProjectPermissions'
+import {
+  DocumentAlreadyExistsError,
+  DocumentWriteConflictError,
+} from '../lib/api/documents'
 import { useProjectStore } from '../store/projectStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useVersionStore } from '../store/versionStore'
@@ -73,6 +77,7 @@ export default function DocumentPage() {
     activeDocType,
     content,
     saveStatus,
+    recoveryConflicts,
     isReadOnly,
     isLoading,
     fetchDocuments,
@@ -82,6 +87,7 @@ export default function DocumentPage() {
     regenerate,
     regenerateCascade,
     setReadOnly,
+    reloadDocumentFromServer,
   } = useDocumentStore()
   const {
     versions,
@@ -95,6 +101,7 @@ export default function DocumentPage() {
     reset: resetVersions,
   } = useVersionStore()
   const { messages, fetchMessages, reset: resetChat } = useChatStore()
+  const chatWritingDocumentId = useDocumentStore((state) => state.chatWritingDocumentId)
   const canGenerate = usePlanStore((s) => s.canGenerate)
   const canSaveVersionPlan = usePlanStore((s) => s.canSaveVersion)
   const canInviteMemberPlan = usePlanStore((s) => s.canInviteMember)
@@ -181,21 +188,20 @@ export default function DocumentPage() {
     reset: resetComments,
   } = useCommentStore()
 
-  const [viewMode, setViewMode] = useState<'edit' | 'review'>('edit')
-  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [requestedViewMode, setRequestedViewMode] = useState<'edit' | 'review'>('edit')
+  const [commentsOpen, setCommentsOpen] = useState(() => searchParams.get('panel') === 'comments')
 
   useEffect(() => {
     const panel = searchParams.get('panel')
     const thread = searchParams.get('thread')
-    if (panel === 'comments') {
-      setCommentsOpen(true)
-      if (thread) setActiveThreadId(thread)
-    }
+    if (panel === 'comments' && thread) setActiveThreadId(thread)
   }, [searchParams, setActiveThreadId])
   const [showRegenerateModal, setShowRegenerateModal] = useState(false)
   const [showSaveVersionModal, setShowSaveVersionModal] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showRestoreModal, setShowRestoreModal] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+  const restoringRef = useRef(false)
   const [showMemberPanel, setShowMemberPanel] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showHistoryPanel, setShowHistoryPanel] = useState(false)
@@ -203,6 +209,7 @@ export default function DocumentPage() {
 
   const availableTypes = useMemo(() => getAvailableDocTypes(documents), [documents])
   const activeDoc = documents[activeDocType]
+  const activeDocumentId = activeDoc?.id
 
   const sidebarVersionInfo = useMemo(() => {
     const result: Partial<Record<DocumentType, SidebarVersionInfo>> = {}
@@ -225,7 +232,8 @@ export default function DocumentPage() {
   const targetUser = getTargetUser(currentProject)
   const canEditDocument = can('document.edit')
   const canComment = can('comment.view')
-  const editorReadOnly = isReadOnly || !canEditDocument
+  const viewMode = canEditDocument ? requestedViewMode : 'review'
+  const editorReadOnly = isReadOnly || !canEditDocument || chatWritingDocumentId === activeDocumentId
 
   const loadProject = useCallback(async () => {
     if (!projectId) return
@@ -249,22 +257,17 @@ export default function DocumentPage() {
   }, [projectId, fetchMembers])
 
   useEffect(() => {
-    if (!canEditDocument) setViewMode('review')
-  }, [canEditDocument])
-
-  useEffect(() => {
     if (!projectId || !canComment) return
     fetchCounts(projectId)
   }, [projectId, canComment, fetchCounts])
 
+  // Comment queries belong to a document identity, not its mutable content.
+  // A keystroke replaces the cached Document object but must not re-fetch
+  // comments or overwrite an in-progress reply UI.
   useEffect(() => {
-    if (!projectId || !activeDoc || !canComment) return
-    fetchThreads(projectId, activeDoc.id)
-  }, [projectId, activeDoc?.id, canComment, commentFilter, commentSearch, fetchThreads])
-
-  useEffect(() => {
-    if (viewMode === 'review' && canComment) setCommentsOpen(true)
-  }, [viewMode, canComment])
+    if (!projectId || !activeDocumentId || !canComment) return
+    void fetchThreads(projectId, activeDocumentId)
+  }, [projectId, activeDocumentId, canComment, commentFilter, commentSearch, fetchThreads])
 
   useEffect(() => {
     if (!projectId || isLoading) return
@@ -289,19 +292,24 @@ export default function DocumentPage() {
     saveLastDocType(projectId, resolved)
   }, [projectId, docTypePath, isLoading, availableTypes, navigate, setActiveDocType])
 
+  // Only document identities affect version summary lookup; editing text
+  // must not re-fetch version summaries on each keystroke.
+  const documentIdsKey = availableTypes
+    .map((type) => documents[type]?.id)
+    .filter((id): id is string => !!id)
+    .join(',')
   useEffect(() => {
-    const docIds = availableTypes
-      .map((t) => documents[t]?.id)
-      .filter((id): id is string => !!id)
-    if (docIds.length > 0) fetchSummaries(docIds)
-  }, [availableTypes, documents, fetchSummaries])
+    if (documentIdsKey) void fetchSummaries(documentIdsKey.split(','))
+  }, [documentIdsKey, fetchSummaries])
 
+  // Chat/version history belongs to a document ID. Draft content changing on
+  // every keystroke must not clear and refetch the entire chat conversation.
   useEffect(() => {
-    if (activeDoc) {
-      fetchVersions(activeDoc.id)
-      fetchMessages(projectId!, activeDoc.id)
+    if (projectId && activeDocumentId) {
+      void fetchVersions(activeDocumentId)
+      void fetchMessages(projectId, activeDocumentId)
     }
-  }, [activeDoc?.id, projectId, fetchVersions, fetchMessages])
+  }, [activeDocumentId, projectId, fetchVersions, fetchMessages])
 
   useEffect(() => {
     if (activeVersionId) {
@@ -348,6 +356,23 @@ export default function DocumentPage() {
     showToast('success', '버전이 저장되었습니다', { animation: 'completion' })
   }
 
+  // Write conflicts never discard the user's input: a first-creation race
+  // reloads the document that was created in the meantime (nothing local
+  // existed for it), while a revision conflict keeps the draft and leaves
+  // the reload choice to the conflict banner. The user retries explicitly.
+  const handleRegenerateError = async (error: unknown) => {
+    if (error instanceof DocumentAlreadyExistsError) {
+      showToast('error', error.message)
+      if (projectId) await fetchDocuments(projectId)
+      return
+    }
+    if (error instanceof DocumentWriteConflictError) {
+      showToast('error', error.message)
+      return
+    }
+    showToast('error', '재생성에 실패했습니다. 다시 시도하세요.')
+  }
+
   const handleRegenerate = async () => {
     if (!canGenerate()) {
       setShowUpgrade(true)
@@ -360,7 +385,12 @@ export default function DocumentPage() {
       return
     }
 
-    await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    try {
+      await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    } catch (error) {
+      await handleRegenerateError(error)
+      return
+    }
     await logActivity({
       project_id: projectId,
       document_id: activeDoc?.id,
@@ -373,7 +403,12 @@ export default function DocumentPage() {
   const handleRegenerateSingle = async () => {
     if (!projectId || !currentProject) return
     setShowRegenerateModal(false)
-    await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    try {
+      await regenerate(projectId, activeDocType, currentProject.title, targetUser)
+    } catch (error) {
+      await handleRegenerateError(error)
+      return
+    }
     await logActivity({
       project_id: projectId,
       document_id: activeDoc?.id,
@@ -386,7 +421,12 @@ export default function DocumentPage() {
   const handleRegenerateCascade = async () => {
     if (!projectId || !currentProject) return
     setShowRegenerateModal(false)
-    await regenerateCascade(projectId, activeDocType, currentProject.title, targetUser)
+    try {
+      await regenerateCascade(projectId, activeDocType, currentProject.title, targetUser)
+    } catch (error) {
+      await handleRegenerateError(error)
+      return
+    }
     await logActivity({
       project_id: projectId,
       document_id: activeDoc?.id,
@@ -394,12 +434,6 @@ export default function DocumentPage() {
       meta: { from: activeDocType },
     })
     showToast('success', '연관 산출물이 모두 재생성되었습니다')
-  }
-
-  const handleChatUpdate = (updated: string) => {
-    updateContent(updated)
-    setReadOnly(false)
-    selectVersion(null)
   }
 
   const handleOpenHistory = async () => {
@@ -476,13 +510,14 @@ export default function DocumentPage() {
     if (mode === 'edit' && isCommentMode) {
       setCommentMode(false)
     }
-    setViewMode(mode)
+    setRequestedViewMode(mode)
+    if (mode === 'review' && canComment) setCommentsOpen(true)
   }
 
   const handleCommentModeToggle = () => {
     if (!can('comment.create')) return
     if (!isCommentMode) {
-      setViewMode('review')
+      setRequestedViewMode('review')
       setCommentsOpen(true)
     }
     setCommentMode(!isCommentMode)
@@ -578,9 +613,33 @@ export default function DocumentPage() {
   }
 
   const hasNoDocuments = availableTypes.length === 0 && !TEST_UNLOCK_ALL_DOCUMENTS
+  const conflictingDraft = activeDocumentId ? recoveryConflicts[activeDocumentId] : undefined
 
   return (
     <>
+      {saveStatus === 'conflict' && activeDocumentId && (
+        <section role="alert" className="mx-5 my-3 rounded-lg border border-red-400 bg-red-50 p-4 text-sm text-gray-900">
+          <h2 className="font-semibold">저장 충돌이 발생했습니다</h2>
+          <p className="my-2">이 문서는 다른 곳에서 먼저 변경되어 자동저장이 중단되었습니다.
+            지금 입력한 내용은 보존됩니다. 최신 문서를 불러온 뒤 필요한 내용을 다시 반영하세요.</p>
+          <Button
+            variant="ghost"
+            className="px-3 py-1.5 text-xs"
+            onClick={() => { void reloadDocumentFromServer(activeDocumentId) }}
+          >
+            최신 문서 불러오기
+          </Button>
+        </section>
+      )}
+      {conflictingDraft !== undefined && (
+        <section role="alert" className="mx-5 my-3 rounded-lg border border-amber-400 bg-amber-50 p-4 text-sm text-gray-900">
+          <h2 className="font-semibold">저장되지 않은 로컬 초안이 있습니다</h2>
+          <p className="my-2">서버 문서가 변경되어 자동 복원하지 않았습니다.
+            아래 원고를 복사하여 변경 내용을 비교하세요. 서버 문서는 그대로 유지됩니다.</p>
+          <textarea aria-label="충돌한 로컬 초안" readOnly value={conflictingDraft}
+            rows={6} className="w-full rounded border border-amber-300 bg-white p-2 font-mono text-xs" />
+        </section>
+      )}
       <DocumentLayout
         projectTitle={currentProject?.title ?? ''}
         canEditProjectTitle={canEditProjectTitle}
@@ -625,7 +684,6 @@ export default function DocumentPage() {
                   chatTitle={currentProject ? resolveChatTitle(currentProject) : 'AI 채팅'}
                   canEditTitle={can('chat.send')}
                   onChatTitleSave={handleChatTitleSave}
-                  onDocumentUpdate={handleChatUpdate}
                   onMessageSent={() =>
                     logActivity({
                       project_id: projectId,
@@ -782,24 +840,40 @@ export default function DocumentPage() {
       <ConfirmModal
         isOpen={showRestoreModal}
         title="버전 복원"
-        message="현재 버전은 보존되고, 선택한 버전 내용으로 새 버전이 생성됩니다."
+        message="선택한 과거 내용으로 복원합니다. 현재 원고가 저장된 마지막 버전과 다르면 복원 전 자동 보관한 뒤 새 복원 버전을 생성합니다."
+        confirming={isRestoring}
         onConfirm={async () => {
-          if (activeDoc && projectId) {
-            await restoreVersion(activeDoc.id, content)
-            await fetchDocuments(projectId)
-            setContent(content)
+          if (!activeDoc || !projectId || !activeVersionId || restoringRef.current) return
+          restoringRef.current = true
+          setIsRestoring(true)
+          const documentId = activeDoc.id
+          const restoreProjectId = projectId
+          try {
+            // The server chooses content from the immutable version ID; this
+            // operation is atomic and safe to retry with its stable UUID.
+            await restoreVersion(documentId, activeVersionId)
+            await fetchDocuments(restoreProjectId)
             setReadOnly(false)
             selectVersion(null)
-            await logActivity({
-              project_id: projectId,
-              document_id: activeDoc.id,
-              action: 'version_restore',
-            })
+            setShowRestoreModal(false)
             showToast('success', '버전이 복원되었습니다')
+            // Activity logging is secondary; don't misreport a committed
+            // restore as failed when an audit notification write fails.
+            void logActivity({
+              project_id: restoreProjectId,
+              document_id: documentId,
+              action: 'version_restore',
+            }).catch(() => undefined)
+          } catch {
+            // A network error after commit can be ambiguous; the same restore
+            // operation UUID is retained so retrying cannot duplicate history.
+            showToast('error', '복원 결과를 확인하지 못했습니다. 다시 시도하거나 새로고침해 주세요.')
+          } finally {
+            restoringRef.current = false
+            setIsRestoring(false)
           }
-          setShowRestoreModal(false)
         }}
-        onCancel={() => setShowRestoreModal(false)}
+        onCancel={() => { if (!restoringRef.current) setShowRestoreModal(false) }}
       />
 
       <MemberPanel

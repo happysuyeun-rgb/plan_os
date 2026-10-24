@@ -33,7 +33,15 @@ export default function LoginPage() {
     }
 
     if (hasGuestSession() && user) {
-      const projectId = await transferGuestToProject(user.id)
+      // A failed transfer keeps the guest data for the next retry; the
+      // login itself already succeeded, so say what actually happened
+      // instead of looking like a failed sign-in.
+      let projectId: string | null = null
+      try {
+        projectId = await transferGuestToProject(user.id)
+      } catch {
+        showToast('error', '방금 만든 기획서 저장에 실패했습니다. 내용은 유지되며 다음 로그인에서 다시 시도합니다')
+      }
       if (projectId) {
         showToast('success', '방금 만든 기획서를 저장했습니다')
         navigate(`/projects/${projectId}/prd`)

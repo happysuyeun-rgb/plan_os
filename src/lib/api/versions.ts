@@ -1,4 +1,4 @@
-import type { DocumentVersion, DocumentVersionSummary } from '../../types'
+import type { Document, DocumentVersion, DocumentVersionSummary } from '../../types'
 import { supabase } from '../supabase'
 import { throwIfError, unwrap } from '../supabaseHelpers'
 
@@ -66,4 +66,26 @@ export async function createVersion(
     .select()
     .single()
   return unwrap(data, error)
+}
+
+
+/**
+ * Restore an immutable historical version in ONE PostgreSQL transaction.
+ * p_operation_id stays stable across an ambiguous network failure/retry.
+ * The target content is read on the server; callers cannot forge a snapshot.
+ * Requires migration 011 (not yet applied to hosted Supabase).
+ */
+export async function restoreDocumentVersion(
+  documentId: string,
+  versionId: string,
+  operationId: string,
+): Promise<Document> {
+  const { data, error } = await supabase
+    .rpc('restore_document_version', {
+      p_document_id: documentId,
+      p_version_id: versionId,
+      p_operation_id: operationId,
+    })
+    .single()
+  return unwrap(data as Document | null, error)
 }
