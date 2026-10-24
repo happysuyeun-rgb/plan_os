@@ -1,4 +1,4 @@
-// Disposable browser smoke test for the *integrated* Phase 0 branch.
+﻿// Disposable browser smoke test for the *integrated* Phase 0 branch.
 // Uses LOCAL Supabase Auth + PostgREST and the REAL Vite frontend.
 // Does not connect to live Plan OS or deploy anything.
 import assert from 'node:assert/strict'
@@ -341,7 +341,7 @@ try{
   // AUTHZ-01: RPC runs with SECURITY DEFINER, so caller permissions must be
   // checked explicitly. Neither an authenticated viewer nor anonymous client
   // may restore. The source version must belong to the requested document.
-  const viewerEmail='viewer-restoration@example.test'
+  const viewerEmail=`viewer-restoration-${runId}@example.test`
   const viewerPassword='Synthetic-viewer-test-password-123!'
   const viewer=await admin('/auth/v1/admin/users','POST',{
     email:viewerEmail,password:viewerPassword,email_confirm:true,
@@ -367,7 +367,7 @@ try{
   const viewerToken=(await viewerTokenResponse.json()).access_token
   const authzBody=JSON.stringify({p_document_id:documentId,
     p_version_id:retriedHistory[0].id,
-    p_operation_id:'88888888-8888-4888-8888-888888888881'})
+    p_operation_id:randomUUID()})
   const viewerDenied=await fetch(api+'/rest/v1/rpc/restore_document_version',{
     method:'POST',
     headers:{apikey:variables.ANON_KEY,Authorization:'Bearer '+viewerToken,
@@ -403,7 +403,7 @@ try{
         'Content-Type':'application/json'},
       body:JSON.stringify({p_document_id:documentId,
         p_version_id:foreignSnapshot.id,
-        p_operation_id:'88888888-8888-4888-8888-888888888882'}),
+        p_operation_id:randomUUID()}),
       signal:AbortSignal.timeout(12000),
     })
   assert(!invalidVersionResponse.ok,
@@ -413,10 +413,7 @@ try{
 
   // CONC-01: Two authenticated restores with separate IDs must serialize on
   // the parent document row without version-number collisions.
-  const competingOperations=[
-    '88888888-8888-4888-8888-888888888883',
-    '88888888-8888-4888-8888-888888888884',
-  ]
+  const competingOperations=[randomUUID(),randomUUID()]
   const concurrentReplies=await Promise.all(competingOperations.map(operationId=>
     fetch(api+'/rest/v1/rpc/restore_document_version',{
       method:'POST',
@@ -689,7 +686,7 @@ try{
   const c10AuthBody={
     p_project_id:projectId,p_document_id:c10DocId,
     p_content:'C10-UNAUTHORIZED',
-    p_operation_id:'77777777-7777-4777-8777-777777777781',
+    p_operation_id:randomUUID(),
   }
   async function c10RpcAs(token,body){
     return fetch(api+'/rest/v1/rpc/commit_chat_document_edit',{
@@ -703,8 +700,8 @@ try{
   const c10Anon=await c10RpcAs(variables.ANON_KEY,c10AuthBody)
   assert(!c10Anon.ok,'C-10 anonymous could write chat document')
   const c10Cross=await c10RpcAs(userToken,{
-    ...c10AuthBody,p_project_id:'88888888-8888-4888-8888-888888888888',
-    p_operation_id:'77777777-7777-4777-8777-777777777782',
+    ...c10AuthBody,p_project_id:randomUUID(),
+    p_operation_id:randomUUID(),
   })
   assert(!c10Cross.ok,'C-10 accepted mismatched document/project')
   const c10ReplayCollision=await c10RpcAs(userToken,{

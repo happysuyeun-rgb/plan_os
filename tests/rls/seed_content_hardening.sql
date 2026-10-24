@@ -3,7 +3,12 @@
 -- Every id is synthetic, deterministic and different from hosted Plan OS data.
 grant select, insert, update, delete on public.project_comments,
   public.comment_reactions, public.comment_participant_status,
-  public.user_notifications, public.document_versions to authenticated;
+  public.user_notifications to authenticated;
+
+-- document_versions stays append-only (migration 014 dropped the UPDATE
+-- policy and revoked UPDATE). This seed must not resurrect the UPDATE grant:
+-- combined with a drifted UPDATE policy it would let editors rewrite history.
+grant select, insert on public.document_versions to authenticated;
 
 insert into public.project_comments
  (id, project_id, document_id, user_id, author_name, body, anchor_type, status)

@@ -4,6 +4,23 @@ import assert from 'node:assert/strict'
 import {
   people, projectOne, projectTwo, anonKey, API_URL, db, call,
 } from './test_local_supabase_auth.mjs'
+import { queryPsqlScalar } from '../helpers/psql.mjs'
+
+// Schema precondition (migration 014/026): document_versions is append-only.
+// A drifted local database once resurrected the UPDATE policy + grant, which
+// silently turned the "past version is immutable" checks below into a real
+// rewrite. Fail loudly here instead of misreporting that as a product bug.
+const updatePolicyCount = queryPsqlScalar(
+  "select count(*) from pg_policies where schemaname='public' and tablename='document_versions' and cmd='UPDATE'",
+)
+assert.equal(updatePolicyCount, '0',
+  'document_versions must not have an UPDATE policy (migration 014); this database has drifted')
+const authenticatedCanUpdate = queryPsqlScalar(
+  "select has_table_privilege('authenticated', 'public.document_versions', 'UPDATE')",
+)
+assert.equal(authenticatedCanUpdate, 'f',
+  'authenticated must not hold UPDATE on document_versions (migration 014); this database has drifted')
+console.log('PASS document_versions schema precondition: no UPDATE policy, no UPDATE grant')
 
 const ownerComment='33333333-3333-3333-3333-333333333301'
 const editorComment='33333333-3333-3333-3333-333333333302'
