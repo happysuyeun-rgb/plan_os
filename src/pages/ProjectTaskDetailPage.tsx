@@ -6,10 +6,17 @@ import { useMemberStore } from '../store/memberStore'
 import {
   listServerTasks,
   listServerTaskEvents,
+  patchServerTask,
+  TaskConflictError,
   type ServerTask,
   type TaskEvent,
 } from '../lib/api/projectTasks'
-import { prototypeTaskRepository, type PrototypeTask, type TaskStatus } from '../lib/taskPrototype'
+import {
+  prototypeTaskRepository,
+  permittedTransition,
+  type PrototypeTask,
+  type TaskStatus,
+} from '../lib/taskPrototype'
 
 const useServerTasks = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 const labels: Record<TaskStatus, string> = {
@@ -29,6 +36,8 @@ export default function ProjectTaskDetailPage() {
   const [events, setEvents] = useState<TaskEvent[]>([])
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [assigneeDraft, setAssigneeDraft] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -41,6 +50,7 @@ export default function ProjectTaskDetailPage() {
         if (!mounted) return
         const found = items.find((item) => item.id === taskId) ?? null
         setTask(found)
+        setAssigneeDraft(found?.assigneeId ?? '')
         if (!found) setError('업무를 찾을 수 없습니다.')
       })
       .catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
@@ -65,6 +75,101 @@ export default function ProjectTaskDetailPage() {
     const member = activeMembers.find((m) => m.user_id === id)
     return member?.name || member?.email || '접근 불가/제외된 멤버'
   }
+
+  async function changeStatus(next: TaskStatus) {
+    if (!projectId || !taskId || !userId || !task || !canEditTasks || saving) return
+    if (!permittedTransition(task.status, next)) {
+      setError('허용되지 않은 업무 상태 변경입니다.')
+      return
+    }
+    let reason: string | null = task.blockedReason
+    if (next === 'blocked') {
+      reason = window.prompt('차단 사유를 입력하세요')?.trim() ?? ''
+      if (!reason) {
+        setError('차단 사유가 필요합니다.')
+        return
+      }
+    } else {
+      reason = null
+    }
+    setSaving(true)
+    setError('')
+    try {
+      if (useServerTasks && 'version' in task) {
+        const updated = await patchServerTask(projectId, taskId, task.version, {
+          status: next,
+          blockedReason: reason,
+        })
+        setTask(updated)
+        setAssigneeDraft(updated.assigneeId ?? '')
+        const rows = await listServerTaskEvents(projectId, taskId)
+        setEvents(rows)
+      } else {
+        const items = await prototypeTaskRepository.list(userId, projectId)
+        const nextItems = items.map((item) =>
+          item.id === taskId
+            ? { ...item, status: next, blockedReason: reason, updatedAt: new Date().toISOString() }
+            : item,
+        )
+        await prototypeTaskRepository.replace(userId, projectId, nextItems)
+        const saved = nextItems.find((item) => item.id === taskId) ?? null
+        setTask(saved)
+        setAssigneeDraft(saved?.assigneeId ?? '')
+      }
+    } catch (e) {
+      setError(e instanceof TaskConflictError ? e.message : '상태 변경에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveAssignee() {
+    if (!projectId || !taskId || !userId || !task || !canEditTasks || saving) return
+    const nextId = assigneeDraft || null
+    if (nextId) {
+      const member = activeMembers.find((m) => m.user_id === nextId)
+      if (!member) {
+        setError('유효한 프로젝트 멤버를 지정하세요.')
+        return
+      }
+    }
+    setSaving(true)
+    setError('')
+    try {
+      if (useServerTasks && 'version' in task) {
+        const updated = await patchServerTask(projectId, taskId, task.version, {
+          assigneeId: nextId,
+        })
+        setTask(updated)
+        setAssigneeDraft(updated.assigneeId ?? '')
+        const rows = await listServerTaskEvents(projectId, taskId)
+        setEvents(rows)
+      } else {
+        const member = nextId ? activeMembers.find((m) => m.user_id === nextId) : undefined
+        const items = await prototypeTaskRepository.list(userId, projectId)
+        const nextItems = items.map((item) =>
+          item.id === taskId
+            ? {
+                ...item,
+                assigneeId: nextId,
+                assigneeName: member?.name || member?.email || null,
+                updatedAt: new Date().toISOString(),
+              }
+            : item,
+        )
+        await prototypeTaskRepository.replace(userId, projectId, nextItems)
+        setTask(nextItems.find((item) => item.id === taskId) ?? null)
+      }
+    } catch (e) {
+      setError(e instanceof TaskConflictError ? e.message : '담당자 저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const statusOptions = (Object.keys(labels) as TaskStatus[]).filter(
+    (status) => !task || permittedTransition(task.status, status) || status === task.status,
+  )
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
@@ -93,7 +198,51 @@ export default function ProjectTaskDetailPage() {
           <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="업무 본문">
             <h2 className="text-xl font-semibold">{task.title}</h2>
             <p className="text-sm text-gray-700">상태: {labels[task.status]}</p>
+            {canEditTasks && (
+              <label className="block text-sm text-gray-700">
+                상태 변경
+                <select
+                  className="mt-1 block rounded border border-gray-300 p-2"
+                  value={task.status}
+                  disabled={saving}
+                  data-testid="task-detail-status"
+                  onChange={(e) => void changeStatus(e.target.value as TaskStatus)}
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>{labels[status]}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <p className="text-sm text-gray-700">담당: {assigneeLabel(task.assigneeId)}</p>
+            {canEditTasks && (
+              <label className="block text-sm text-gray-700">
+                담당자 변경
+                <select
+                  className="mt-1 block w-full rounded border border-gray-300 p-2"
+                  value={assigneeDraft}
+                  disabled={saving}
+                  data-testid="task-detail-assignee"
+                  onChange={(e) => setAssigneeDraft(e.target.value)}
+                >
+                  <option value="">미지정</option>
+                  {activeMembers.map((m) => (
+                    <option key={m.user_id!} value={m.user_id!}>
+                      {m.name || m.email || m.user_id}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="mt-2 rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
+                  disabled={saving || assigneeDraft === (task.assigneeId ?? '')}
+                  data-testid="task-detail-assignee-save"
+                  onClick={() => void saveAssignee()}
+                >
+                  담당자 저장
+                </button>
+              </label>
+            )}
             {task.objective && (
               <div>
                 <h3 className="text-sm font-medium text-gray-800">목표</h3>

@@ -10,7 +10,9 @@ export type AiSecretName =
   | 'PLANOS_AI_MONTHLY_COST_CAP_USD'
 
 export function readAiSecret(name: AiSecretName): string | undefined {
-  if (typeof window !== 'undefined') {
+  // Avoid referencing DOM `window` (not in Node/tsc lib); detect browser via globalThis.
+  const g = globalThis as { window?: unknown }
+  if (typeof g.window !== 'undefined') {
     throw new Error('Ai secrets must not be read in the browser')
   }
   const value = process.env[name]

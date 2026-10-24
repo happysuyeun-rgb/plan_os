@@ -8,6 +8,7 @@ import type { DocumentType } from '../../types'
 import { resolveGenerationProvider } from '../../lib/ai/providerRegistry'
 import type { GenerationVars } from '../../lib/ai/GenerationProvider'
 import { assertPaidCallAllowed, readBudgetCaps, type BudgetSnapshot } from './budget'
+import { appendGenerationAttempt } from './generationAttemptLog'
 import { hasPaidProviderCredentials } from './secrets'
 
 export type GenerationBffRequest = {
@@ -16,6 +17,9 @@ export type GenerationBffRequest = {
   /** Explicit opt-in; default false — never call paid APIs without approval. */
   allowPaidCalls?: boolean
   usage?: BudgetSnapshot
+  signal?: AbortSignal
+  attemptId?: string
+  retryIndex?: number
 }
 
 export type GenerationBffResponse = {
@@ -23,11 +27,19 @@ export type GenerationBffResponse = {
   providerId: string
   content: string
   budget: ReturnType<typeof readBudgetCaps>
+  attemptId: string
+}
+
+function stamp() {
+  return new Date().toISOString()
 }
 
 export async function handleGenerationRequest(
   req: GenerationBffRequest,
 ): Promise<GenerationBffResponse> {
+  const attemptId = req.attemptId ?? crypto.randomUUID()
+  const retryIndex = req.retryIndex ?? 0
+  const startedAt = stamp()
   const allowPaid = req.allowPaidCalls === true
   const caps = readBudgetCaps()
   const usage = req.usage ?? {
@@ -37,21 +49,90 @@ export async function handleGenerationRequest(
     costCapUsd: caps.costCapUsd,
   }
 
+  if (req.signal?.aborted) {
+    appendGenerationAttempt({
+      attemptId,
+      providerId: 'none',
+      mode: 'placeholder',
+      documentType: req.documentType,
+      status: 'aborted',
+      retryIndex,
+      errorMessage: 'aborted before start',
+      startedAt,
+      finishedAt: stamp(),
+    })
+    const abortErr = new Error('Generation aborted')
+    abortErr.name = 'AbortError'
+    throw abortErr
+  }
+
   if (allowPaid && hasPaidProviderCredentials()) {
     const decision = assertPaidCallAllowed(usage, { tokens: 1, costUsd: 0.01 }, { allowPaidCalls: true })
     if (!decision.ok) {
+      appendGenerationAttempt({
+        attemptId,
+        providerId: 'paid-unregistered',
+        mode: 'paid',
+        documentType: req.documentType,
+        status: 'budget_blocked',
+        retryIndex,
+        errorMessage: decision.reason,
+        startedAt,
+        finishedAt: stamp(),
+      })
       throw new Error(`Paid generation blocked: ${decision.reason}`)
     }
-    // Real provider adapters are not registered until spend is approved.
+    appendGenerationAttempt({
+      attemptId,
+      providerId: 'paid-unregistered',
+      mode: 'paid',
+      documentType: req.documentType,
+      status: 'failed',
+      retryIndex,
+      errorMessage: 'Paid generation provider is not registered; approval required',
+      startedAt,
+      finishedAt: stamp(),
+    })
     throw new Error('Paid generation provider is not registered; approval required')
   }
 
   const provider = resolveGenerationProvider({ preferredId: 'placeholder' })
-  const content = await provider.generateDocument(req.documentType, req.vars)
-  return {
-    mode: 'placeholder',
-    providerId: provider.id,
-    content,
-    budget: caps,
+  try {
+    const content = await provider.generateDocument(req.documentType, req.vars, {
+      signal: req.signal,
+      attemptId,
+      retryIndex,
+    })
+    appendGenerationAttempt({
+      attemptId,
+      providerId: provider.id,
+      mode: 'placeholder',
+      documentType: req.documentType,
+      status: 'ok',
+      retryIndex,
+      startedAt,
+      finishedAt: stamp(),
+    })
+    return {
+      mode: 'placeholder',
+      providerId: provider.id,
+      content,
+      budget: caps,
+      attemptId,
+    }
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError'
+    appendGenerationAttempt({
+      attemptId,
+      providerId: provider.id,
+      mode: 'placeholder',
+      documentType: req.documentType,
+      status: aborted ? 'aborted' : 'failed',
+      retryIndex,
+      errorMessage: err instanceof Error ? err.message : 'generation failed',
+      startedAt,
+      finishedAt: stamp(),
+    })
+    throw err
   }
 }

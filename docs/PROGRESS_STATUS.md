@@ -1,11 +1,23 @@
 # PlanOS 3.0 — 전체 개발 진행 현황
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-19  
-**문서 버전:** v4.3  
+**최종 수정일:** 2026-10-24  
+**문서 버전:** v4.4  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
 > 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 이 문서는 개발 브랜치의 초안이며 main에 아직 병합되지 않았다.
+
+## 2026-10-24 Phase B·C·D 코드 슬라이스 (기능 브랜치 · 배포/유료 미승인)
+
+**브랜치:** `feat/planos-bcd-foundation-20261023-wip` (main `527e042` 기준 리베이스). **Production 배포·운영 DB·유료 LLM 호출 없음.**
+
+| Phase | 코드 완료 | 테스트 | 배포 |
+|---|---|---|---|
+| B S1 상세·역할·상태·담당·PM→S1·C04 | 예 (UI/API 경로) | 단위·기존 RLS | Preview만 권장 |
+| C GenerationProvider·Vite BFF·budget·attempt log | 예 (placeholder 강제) | 단위 | 유료 차단 |
+| D Mock 기획 검수 직원 `/ai-review` → 수락→S1→재검수 | 예 (in-memory store) | 단위 | 027 영속 미적용 |
+
+남은 게이트: Preview E2E 전수, migration 027 승인, 유료 provider 등록 승인, Production.
 
 ## 2026-10-19 최신 검수 스냅샷 (과거 아래 로그보다 우선)
 

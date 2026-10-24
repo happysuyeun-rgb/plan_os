@@ -17,6 +17,7 @@ import ProjectCreatePage from './pages/ProjectCreatePage'
 import DocumentPage from './pages/DocumentPage'
 import ProjectTasksPage from './pages/ProjectTasksPage'
 import ProjectTaskDetailPage from './pages/ProjectTaskDetailPage'
+import ProjectAiReviewPage from './pages/ProjectAiReviewPage'
 import AuditSourceSelectionPage from './pages/AuditSourceSelectionPage'
 import PmPlanListPage from './pages/PmPlanListPage'
 import PmPlanNewPage from './pages/PmPlanNewPage'
@@ -60,6 +61,7 @@ function App() {
           </Route>
           <Route path="/projects/:projectId/tasks" element={<ProjectTasksPage />} />
           <Route path="/projects/:projectId/tasks/:taskId" element={<ProjectTaskDetailPage />} />
+          <Route path="/projects/:projectId/ai-review" element={<ProjectAiReviewPage />} />
           <Route path="/projects/:projectId/plans" element={<PmPlanListPage />} />
           <Route path="/projects/:projectId/plans/new" element={<PmPlanNewPage />} />
           <Route path="/projects/:projectId/plans/:planId" element={<PmPlanDetailPage />} />
