@@ -8,8 +8,9 @@
 |---|---|---|
 | Gate 0 (단위/S1/RLS) | main에서 반복 | `npm run test:unit` / CI S1·RLS·ai-review-local |
 | Gate A Preview 수용 | **미완료** | 전수 사용자 체크 미증빙 |
-| Gate B/C (#30/#36/#42/#45 →main) | **통과·병합** | main `f780691` |
-| Gate D 운영 DB | V1.1 적용됨 · **추가 mig/쓰기 금지** | 027 호스티드 미적용 |
+| Gate A-027 Preview 027 | **미적용 · 승인 대기** | 런북 [`PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md`](./PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md) · `apply-027-local-only`로는 Preview 불가 |
+| Gate B/C (#30/#36/#42/#45/#46 →main) | **통과·병합** | main `ec3ab6b` |
+| Gate D 운영 DB | V1.1 적용됨 · **추가 mig/쓰기 금지** | 027 ops/Production 미적용 |
 | Gate E Production | **미통과** | 배포 승인 없음 |
 
 ---

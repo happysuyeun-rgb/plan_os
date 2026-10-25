@@ -29,6 +29,18 @@ test('027 executable SQL is local_only not migrations', () => {
   const draft = readFileSync('supabase/drafts/027_ai_review_jobs_DRAFT.sql', 'utf8')
   assert.match(draft, /local_only\/027_ai_review_jobs\.sql/)
   assert.doesNotMatch(draft, /create table if not exists public\.ai_review_jobs/)
+  assert.match(draft, /PREVIEW_027_APPLY_RUNBOOK/)
+})
+
+test('Preview 027 apply runbook is gated and forbids local-only script on hosted', () => {
+  const runbook = readFileSync('docs/plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md', 'utf8')
+  assert.match(runbook, /Gate A-027/)
+  assert.match(runbook, /apply-027-local-only/)
+  assert.match(runbook, /FORBIDDEN|금지/)
+  assert.match(runbook, /PlanOS-Preview/)
+  assert.match(runbook, /VITE_AI_REVIEW_STORE=server/)
+  assert.match(runbook, /db push.*migrations에 027|migrations\/` 승격/)
+  assert.match(runbook, /호스티드 DB에 쓰지 않는다/)
 })
 
 test('server store and pipeline factory wiring', () => {
