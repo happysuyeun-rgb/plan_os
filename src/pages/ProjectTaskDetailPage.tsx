@@ -34,6 +34,7 @@ export default function ProjectTaskDetailPage() {
   const fetchMembers = useMemberStore((s) => s.fetchMembers)
   const [task, setTask] = useState<PrototypeTask | ServerTask | null>(null)
   const [events, setEvents] = useState<TaskEvent[]>([])
+  const [eventsError, setEventsError] = useState('')
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -58,8 +59,16 @@ export default function ProjectTaskDetailPage() {
     void fetchMembers(projectId).catch(() => undefined)
     if (useServerTasks) {
       void listServerTaskEvents(projectId, taskId)
-        .then((rows) => { if (mounted) setEvents(rows) })
-        .catch(() => { if (mounted) setEvents([]) })
+        .then((rows) => {
+          if (!mounted) return
+          setEvents(rows)
+          setEventsError('')
+        })
+        .catch(() => {
+          if (!mounted) return
+          setEvents([])
+          setEventsError('업무 이력을 불러오지 못했습니다.')
+        })
     }
     return () => { mounted = false }
   }, [projectId, taskId, userId, setCurrentProject, fetchMembers])
@@ -266,22 +275,38 @@ export default function ProjectTaskDetailPage() {
               {'version' in task ? ` · v${task.version}` : ''}
             </p>
           </section>
-          <section className="space-y-3" aria-label="업무 이력">
-            <h2 className="font-semibold">이력</h2>
+          <section
+            className="space-y-3"
+            aria-label="업무 이력"
+            data-testid="task-detail-events"
+          >
+            <h2 className="font-semibold">감사 이력</h2>
             {!useServerTasks && (
               <p className="text-sm text-gray-500">로컬 시안 모드에서는 서버 이력을 제공하지 않습니다.</p>
             )}
-            {useServerTasks && events.length === 0 && (
+            {useServerTasks && eventsError && (
+              <p role="alert" className="text-sm text-red-700" data-testid="task-detail-events-error">
+                {eventsError}
+              </p>
+            )}
+            {useServerTasks && !eventsError && events.length === 0 && (
               <p className="text-sm text-gray-500">기록된 이력이 없습니다.</p>
             )}
             {events.map((event) => (
-              <article key={event.id} className="rounded border border-gray-200 p-3 text-sm">
+              <article
+                key={event.id}
+                className="rounded border border-gray-200 p-3 text-sm"
+                data-testid="task-detail-event-row"
+              >
                 <p className="font-medium">{eventLabels[event.event_type]}</p>
                 <p className="text-gray-600">
                   {event.previous_status ? `${labels[event.previous_status]} → ` : ''}
                   {labels[event.next_status]}
                   {' · '}v{event.version}
                   {' · '}{new Date(event.happened_at).toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  주체: {event.actor_id ? assigneeLabel(event.actor_id) : '시스템/미기록'}
                 </p>
               </article>
             ))}
