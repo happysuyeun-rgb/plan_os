@@ -264,7 +264,7 @@ export default function ProjectTaskDetailPage() {
                 </label>
                 {assigneeKindDraft === 'human' ? (
                   <label className="block text-sm text-gray-700">
-                    담당 프로젝트 멤버
+                    <span className="block">담당 프로젝트 멤버</span>
                     <select
                       className="mt-1 block w-full rounded border border-gray-300 p-2"
                       value={assigneeDraft}
