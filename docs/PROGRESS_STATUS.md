@@ -48,7 +48,7 @@
 ### 남은 P0/P1 (2026-10-25)
 
 - **P0:** Preview 호스티드 E2E 전수 · 운영 009/010≡013/014 **읽기 전용** 확인
-- **P1 (코드·게이트 문서, DB/과금 없이):** AI 채용 Mock **#49 main** · 채용→`/ai-review` 세션 핸드오프(진행) · AI PM(E) 잔여 · Gate C-LLM 런북 [`PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md`](./plans/PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md)
+- **P1 (코드·게이트 문서, DB/과금 없이):** AI 채용 Mock **#49** · 핸드오프 **#50** · staffing brief→Mock 검수 묶기(진행) · AI PM(E) 잔여 · Gate C-LLM 런북 [`PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md`](./plans/PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md)
 - **P1-말미 (명시 승인):** Gate A-027 Preview 027 — 런북 [`PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md`](./plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md) · 유료 LLM 키/캡 · Production
 - **P2:** 인력사무소 · 서버 스토어 프로덕션 경로
 

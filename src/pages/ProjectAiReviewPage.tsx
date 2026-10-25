@@ -117,6 +117,15 @@ export default function ProjectAiReviewPage() {
     setMessage(`Mock 직원 투입: ${MOCK_PLANNING_REVIEWER_ID} (유료 LLM 아님 · 저장=${REVIEW_STORE_MODE})`)
   }
 
+  const activeBrief = job?.staffBrief ?? (handoff
+    ? {
+        roleId: handoff.roleId,
+        task: handoff.task,
+        acceptanceCriteria: handoff.acceptanceCriteria,
+        mockOnly: true as const,
+      }
+    : null)
+
   const onRun = async () => {
     if (!projectId || !canRun || selectionInsufficient) return
     setBusy(true)
@@ -128,6 +137,7 @@ export default function ProjectAiReviewPage() {
         defaultReviewStore,
         selectedTypes,
         role,
+        activeBrief,
       )
       setJob(result.job)
       const insuff = result.job.insufficientInput
@@ -206,6 +216,7 @@ export default function ProjectAiReviewPage() {
         defaultReviewStore,
         selectedTypes,
         role,
+        activeBrief,
       )
       setJob(result.job)
       setReReviewJobId(null)
@@ -256,17 +267,19 @@ export default function ProjectAiReviewPage() {
         </p>
       )}
 
-      {canView && handoff && (
+      {canView && activeBrief && (
         <section
           role="status"
           aria-label="S3 채용 핸드오프"
           className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950"
           data-testid="ai-review-specialist-handoff"
         >
-          <h2 className="font-semibold">채용 요청 Mock에서 이어짐</h2>
-          <p className="mt-1 text-xs">역할 {handoff.roleId} · 세션 전용 · 계약/결제/실행 아님</p>
-          <p className="mt-3 whitespace-pre-wrap"><span className="font-medium">요청 업무:</span> {handoff.task}</p>
-          <p className="mt-2 whitespace-pre-wrap"><span className="font-medium">완료 기준:</span> {handoff.acceptanceCriteria}</p>
+          <h2 className="font-semibold">
+            {job?.staffBrief ? '검수 job에 저장된 채용 brief (Mock)' : '채용 요청 Mock에서 이어짐'}
+          </h2>
+          <p className="mt-1 text-xs">역할 {activeBrief.roleId} · 세션/로컬 스냅샷 · 계약/결제/실행 아님</p>
+          <p className="mt-3 whitespace-pre-wrap"><span className="font-medium">요청 업무:</span> {activeBrief.task}</p>
+          <p className="mt-2 whitespace-pre-wrap"><span className="font-medium">완료 기준:</span> {activeBrief.acceptanceCriteria}</p>
         </section>
       )}
 
@@ -315,6 +328,11 @@ export default function ProjectAiReviewPage() {
               </p>
             )}
             <p className="text-xs text-gray-500">예상 비용: $0 (Mock · 토큰 미사용 · 유료 LLM 없음)</p>
+            {activeBrief && (
+              <p className="text-xs text-indigo-800" data-testid="ai-review-brief-run-hint">
+                요청 업무 기준 Mock 검수 · 유료 LLM 아님 · 계약/결제 아님
+              </p>
+            )}
             <button
               type="button"
               disabled={!canExecuteRun}

@@ -49,6 +49,14 @@ export type ReviewFinding = {
   reviewerState: ReviewerState
 }
 
+/** Session staffing brief snapshot on a Mock review job (not a paid hire/contract). */
+export type StaffBrief = {
+  roleId: string
+  task: string
+  acceptanceCriteria: string
+  mockOnly: true
+}
+
 export type ReviewJob = {
   id: string
   projectId: string
@@ -58,6 +66,8 @@ export type ReviewJob = {
   sourceManifest?: SourceManifestEntry[]
   /** True when input docs were insufficient for a full audit. */
   insufficientInput?: boolean
+  /** Optional S3 hire-mock brief carried into this Mock run (browser snapshot). */
+  staffBrief?: StaffBrief
   linkedTaskId?: string
   /** findingId → taskId; prevents duplicate S1 tasks on re-accept / double-click. */
   acceptedFindingTaskIds?: Record<string, string>
