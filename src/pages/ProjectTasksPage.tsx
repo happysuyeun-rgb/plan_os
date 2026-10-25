@@ -166,6 +166,8 @@ export default function ProjectTasksPage() {
           className="text-sm text-indigo-700 hover:underline">PM 계획 →</Link>
         <Link to={projectId ? `/projects/${projectId}/ai-review` : '/projects'}
           className="text-sm text-violet-700 hover:underline">AI 기획 검수 (Mock) →</Link>
+        <Link to={projectId ? `/projects/${projectId}/specialists` : '/projects'}
+          className="text-sm text-indigo-700 hover:underline">AI 직원 카탈로그 Mock →</Link>
         <Link to={projectId ? `/projects/${projectId}/specialists/request` : '/projects'}
           className="text-sm text-indigo-700 hover:underline">AI 전문가 업무 요청 Mock →</Link>
       </div>

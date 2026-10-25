@@ -11,6 +11,7 @@ type Props = {
  * Does not replace direct planning or human PM paths.
  */
 export function MidProjectAiStaffingNotice({ projectId, className = '' }: Props) {
+  const catalogHref = projectId ? `/projects/${projectId}/specialists` : '/projects'
   const requestHref = projectId ? `/projects/${projectId}/specialists/request` : '/projects'
   const reviewHref = projectId ? `/projects/${projectId}/ai-review` : '/projects'
   const plansHref = projectId ? `/projects/${projectId}/plans` : '/projects'
@@ -29,11 +30,17 @@ export function MidProjectAiStaffingNotice({ projectId, className = '' }: Props)
       <ul className="mt-2 list-disc space-y-1 pl-5 text-indigo-900/90">
         <li>
           {projectId ? (
-            <Link to={requestHref} className="font-medium underline underline-offset-2">
-              AI 전문가 업무 요청 Mock
-            </Link>
+            <>
+              <Link to={catalogHref} className="font-medium underline underline-offset-2">
+                AI 직원 카탈로그 Mock
+              </Link>
+              {' · '}
+              <Link to={requestHref} className="font-medium underline underline-offset-2">
+                업무 요청 Mock
+              </Link>
+            </>
           ) : (
-            <span>프로젝트 → 업무 관리 → AI 전문가 업무 요청 Mock</span>
+            <span>프로젝트 → AI 직원 카탈로그 / 업무 요청 Mock</span>
           )}
         </li>
         <li>
