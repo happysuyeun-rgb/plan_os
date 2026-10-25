@@ -18,6 +18,7 @@
 - [x] AI 직원 1종 카탈로그 카드 Mock (#54)
 - [x] 사람 PM(`/plans`) ↔ AI 검수(`/ai-review`) 병행 고지 (#55)
 - [x] 채용→검수→S1 E2E fixture 문서 (#56)
+- [x] S1 감사 이력 주체·로드 오류 고지 (#57)
 - [x] S2 manifest digest 재검증 게이트 (#61)
 - [x] F-A 서버 계약·명시 동의 Mock (`requirements_auditor_v1`, #62)
 - [x] F-B Mock worker 큐·실행 이력·mock usage (#63)
@@ -37,9 +38,9 @@
 ### 1-B. S1/S2 품질 (기존 코드 다듬기)
 
 - [x] S1 삭제·복원: UI를 DB(owner 전용)에 맞추기 (#52)
-- [x] S1 감사 이력 API → 화면에 연결 (주체 표시·로드 실패 고지)
+- [x] S1 감사 이력 API → 화면에 연결 (#57 · 주체 표시·로드 실패 고지)
 - [x] S2 manifest ↔ 검수 실행 전 재검증 (#61)
-- [ ] S1 AI 담당 지정 UI (F-105 Mock) — OPEN [#58](https://github.com/happysuyeun-rgb/plan_os/pull/58)
+- [x] S1 AI 담당 지정 UI (F-105 Mock) (본 PR · 브라우저 메타만, 실행/DB mig 없음)
 - [ ] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소)
 
 ### 1-C. 품질·회귀
@@ -93,6 +94,6 @@
 
 ## 추천 다음 1개 (작음)
 
-1. **S1 AI 담당 지정 UI (F-105 Mock)** — [#58](https://github.com/happysuyeun-rgb/plan_os/pull/58)  
-2. 또는 **F-402 사람 PM 승인 루프** — [#60](https://github.com/happysuyeun-rgb/plan_os/pull/60)  
-3. 또는 **placeholder 환경 프로젝트 생성 로컬 가드** — 로컬 E2E 단절 해소  
+1. **F-402 사람 PM 승인 루프** — [#60](https://github.com/happysuyeun-rgb/plan_os/pull/60)  
+2. 또는 **placeholder 환경 프로젝트 생성 로컬 가드** — 로컬 E2E 단절 해소  
+3. 또는 전체 `npm run lint` 잔여 오류 정리  

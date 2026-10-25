@@ -17,6 +17,13 @@ import {
   type PrototypeTask,
   type TaskStatus,
 } from '../lib/taskPrototype'
+import {
+  formatTaskAssigneeDisplay,
+  getTaskAiAssignee,
+  MOCK_AI_ASSIGNEE_ROLE,
+  writeTaskAiAssignee,
+  type TaskAssigneeKind,
+} from '../lib/taskAiAssigneeMock'
 
 const useServerTasks = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 const labels: Record<TaskStatus, string> = {
@@ -39,6 +46,7 @@ export default function ProjectTaskDetailPage() {
   const [ready, setReady] = useState(false)
   const [saving, setSaving] = useState(false)
   const [assigneeDraft, setAssigneeDraft] = useState('')
+  const [assigneeKindDraft, setAssigneeKindDraft] = useState<TaskAssigneeKind>('human')
 
   useEffect(() => {
     let mounted = true
@@ -52,6 +60,7 @@ export default function ProjectTaskDetailPage() {
         const found = items.find((item) => item.id === taskId) ?? null
         setTask(found)
         setAssigneeDraft(found?.assigneeId ?? '')
+        setAssigneeKindDraft(getTaskAiAssignee(projectId, taskId).kind)
         if (!found) setError('업무를 찾을 수 없습니다.')
       })
       .catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
@@ -134,8 +143,9 @@ export default function ProjectTaskDetailPage() {
 
   async function saveAssignee() {
     if (!projectId || !taskId || !userId || !task || !canEditTasks || saving) return
-    const nextId = assigneeDraft || null
-    if (nextId) {
+    const kind = assigneeKindDraft
+    const nextId = kind === 'human' ? (assigneeDraft || null) : null
+    if (kind === 'human' && nextId) {
       const member = activeMembers.find((m) => m.user_id === nextId)
       if (!member) {
         setError('유효한 프로젝트 멤버를 지정하세요.')
@@ -145,12 +155,17 @@ export default function ProjectTaskDetailPage() {
     setSaving(true)
     setError('')
     try {
+      writeTaskAiAssignee(projectId, taskId, {
+        kind,
+        agentRoleId: kind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
+      })
       if (useServerTasks && 'version' in task) {
         const updated = await patchServerTask(projectId, taskId, task.version, {
           assigneeId: nextId,
         })
         setTask(updated)
         setAssigneeDraft(updated.assigneeId ?? '')
+        setAssigneeKindDraft(kind)
         const rows = await listServerTaskEvents(projectId, taskId)
         setEvents(rows)
       } else {
@@ -168,6 +183,8 @@ export default function ProjectTaskDetailPage() {
         )
         await prototypeTaskRepository.replace(userId, projectId, nextItems)
         setTask(nextItems.find((item) => item.id === taskId) ?? null)
+        setAssigneeDraft(nextId ?? '')
+        setAssigneeKindDraft(kind)
       }
     } catch (e) {
       setError(e instanceof TaskConflictError ? e.message : '담당자 저장에 실패했습니다.')
@@ -223,34 +240,75 @@ export default function ProjectTaskDetailPage() {
                 </select>
               </label>
             )}
-            <p className="text-sm text-gray-700">담당: {assigneeLabel(task.assigneeId)}</p>
+            <p className="text-sm text-gray-700" data-testid="task-detail-assignee-summary">
+              담당:{' '}
+              {formatTaskAssigneeDisplay(
+                projectId && taskId ? getTaskAiAssignee(projectId, taskId).kind : 'human',
+                assigneeLabel(task.assigneeId),
+              )}
+            </p>
             {canEditTasks && (
-              <label className="block text-sm text-gray-700">
-                담당자 변경
-                <select
-                  className="mt-1 block w-full rounded border border-gray-300 p-2"
-                  value={assigneeDraft}
-                  disabled={saving}
-                  data-testid="task-detail-assignee"
-                  onChange={(e) => setAssigneeDraft(e.target.value)}
-                >
-                  <option value="">미지정</option>
-                  {activeMembers.map((m) => (
-                    <option key={m.user_id!} value={m.user_id!}>
-                      {m.name || m.email || m.user_id}
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-2" data-testid="task-detail-assignee-kind-block">
+                <label className="block text-sm text-gray-700">
+                  담당 유형 (F-105 Mock)
+                  <select
+                    className="mt-1 block w-full rounded border border-gray-300 p-2"
+                    value={assigneeKindDraft}
+                    disabled={saving}
+                    data-testid="task-detail-assignee-kind"
+                    onChange={(e) => setAssigneeKindDraft(e.target.value as TaskAssigneeKind)}
+                  >
+                    <option value="human">사람 담당</option>
+                    <option value="agent">AI 담당 (Mock · 실행 아님)</option>
+                  </select>
+                </label>
+                {assigneeKindDraft === 'human' ? (
+                  <label className="block text-sm text-gray-700">
+                    담당 프로젝트 멤버
+                    <select
+                      className="mt-1 block w-full rounded border border-gray-300 p-2"
+                      value={assigneeDraft}
+                      disabled={saving}
+                      data-testid="task-detail-assignee"
+                      onChange={(e) => setAssigneeDraft(e.target.value)}
+                    >
+                      <option value="">미지정</option>
+                      {activeMembers.map((m) => (
+                        <option key={m.user_id!} value={m.user_id!}>
+                          {m.name || m.email || m.user_id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <div
+                    className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-950"
+                    data-testid="task-detail-ai-assignee-mock"
+                  >
+                    <p className="font-medium">AI 역할: {MOCK_AI_ASSIGNEE_ROLE.title}</p>
+                    <p className="mt-1 text-xs">
+                      역할 ID `{MOCK_AI_ASSIGNEE_ROLE.id}` · 메타데이터만 저장합니다. 유료 LLM·계약·채용·검수
+                      실행이 시작되지 않습니다. 실제 Mock 투입은{' '}
+                      <Link
+                        to={projectId ? `/projects/${projectId}/specialists` : '/projects'}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        AI 직원 카탈로그
+                      </Link>
+                      를 이용하세요.
+                    </p>
+                  </div>
+                )}
                 <button
                   type="button"
-                  className="mt-2 rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
-                  disabled={saving || assigneeDraft === (task.assigneeId ?? '')}
+                  className="rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
+                  disabled={saving}
                   data-testid="task-detail-assignee-save"
                   onClick={() => void saveAssignee()}
                 >
-                  담당자 저장
+                  담당 저장
                 </button>
-              </label>
+              </div>
             )}
             {task.objective && (
               <div>
