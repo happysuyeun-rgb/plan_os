@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { useMemberStore } from '../store/memberStore'
@@ -254,6 +255,8 @@ export default function ProjectAiReviewPage() {
           저장 모드: {REVIEW_STORE_MODE} · 역할: {role ?? 'none'}
         </p>
       </header>
+
+      <DualEntryLaneNotice projectId={projectId} lane="ai-review" />
 
       {!canView && (
         <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900">
