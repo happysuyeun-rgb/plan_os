@@ -1,10 +1,11 @@
 # PlanOS 3.0 × AI 인력사무소 — 통합 실행계획서 v1.0
 
-- **작성일:** 2026-10-21 (KST)
+- **작성일:** 2026-10-21 (KST) · **문서 주석 갱신:** 2026-10-25
 - **상태:** 실행 기준선 / 개발·검증 지속 / 출시 승인 아님
 - **관리 원칙:** 개발 → 검수·불일치 조정 → 완료 기준 증빙 → 문서·업무일지 갱신 → 다음 작업의 누락/선행 조건 확인 → 진행
 - **기준 저장소:** `happysuyeun-rgb/plan_os`; 기본 브랜치 `main`.
-- **참조:** [통합 기능정의서](../product/FUNCTIONAL_SPEC_V1_2026-10-20.md), [PRD](../product/PRD.md), [서비스 정책](../product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md), [MVP 구현 계약](../engineering/MVP_BUILD_READY_SPEC_2026-10-20.md), [S1 결함 대장](../quality/S1_TASK_CROSS_AUDIT_2026-10-20.md).
+- **일일 잔여·정합 정본:** [REMAINING_DEV_CHECKLIST](./REMAINING_DEV_CHECKLIST_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) · [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md). 본 문서 하단의 구(#25 보류 등) 서술은 위 정본이 우선한다.
+- **참조:** [기능정의서](../product/FUNCTIONAL_SPEC_V1_2026-10-20.md), [PRD](../product/PRD.md), [MVP](../engineering/MVP_BUILD_READY_SPEC_2026-10-20.md).
 
 > **중요:** PR 병합·빌드 통과·문서 작성은 기능 완료 또는 운영 준비 완료가 아니다. 사용자의 기존 결정대로 **운영 DB 변경, 운영 배포, 유료 AI 호출은 명시적 승인 전 금지**. 개발 중 격리 DB에서 기능 검증은 가능하며 운영 데이터와 구별한다.
 

@@ -1,11 +1,19 @@
-# PlanOS 3.0 — 데이터 모델 명세 (TARGET)
+# PlanOS 3.0 — 데이터 모델 명세 (TARGET + CURRENT 주석)
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** 설계 정합성 1차 보완 / SQL 작성·적용·실 DB 검증 전  
-**기준:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [AI 아키텍처](ARCHITECTURE.md)  
-**증빙:** GitHub `main`의 `supabase/migrations/001~008` 정적 확인. 실제 운영 DB 적용 상태는 미확인.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** CURRENT(011 tasks·022 pm_plans 등)와 TARGET(ai_runs·contracts) 구분 / 운영 mig 금지  
+**기준:** [PRD](../product/PRD.md) · [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md) · [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md)  
+**증빙:** migrations 정적 확인. 운영 DB 적용 상태는 미확인.
+
+### CURRENT 추가 (011+ · 2026-10-25)
+| 테이블/저장 | 비고 |
+|---|---|
+| `project_tasks` + `project_task_events` | 사람 업무 5상태 · soft-delete · 감사. **`assignee_kind` 컬럼 없음** |
+| `pm_plans` 등 (022~) | 사람 PM · `pending_owner_approval` |
+| F-105 Mock LS | `planos:s1-ai-assignee-mock:v2:{userId}:{projectId}` — DB 아님 |
+| ReviewJob store | browser localStorage 또는 server flag — `ai_runs`와 분리 |
 
 ## 1. 설계 결정
 - **KEEP:** 기존 `users`, `projects`, `documents`, `document_versions`, `project_members`, `chat_messages`, `project_activities`, `generation_runs`, `project_comments`, `comment_reactions`, `comment_participant_status`, `user_notifications`.
@@ -40,7 +48,7 @@
 | `agent_contracts` | id, project_id, agent_id, created_by, terms_version, scope_json, allowed_tools, budget_cap_minor, currency, status, expires_at, accepted_by, accepted_at | owner 동의 전 active 금지, 계약 조건 불변 스냅샷 |
 | `agent_assignments` | id, project_id, contract_id, agent_id, status, assigned_at | 계약과 프로젝트 일치, 활성 계약만 실행 |
 | `project_plans` | id, project_id, version, objective, status, created_by, approved_by, approved_at | 계획 버전 고정, 승인 후 수정은 새 버전 |
-| `project_tasks` | id, project_id, plan_id(nullable), title, objective, assignee_kind, assignee_id, status, acceptance_criteria_json, created_by | 사람/AI 공통, 프로젝트 내 FK 검증 |
+| `project_tasks` (TARGET 확장) | … + `assignee_kind` | CURRENT 011은 `assignee_user_id`만. kind는 F-105 Mock LS |
 | `task_dependencies` | project_id, task_id, depends_on_task_id | 동일 프로젝트, 자기 의존/순환 금지 |
 | `ai_runs` | id, project_id, task_id, contract_id, plan_id, status, idempotency_key, lease_owner, lease_expires_at, attempt, cancel_requested_at, created_at, finished_at | 브라우저와 무관한 영속 상태, 상태 버전/CAS |
 | `ai_run_events` | id, project_id, run_id, event_type, actor_kind, actor_id, payload_redacted_json, trace_id, created_at | append-only, 로그 민감정보 마스킹 |

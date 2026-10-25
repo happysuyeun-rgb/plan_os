@@ -1,6 +1,7 @@
 # PlanOS 3.0 × AI 인력사무소 — 구현 인계 상세 명세 v1.1 — 교차 정합성 보완
 
-**2026-10-20 · 교차검토 보완:** 실제 소스/기존 설계/감사 결과를 대조한 **MVP 개발 기준선**. 이 문서의 기본 선택은 개발을 위한 잠정 결정이며 상용 가격·외부 모델·운영 배포 승인을 뜻하지 않는다. 코드/테스트/운영 적용 전에는 완료가 아니다.
+**2026-10-20 · 교차검토 보완 · 2026-10-25 CURRENT/TARGET 주석:** 실제 소스/기존 설계/감사 결과를 대조한 **MVP 개발 기준선**. 상용 가격·외부 모델·운영 배포 승인을 뜻하지 않는다. 문서 정합화 ≠ E2E/기능 완료.  
+**정본 보조:** [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](../plans/FEATURE_TRACEABILITY_2026-10-25.md).
 
 ## 0. 제품 정의와 완료 정의
 
@@ -28,15 +29,17 @@
 
 S1은 이전 Phase 0의 데이터 유실 결함과 **별도 브랜치에서 병행**하되, 운영 DB와 main으로의 병합은 검증·승인 후 수행한다. UI-only/mock-only를 서버 구현 완료로 표기 금지.
 
-## 2. 화면 계약 (신규 목표 라우트 — 기존 C05/DocumentPage 경로 변경 금지)
+## 2. 화면 계약 (DocumentPage C09/C10 경로 변경 금지)
 
-- `/projects/:projectId/tasks`: 목록, 상태별 필터, 빈 화면, 권한별 CTA, 새로고침 후 동일 결과. 필수 열: 제목, 담당 역할, 상태, 마지막 변경일, 상세 이동.
-- `/projects/:projectId/tasks/:taskId`: 목표/성공 기준/담당자, 선택 소스 2종, 활동 이력, 계약/계획/실행/보고서 단계별 상태. 데이터 fetch 중 skeleton; 403/404/409/503 별도 행동.
-- `/projects/:projectId/audits/new`: 같은 프로젝트의 2개 이상 문서 선택, 수정 시각/버전/해시 미리보기, 제외할 문서·검사 범주. 원본 미저장 경고; 임의 프로젝트 전체 접근 금지.
-- `/projects/:projectId/contracts/:contractId`: 사용 도구 `read_project_documents` 1종, 선택 문서 고정 범위, 제공사 전송 고지, 계획/실행 각각의 최대 비용, 만료일, 데이터 취급 약관 버전. owner 동의 전 시작 비활성화.
-- `/projects/:projectId/plans/:planId`: 사람이 편집한 검사 계획 버전, expectedVersion, 비용/입력 변경 경고, 승인·반려. **무과금 사람 계획을 AI 생성으로 표시하지 않는다.**
-- `/projects/:projectId/runs/:runId`: queued/running/blocked/succeeded/failed/cancelled, 이벤트 커서, 안전 재시도·취소; 사용자가 화면을 닫아도 서버 실행 상태 보존.
-- `/projects/:projectId/artifacts/:artifactId`: finding별 분류·심각도·근거 위치/원본 해시/인용 검증 여부, 사람이 선택하는 확인·반려·수정 요청. 모델의 '완료'와 사람의 '수락' 명확히 분리.
+### 2.1 CURRENT (구현·Mock)
+- `/projects/:projectId/tasks` · `/tasks/:taskId`: S1 목록/상세·이력·**F-105 AI 담당 Mock**(LS). 상태 필터·skeleton·HTTP별 UI는 부분.
+- `/projects/:projectId/plans` · `/plans/new` · `/plans/:planId`: **사람 PM** (AI 생성으로 표시 금지).
+- `/projects/:projectId/specialists` · `/specialists/request` · `/ai-review`: 채용·검수 **Mock** (유료 LLM/실계약 없음).
+- `/projects/:projectId/audits/new`: 소스 선택 (S2 부분).
+
+### 2.2 TARGET (미구현 — CURRENT로 오인 금지)
+- `/projects/:projectId/contracts/:contractId`: 실계약·동의·철회.
+- `/projects/:projectId/runs/:runId` · `/artifacts/:artifactId`: 서버 실행·산출물 수락.
 
 **공통 UI 규칙:** 쓰기에는 처리중 중복 클릭 방지 + 요청키 재사용; 실패 재시도는 새 작업을 무조건 만들지 않음; 접근 금지는 오류 존재 여부를 누출하지 않는 404; 키보드로 모든 승인/수락 실행; 상태는 서버에서만 확정.
 
@@ -46,17 +49,17 @@ S1은 이전 Phase 0의 데이터 유실 결함과 **별도 브랜치에서 병�
 
 **contract.status:** `draft -> active -> revoked/expired`. active 약관·문서 범위·상한은 불변. 변경은 새 버전 계약을 만들어 owner 재동의.
 
-**plan.status:** `draft -> awaiting_approval -> approved/rejected/expired`; 승인 후 수정은 새 버전이며 기존 승인 재사용 불가.
+**plan.status (CURRENT canonical):** `draft -> pending_owner_approval -> approved|rejected|needs_revision`. (구 문서 `awaiting_approval` = `pending_owner_approval`.)
 
-**run.status (DB 표준):** `queued -> running -> validating -> succeeded`; UX의 `verifying`은 `validating`, `awaiting_acceptance`는 성공한 run과 수락 대기 artifact를 합성한 화면 상태로만 사용한다. `queued/running -> cancel_requested -> cancelled`; `queued/running/validating -> failed` 또는 `blocked_reconciliation`. 실패 재시도는 같은 idempotency 의도와 별도 attempt 이력 기록; provider 불명확시 재호출 금지.
+**run.status (TARGET DB):** `queued -> running -> validating -> succeeded` 등. **CURRENT Mock ReviewJob**은 `awaiting_human` 등을 쓰며 run과 혼용 금지. 상세: STATUS_VOCABULARY.
 
-**artifact.acceptance:** `pending -> accepted/rejected/changes_requested`는 정확한 artifact_version+digest의 사람 사건; 모델 또는 validator가 accepted로 변경 불가.
+**artifact.acceptance (TARGET):** `pending -> accepted|rejected|needs_revision` (구 `changes_requested` 별칭 폐기 권고). 모델이 accepted로 변경 불가.
 
 ## 4. REST 계약 (최소 변경 가능한 범위)
 
 공통: `Authorization: Bearer <JWT>`; `Idempotency-Key`는 모든 최초 생성/결정/재시도 POST에 필수; 자원 수정 PATCH에는 `If-Match: "<version>"` 필수. 최초 생성 POST에 가상의 If-Match 요구 금지.
 
-- `POST /api/v1/projects/:p/tasks` 201: {title, objective, acceptanceCriteria[], assigneeKind:"human"|"agent", agentKey?}. 응답 {id,projectId,status:"todo",version:1}. owner/editor만; viewer 403.
+- `POST /api/v1/projects/:p/tasks` 201: {title, objective, acceptanceCriteria[], assigneeKind:"human"|"agent", agentKey?}. **assigneeKind는 TARGET REST.** CURRENT는 `assignee_user_id` + 브라우저 F-105 Mock. 응답 {id,projectId,status:"todo",version:1}. owner/editor만; viewer 403.
 - `GET /api/v1/projects/:p/tasks?cursor=&status=` 200: 커서 기반 목록. 타 프로젝트/없는 ID 404.
 - `GET /api/v1/projects/:p/tasks/:id` 200: 멤버에게 권한별 redacted 작업 정보.
 - `PATCH /api/v1/projects/:p/tasks/:id` 200: 수정 가능 필드 allowlist, expectedVersion CAS; stale 409.

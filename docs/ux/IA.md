@@ -1,11 +1,11 @@
 # PlanOS 3.0 × AI 인력사무소 — IA 및 화면 목록
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** TARGET IA/화면 ID 초안 — 제품·개발 검토 전  
-**상위 기준:** [PRD](../product/PRD.md) · [TF-01~30](../product/TASK_FLOWS.md)  
-**구분:** CURRENT=실제 라우트 확인, KEEP=호환 유지, MODIFY=기존 확장 제안, NEW=신규 제안. **TARGET URL은 제안이며 구현된 주소가 아님.**
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** CURRENT 라우트 정합화 완료 · TARGET IA는 제안(미구현 URL 포함)  
+**상위 기준:** [PRD](../product/PRD.md) · [TF-01~30](../product/TASK_FLOWS.md) · [상태 기준표](../plans/STATUS_VOCABULARY_2026-10-25.md) · [권한 매트릭스](../plans/PERMISSION_MATRIX_2026-10-25.md) · [기능 추적](../plans/FEATURE_TRACEABILITY_2026-10-25.md)  
+**구분:** CURRENT=실제 라우트 확인, KEEP=호환 유지, MODIFY=기존 확장 제안, NEW=신규 제안. **TARGET URL(`/workspace`·`/contracts`·`/runs` 등)은 제안이며 구현된 주소가 아님.**
 
 ## 1. IA 설계 원칙
 1. **프로젝트 중심:** 프로젝트는 사람 업무·AI 업무·문서·승인·비용·이력을 공유하는 단일 공간.
@@ -15,23 +15,34 @@
 5. **CURRENT/ TARGET 구분:** 아래 새 URL은 네비게이션 설계용 제안일 뿐, 라우터·DB·API에 반영되지 않음.
 6. **접근권한:** 로그인/프로젝트 멤버십/역할/계약/도구 권한을 화면별로 점검. 프런트 라우트 가드만으로 보안 충족 아님.
 
-## 2. CURRENT 라우트 (GitHub main src/App.tsx 정적 확인)
+## 2. CURRENT 라우트 (`src/App.tsx` 정적 확인 · 2026-10-25)
+
+**DocumentPage URL 보호:** `/projects/:projectId/tasks|ai-review|specialists|plans|audits/...` 등 **고정 path를 C09/C10보다 먼저** 선언한다. C09/C10 KEEP.
 
 | 화면 ID | 현재 URL | 구현 컴포넌트 | 분류 | 설계 처리 |
 |---|---|---|---|---|
-| C01 | `/` | LandingPage | KEEP | 공개 랜딩; 비회원/로그인 리다이렉트 회귀 |
-| C02 | `/login` | LoginPage | KEEP | 인증 및 에러 안내 |
-| C03 | `/onboarding` | OnboardingPage | KEEP | 최초 진입 가드 유지 |
-| C04 | `/dashboard` | DashboardPage | MODIFY | 프로젝트·승인·최근 실행 요약 확장 |
-| C05 | `/projects` | ProjectListPage | KEEP | 프로젝트 검색/열기 |
-| C06 | `/projects/new` | ProjectCreatePage | MODIFY | 목표·제약·예산 입력은 후속 확장 |
-| C07 | `/projects/trash` | TrashPage | KEEP | 삭제/복원 권한 검증 |
-| C08 | `/settings` | SettingsPage | MODIFY | AI 데이터 처리/비용 설정 추가 |
+| C01 | `/` | LandingPage | KEEP | 공개 랜딩 |
+| C02 | `/login` | LoginPage | KEEP | 인증 |
+| C03 | `/onboarding` | OnboardingPage | KEEP | 온보딩 가드 |
+| C04 | `/dashboard` | DashboardPage | MODIFY | MidProjectAiStaffingNotice 포함 |
+| C05 | `/projects` | ProjectListPage | KEEP | 목록 |
+| C06 | `/projects/new` | ProjectCreatePage | MODIFY | 생성(+중도 AI 안내). **E-01 이중경로 선택 UI는 미구현** |
+| C07 | `/projects/trash` | TrashPage | KEEP | 휴지통 |
+| C08 | `/settings` | SettingsPage | MODIFY | 설정 |
+| C12 | `/projects/:projectId/tasks` | ProjectTasksPage | CURRENT | S1 업무 보드 (구현 경로 ≠ TARGET `/workspace/...`) |
+| C13 | `/projects/:projectId/tasks/:taskId` | ProjectTaskDetailPage | CURRENT | S1 상세·감사 이력·**F-105 AI 담당 Mock** |
+| C14 | `/projects/:projectId/specialists` | AiStaffCatalogMockPage | CURRENT Mock | F-301 1종 카탈로그 · 결제/실행 없음 |
+| C15 | `/projects/:projectId/specialists/request` | SpecialistRequestMockPage | CURRENT Mock | owner-only 요청·모의 계약 고지 |
+| C16 | `/projects/:projectId/ai-review` | ProjectAiReviewPage | CURRENT Mock | 기획 검수 Mock · 유료 LLM 아님 |
+| C17 | `/projects/:projectId/plans` | PmPlanListPage | CURRENT | **사람 PM** 목록 (AI PM 아님) |
+| C18 | `/projects/:projectId/plans/new` | PmPlanNewPage | CURRENT | 사람 PM 초안 |
+| C19 | `/projects/:projectId/plans/:planId` | PmPlanDetailPage | CURRENT | 승인/반려/`needs_revision` |
+| C20 | `/projects/:projectId/audits/new` | AuditSourceSelectionPage | CURRENT | S2 소스 선택 |
 | C09 | `/projects/:projectId` | DocumentPage | KEEP | 기존 문서 진입 URL 보존 |
 | C10 | `/projects/:projectId/:docType` | DocumentPage | KEEP | 기존 문서 유형 URL 보존 |
-| C11 | `*` | NotFoundPage | KEEP | 권한/404 응답 구분 필요 |
+| C11 | `*` | NotFoundPage | KEEP | 미매칭 경로. **비멤버 Document는 EmptyState(권한 문구)** — HTTP 404 마스킹은 TARGET |
 
-**확인 범위:** 라우트 선언 및 컴포넌트 연결만 확인. 모든 화면의 런타임 동작, 모바일 접근성, RLS 정상 작동을 확인했다는 뜻은 아니다.
+**확인 범위:** 라우트 선언 및 컴포넌트 연결. RLS·모바일·E2E 전수 완료를 의미하지 않는다.
 
 ## 3. TARGET 정보 구조
 
@@ -72,13 +83,13 @@
 |---|---|---|---|---|---|---|
 | N01 | 프로젝트 워크스페이스 | `/workspace/:projectId` | NEW | 공통 프로젝트 허브·모드 전환 | 멤버 | 04~06 |
 | N02 | 개요·브리프 | `/workspace/:projectId/overview` | NEW | 목표/제약·수정 이력 | 멤버(쓰기 owner/editor) | 03~05 |
-| N03 | 업무 보드 | `/workspace/:projectId/tasks` | NEW | 사람/AI 업무 상태 통합 | 멤버 | 13~18 |
-| N04 | 업무 상세 | `/workspace/:projectId/tasks/:taskId` | NEW | 담당/완료 조건/결과 | 멤버 | 15~16,23~24 |
+| N03 | 업무 보드 | `/workspace/:projectId/tasks` (**구현=C12 `/projects/.../tasks`**) | NEW/부분CURRENT | 사람/AI 업무 상태 통합 | 멤버 | 13~18 |
+| N04 | 업무 상세 | `/workspace/:projectId/tasks/:taskId` (**구현=C13**) | NEW/부분CURRENT | 담당/완료 조건/결과 · F-105 Mock | 멤버 | 15~16,23~24 |
 | N05 | 문서·산출물 목록 | `/workspace/:projectId/documents` | NEW | 기존 문서/AI 산출물 연결 | 멤버 | 21,25 |
 | N06 | AI 팀 | `/workspace/:projectId/team` | NEW | 역할·계약·권한 가시화 | 멤버 | 06,12 |
 | N07 | 역할 배치 | `/workspace/:projectId/team/assign` | NEW | 활성 계약 역할 배치 | owner | 12 |
-| N08 | AI PM 계획 | `/workspace/:projectId/plan` | NEW | 계획 생성/검토 | owner/editor | 13~14 |
-| N09 | 계획 승인 | `/workspace/:projectId/plan/approve` | NEW | 계획 버전·비용 승인 | 승인 권한자 | 14 |
+| N08 | AI PM 계획 (TARGET) | `/workspace/:projectId/plan` | NEW | **유료 AI PM** 계획. CURRENT 사람 PM은 C17~C19 | owner/editor | 13~14 |
+| N09 | 계획 승인 | `/workspace/:projectId/plan/approve` | NEW | AI PM 승인 TARGET. 사람 PM 승인은 C19 | 승인 권한자 | 14 |
 | N10 | 실행 내역 | `/workspace/:projectId/runs` | NEW | 진행/실패/완료 기록 | 멤버 | 17~18 |
 | N11 | 실행 상세 | `/workspace/:projectId/runs/:runId` | NEW | 로그·증빙·재시도/취소 | 멤버(행위는 권한별) | 18,20~24 |
 | N12 | 프로젝트 승인함 | `/workspace/:projectId/approvals` | NEW | 승인 대기 모아보기 | 멤버(행위는 승인자) | 14,19,23 |
@@ -99,8 +110,8 @@
 ## 5. 화면별 공통 상태·예외 요구사항
 - **목록/상세:** loading, empty, error, forbidden, not-found, retry.
 - **입력/편집:** dirty, saving, saved, conflict, validation-error; 저장 실패 후 데이터 보존.
-- **AI 실행:** draft, awaiting-approval, queued, running, verifying, awaiting-acceptance, accepted, failed, cancelled.
-- **승인:** pending, approved, rejected, expired, revoked; 만료/철회 후 실행 차단.
+- **상태 canonical:** [STATUS_VOCABULARY_2026-10-25](../plans/STATUS_VOCABULARY_2026-10-25.md) — 업무 5상태 · PM `pending_owner_approval` · ReviewJob `awaiting_human` 등. 구 문서 `awaiting_approval`/`verifying` 혼용 금지.
+- **승인:** 계획·계약·산출물은 리소스별 상태. 만료/철회 후 실행 차단은 TARGET 계약 게이트.
 - **비용:** estimate, reserved, actual, refunded; 미확정 금액을 확정 과금처럼 표시 금지.
 - **모바일:** 핵심 읽기·승인·상태 확인을 우선 지원. 기존 DesktopOnlyBanner 정책은 별도 재검토.
 - **접근성:** 키보드/포커스/오류 텍스트, 색상 외 상태 표시, 대화상자 포커스 복귀.
@@ -136,16 +147,18 @@
 - **URL 정책:** `/workspace/:projectId`를 제안하지만 아직 구현 URL 아님. 기존 `/projects/:projectId`의 DocumentPage 라우트는 변경·리다이렉트하지 않는다.
 
 ## 점검
-- [x] CURRENT `src/App.tsx` 라우트 11개 정적 대조
+- [x] CURRENT `src/App.tsx` 라우트 정적 대조 (**C01~C20 + C09/C10 KEEP**, 2026-10-25)
 - [x] TF-01~30의 화면 매핑 초안
-- [x] 기존 DocumentPage URL 보존 전략 명시
+- [x] 기존 DocumentPage URL 보존 전략 명시 (고정 path 선행)
 - [x] 신규 화면 ID·권한·예외·MVP 축소 후보
+- [x] 사람 PM(C17~19) ≠ AI PM(N08 TARGET) · F-105 ≠ specialists 채용 구분
 - [ ] 실제 사용자 동선·모바일/접근성 검증
 - [ ] 화면별 정책 승인 및 상세 기능명세
-- [ ] 구현/테스트·라우팅 적용
+- [ ] TARGET `/workspace` 라우팅 적용 (미착수)
 
 ## 변경 이력
 | 날짜 | 버전 | 내용 | 상태 |
 |---|---|---|---|
+| 2026-10-25 | v0.3 | CURRENT에 tasks/ai-review/specialists/plans/audits 반영 · DocumentPage 보호·상태 canonical 링크 · 사람PM/AI PM 구분 | 정합화 |
 | 2026-10-16 | v0.1 | CURRENT 11개 라우트, TARGET IA 23개 화면, TF 연결 및 MVP 최소 세트 최초 작성 | 검토 전 |
 | 2026-10-16 | v0.2 | 역할별 메뉴·승인함 중복·수락 UI 연결·레거시 URL 보존 조건 보완 | 검토 전 |
