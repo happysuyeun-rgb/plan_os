@@ -58,7 +58,12 @@ export default function ProjectTasksPage() {
 
   const activeProject = currentProject?.id === projectId && currentProject?.deleted_at === null
   const currentMembership = membersLoaded ? members.find((member) => member.project_id === projectId && member.user_id === userId && member.status === 'active') : undefined
-  const canEdit = activeProject && (currentProject?.user_id === userId || currentMembership?.role === 'owner' || currentMembership?.role === 'editor')
+  const isOwner = Boolean(
+    activeProject && (currentProject?.user_id === userId || currentMembership?.role === 'owner'),
+  )
+  const canEdit = activeProject && (isOwner || currentMembership?.role === 'editor')
+  /** Matches DB triggers ONLY_OWNER_MAY_DELETE_TASK / ONLY_OWNER_MAY_RESTORE_TASK. */
+  const canSoftDelete = isOwner
   const activeMembers = membersLoaded ? members.filter((member) => member.project_id === projectId && member.status === 'active' && member.user_id) : []
   const assignee = (id: string) => activeMembers.find((member) => member.user_id === id)
   const assigneeLabel = (id: string | null) => id ? (assignee(id)?.name || assignee(id)?.email || '접근 불가/제외된 멤버') : '미지정'
@@ -145,7 +150,7 @@ export default function ProjectTasksPage() {
     if (ok) setEditingId(null)
   }
   function setDeleted(task: PrototypeTask, deleted: boolean) {
-    if (!canEdit || saving) return
+    if (!canSoftDelete || saving) return
     void save(tasks.map((item) => item.id === task.id ? {
       ...item, deletedAt: deleted ? new Date().toISOString() : null,
       updatedAt: new Date().toISOString(),
@@ -261,16 +266,41 @@ export default function ProjectTasksPage() {
                     ))}
                   </select>
                 </label>}
-                {canEdit && <div className="mt-3 flex gap-2">
+                {(canEdit || canSoftDelete) && <div className="mt-3 flex gap-2">
                   {showDeleted ? (
-                    <button type="button" onClick={() => setDeleted(task, false)} className="rounded border px-3 py-1 text-sm">복원</button>
+                    canSoftDelete && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleted(task, false)}
+                        className="rounded border px-3 py-1 text-sm"
+                        data-testid="task-restore"
+                      >
+                        복원
+                      </button>
+                    )
                   ) : (
                     <>
-                      {editingId !== task.id && <button type="button" onClick={() => beginEdit(task)} className="rounded border px-3 py-1 text-sm">수정</button>}
-                      <button type="button" onClick={() => setDeleted(task, true)} className="rounded border px-3 py-1 text-sm text-red-700">삭제</button>
+                      {canEdit && editingId !== task.id && (
+                        <button type="button" onClick={() => beginEdit(task)} className="rounded border px-3 py-1 text-sm">수정</button>
+                      )}
+                      {canSoftDelete && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleted(task, true)}
+                          className="rounded border px-3 py-1 text-sm text-red-700"
+                          data-testid="task-soft-delete"
+                        >
+                          삭제
+                        </button>
+                      )}
                     </>
                   )}
                 </div>}
+                {canEdit && !canSoftDelete && !showDeleted && (
+                  <p className="mt-2 text-xs text-amber-800" data-testid="task-delete-owner-only-note">
+                    업무 삭제·복원은 프로젝트 소유자만 할 수 있습니다 (서버 정책과 동일).
+                  </p>
+                )}
               </article>
             ))}
           </section>

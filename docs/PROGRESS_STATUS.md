@@ -22,7 +22,7 @@
 
 | 레이어 | 상태 | 증거 |
 |---|---|---|
-| **GitHub main 병합** | Phase A + BCD Mock MVP **완료** | main tip **`ec3ab6b`** · #30/#36/#42/#45/#46 merged |
+| **GitHub main 병합** | Phase A + BCD Mock MVP + S3 채용 Mock 루프 **완료** | main tip **`bbfe454`** · #45~#51 merged |
 | **코드 완료** | Phase B·C·D **Mock이 main에 포함** | `/ai-review`, S1 상세, Vite/Preview AI BFF, local_only 027 |
 | **단위·RLS CI** | #46 병합 시 체크 통과 (local server-store E2E 포함) | Preview/ops DB에 027 **미적용** |
 | **로컬 Playwright E2E** | **일회용 스택에서 통과** | `tests/e2e/browser_ai_review.mjs` · `ai-review-local-e2e.yml` |
@@ -38,7 +38,7 @@
 | **B** S1 상세·권한 | **main 포함** (#45) | 단위·S1·RLS·로컬 Playwright | 통합 Preview E2E 미완료 | 011 등 기존 | 미배포 |
 | **C** LLM | Provider·BFF·budget (유료 차단) | 단위·BFF placeholder | 유료 미연결 | n/a | 미배포 |
 | **D** 기획 검수 | **Mock MVP main** (#46) · 027 `local_only` | 단위·로컬 RLS·Playwright | Preview 전수 미증빙 | 027 **호스티드 미적용** | 미배포 |
-| **E/F** AI PM·출시 | 미구현 | — | — | — | 미완료 |
+| **E/F** AI PM·출시 | 채용→검수 Mock **일부** (#49~#51) · AI PM 풀스펙 미구현 | unit·S3 Chromium | — | — | 미완료 |
 
 ### 브랜치 계보
 
@@ -48,7 +48,7 @@
 ### 남은 P0/P1 (2026-10-25)
 
 - **P0:** Preview 호스티드 E2E 전수 · 운영 009/010≡013/014 **읽기 전용** 확인
-- **P1 (코드·게이트 문서, DB/과금 없이):** AI 채용 Mock **#49** · 핸드오프 **#50** · staffing brief→Mock 검수 묶기(진행) · AI PM(E) 잔여 · Gate C-LLM 런북 [`PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md`](./plans/PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md)
+- **P1 (코드·게이트 문서, DB/과금 없이):** AI 채용→핸드오프→brief **#49~#51 완료** · [남은 개발 체크리스트](./plans/REMAINING_DEV_CHECKLIST_2026-10-25.md) · AI PM(E) 잔여 · S1 UI/감사 정리 · Gate C-LLM 런북 [`PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md`](./plans/PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md)
 - **P1-말미 (명시 승인):** Gate A-027 Preview 027 — 런북 [`PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md`](./plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md) · 유료 LLM 키/캡 · Production
 - **P2:** 인력사무소 · 서버 스토어 프로덕션 경로
 
