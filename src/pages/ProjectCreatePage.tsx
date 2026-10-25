@@ -7,6 +7,7 @@ import { ProjectForm, type ProjectFormData } from '../components/project/Project
 import { StepProgress } from '../components/project/StepProgress'
 import { GenerationStep } from '../components/project/GenerationStep'
 import { Button } from '../components/common/Button'
+import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
 import { useProjectStore } from '../store/projectStore'
 import { useInterviewStore } from '../store/interviewStore'
 import { useGenerationStore } from '../store/generationStore'
@@ -139,8 +140,9 @@ export default function ProjectCreatePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-lg space-y-4">
       <StepProgress currentStep={step} />
+      <MidProjectAiStaffingNotice />
 
       {step === 1 && (
         <ProjectForm

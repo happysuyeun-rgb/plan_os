@@ -4,6 +4,7 @@ import { AlertTriangle, Clock, Inbox, Plus, RefreshCw } from 'lucide-react'
 import type { DocumentType, Project } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
+import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
@@ -167,6 +168,8 @@ export default function DashboardPage() {
           새 프로젝트
         </Button>
       </div>
+
+      <MidProjectAiStaffingNotice className="mt-6" />
 
       {/* 업무 현황 요약 (C04) — 서버 업무 모드가 켜진 환경에서만 집계한다. */}
       <section aria-label="업무 현황" className="mt-6">
