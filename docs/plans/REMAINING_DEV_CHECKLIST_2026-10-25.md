@@ -1,8 +1,8 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `fde3a6d` (#57) + 본 브랜치 F-105 결함수정·설계 정합화 (main 미병합)  
+**기준 tip:** `main` @ `fde3a6d` (#57) + 본 브랜치 F-105 결함수정·설계 정합화 **1차+2차(R2)** (main 미병합 · PR #59)  
 **정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**  
-**정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md)
+**정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) (R2 표 포함)
 
 ---
 

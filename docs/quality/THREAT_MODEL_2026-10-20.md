@@ -33,4 +33,10 @@
 ## 미해결 승인/위험
 외부 모델 데이터 전송/보존·국외 이전·개인정보 법적 고지, 임시 저장 TTL, 원장 보존, 공급자 이중 과금 정책, RLS 실제 정책 및 Phase 0 직접 chat INSERT 문제는 **차단/검증 대기**.
 
+### 2026-10-25 R2 보강 (문서 정합 · 구현 완료 아님)
+- **온보딩 동의 vs 외부 LLM 전송 동의:** TF-02 온보딩 동의만으로 공급자 전송을 허가하지 않는다. 실전송 전 계약·데이터 처리 고지(TF-11/OP-03)·명시적 consent digest가 필요하다(CURRENT Mock은 전송 없음).
+- **법적 검토 항목(미완):** 개인정보 처리방침·국외 이전·학습/보존·삭제 요청 대응 문구, 공급자 DPA, 고객 고지 UI 카피. 유료 LLM·Production 전 필수.
+- **프롬프트 인젝션 (TM-03):** 문서/채팅 내용은 비신뢰. CURRENT는 유료 도구 호출 경로가 없어 실증 전. TARGET 완화= R0 allowlist·tool scope·R2/R3 차단·secrets 미포함. 반증=POL-05/AC-10 (미실행).
+- **성과 측정:** PRD KPI 수치는 임의 확정 금지. 후보 이벤트(설계): `project_created`, `pm_plan_approved`, `mock_review_accepted`, `contract_accepted`(TARGET), `artifact_accepted`(TARGET). 계측 파이프라인·목표치는 **미결정**.
+
 **실제 침투 테스트·RLS 재현:** 0건. [TEST_PLAN](TEST_PLAN_2026-10-20.md)과 [RELEASE_RUNBOOK](../operations/RELEASE_RUNBOOK_2026-10-20.md)의 게이트 통과 전 보안 완료/출시 가능 판정 불가.
