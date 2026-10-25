@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { MOCK_SPECIALIST, createMockDraft, previewMockContract, getMockBudgetReview, type MockRequest, type MockContractReview } from '../lib/mockSpecialistRequest'
+import { buildHandoffFromDraft, writeSpecialistReviewHandoff } from '../lib/specialistReviewHandoff'
 
 export default function SpecialistRequestMockPage() {
   const { projectId } = useParams()
+  const navigate = useNavigate()
   const userId = useAuthStore((s) => s.user?.id)
   const { currentProject, setCurrentProject } = useProjectStore()
   const [task, setTask] = useState('')
@@ -49,6 +51,15 @@ export default function SpecialistRequestMockPage() {
     try { setContractPreview(previewMockContract(draft, noticeRead)); setError('') }
     catch (e) { setError(e instanceof Error ? e.message : '검토 화면을 열 수 없습니다.') }
   }
+  const continueToMockReview = () => {
+    if (!draft || !contractPreview || !projectId) return
+    try {
+      writeSpecialistReviewHandoff(buildHandoffFromDraft(draft))
+      navigate(`/projects/${projectId}/ai-review`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '검수 화면으로 이어갈 수 없습니다.')
+    }
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-10 text-gray-900">
@@ -85,7 +96,27 @@ export default function SpecialistRequestMockPage() {
               <button type="button" onClick={reset} className="rounded-md border px-4 py-2">초기화</button>
             </div>
           </section>
-          {contractPreview && <section role="status" aria-label="모의 계약 검토" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm"><h2 className="font-semibold">모의 계약 조건 검토</h2><p>검토 상태: {contractPreview.status} · 실제 계약 아님 · 실제 AI 실행 불가 · 외부 데이터 전송 불가 · 과금 불가</p><p className="mt-2">정식 동의·철회·예산 상한과 서버 검증은 아직 구현되지 않았습니다.</p><div className="mt-3 rounded border border-amber-300 bg-white p-3"><h3 className="font-semibold">예상 비용·예산 검토 (Mock)</h3><p>예상 비용: 산정 불가 · 최대 청구금액: 미정 · 결제: 불가</p><p className="mt-1">{budgetReview?.reason}</p></div></section>}
+          {contractPreview && (
+            <section role="status" aria-label="모의 계약 검토" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
+              <h2 className="font-semibold">모의 계약 조건 검토</h2>
+              <p>검토 상태: {contractPreview.status} · 실제 계약 아님 · 실제 AI 실행 불가 · 외부 데이터 전송 불가 · 과금 불가</p>
+              <p className="mt-2">정식 동의·철회·예산 상한과 서버 검증은 아직 구현되지 않았습니다.</p>
+              <div className="mt-3 rounded border border-amber-300 bg-white p-3">
+                <h3 className="font-semibold">예상 비용·예산 검토 (Mock)</h3>
+                <p>예상 비용: 산정 불가 · 최대 청구금액: 미정 · 결제: 불가</p>
+                <p className="mt-1">{budgetReview?.reason}</p>
+              </div>
+              <button
+                type="button"
+                onClick={continueToMockReview}
+                className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white"
+                data-testid="specialist-continue-ai-review"
+              >
+                Mock 기획 검수로 이어가기
+              </button>
+              <p className="mt-2 text-xs text-amber-900">세션 핸드오프만 전달합니다. 유료 채용·계약·LLM 실행이 아닙니다.</p>
+            </section>
+          )}
           {draft && (
             <section aria-label="업무 요청 초안" className="mt-6 rounded-xl border border-green-300 bg-green-50 p-5">
               <h2 className="text-lg font-bold">요청 초안 생성됨 · 실행 대기 아님</h2>

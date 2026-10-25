@@ -20,6 +20,10 @@ import {
   MIN_REVIEW_DOCUMENTS,
   MOCK_PLANNING_REVIEWER_ID,
 } from '../lib/ai/MockPlanningReviewProvider'
+import {
+  consumeSpecialistReviewHandoff,
+  type SpecialistReviewHandoff,
+} from '../lib/specialistReviewHandoff'
 
 const DOC_OPTIONS = [
   { type: 'prd', label: 'PRD' },
@@ -43,6 +47,8 @@ export default function ProjectAiReviewPage() {
   const fetchMembers = useMemberStore((s) => s.fetchMembers)
 
   const [hired, setHired] = useState(false)
+  const [handoff, setHandoff] = useState<SpecialistReviewHandoff | null>(null)
+  const [handoffTrackId, setHandoffTrackId] = useState<string | undefined>(undefined)
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['prd', 'policy', 'wireframe'])
   const [job, setJob] = useState<ReviewJob | null>(null)
   const [reReviewJobId, setReReviewJobId] = useState<string | null>(null)
@@ -50,6 +56,20 @@ export default function ProjectAiReviewPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [changeReason, setChangeReason] = useState('')
+
+  if (projectId !== handoffTrackId) {
+    setHandoffTrackId(projectId)
+    if (projectId) {
+      const incoming = consumeSpecialistReviewHandoff(projectId)
+      setHandoff(incoming)
+      if (incoming) {
+        setHired(true)
+        setMessage('S3 채용 Mock에서 이어짐 · 세션 핸드오프(계약·과금·유료 LLM 아님)')
+      }
+    } else {
+      setHandoff(null)
+    }
+  }
 
   const role = resolveMemberRole(
     currentProject,
@@ -75,7 +95,11 @@ export default function ProjectAiReviewPage() {
       if (cancelled || !latest) return
       setJob(latest)
       setHired(true)
-      setMessage(`재접속: 저장된 검수 job ${latest.id.slice(0, 8)}… (${REVIEW_STORE_MODE})`)
+      setMessage((prev) =>
+        prev.includes('S3 채용 Mock')
+          ? prev
+          : `재접속: 저장된 검수 job ${latest.id.slice(0, 8)}… (${REVIEW_STORE_MODE})`,
+      )
     })
     return () => {
       cancelled = true
@@ -230,6 +254,20 @@ export default function ProjectAiReviewPage() {
         <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900" data-testid="ai-review-viewer-readonly">
           Viewer는 검수 결과 조회만 가능합니다. 실행·수락·업무 생성은 Owner/Editor만 가능합니다.
         </p>
+      )}
+
+      {canView && handoff && (
+        <section
+          role="status"
+          aria-label="S3 채용 핸드오프"
+          className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950"
+          data-testid="ai-review-specialist-handoff"
+        >
+          <h2 className="font-semibold">채용 요청 Mock에서 이어짐</h2>
+          <p className="mt-1 text-xs">역할 {handoff.roleId} · 세션 전용 · 계약/결제/실행 아님</p>
+          <p className="mt-3 whitespace-pre-wrap"><span className="font-medium">요청 업무:</span> {handoff.task}</p>
+          <p className="mt-2 whitespace-pre-wrap"><span className="font-medium">완료 기준:</span> {handoff.acceptanceCriteria}</p>
+        </section>
       )}
 
       {canView && (

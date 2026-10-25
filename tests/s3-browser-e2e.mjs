@@ -19,15 +19,20 @@ async function open(path, authenticated = true) {
   await page.goto(base + path)
   return { page, context }
 }
-try {
-  let { page, context } = await open('/projects/fixture-owner/specialists/request')
+
+async function fillOwnerDraft(page) {
   await page.getByText('요구사항 검수 전문가').waitFor()
-  await page.getByRole('button', { name: '요청 초안 미리보기' }).click()
-  await page.getByRole('alert').getByText('업무 요청은 10~1000자로 작성해 주세요.').waitFor()
   await page.getByPlaceholder('검수할 범위와 원하는 결과를 10자 이상 작성하세요.').fill('기획 요구사항 문서의 누락 항목을 검토해 주세요.')
   await page.getByPlaceholder('어떤 결과면 완료인지 5자 이상 작성하세요.').fill('누락과 근거를 보고서로 정리')
   await page.getByRole('button', { name: '요청 초안 미리보기' }).click()
   await page.getByText('요청 초안 생성됨').waitFor()
+}
+
+try {
+  let { page, context } = await open('/projects/fixture-owner/specialists/request')
+  await page.getByRole('button', { name: '요청 초안 미리보기' }).click()
+  await page.getByRole('alert').getByText('업무 요청은 10~1000자로 작성해 주세요.').waitFor()
+  await fillOwnerDraft(page)
   assert.equal(await page.getByRole('button', { name: '계약 조건 모의 검토' }).isDisabled(), true)
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: '계약 조건 모의 검토' }).click()
@@ -40,23 +45,37 @@ try {
   assert.equal(await page.getByText('요청 초안 생성됨').count(), 0)
   await context.close()
 
-  ;({page,context} = await open('/projects/fixture-viewer/specialists/request'))
-  await page.getByText('프로젝트 소유자만 작성할 수 있습니다.', {exact:false}).waitFor()
-  assert.equal(await page.getByRole('button', {name:'요청 초안 미리보기'}).count(),0)
+  ;({ page, context } = await open('/projects/fixture-owner/specialists/request'))
+  await fillOwnerDraft(page)
+  await page.getByRole('checkbox').check()
+  await page.getByRole('button', { name: '계약 조건 모의 검토' }).click()
+  await page.getByTestId('specialist-continue-ai-review').click()
+  await page.waitForURL(/\/projects\/fixture-owner\/ai-review/)
+  await page.getByTestId('ai-review-specialist-handoff').waitFor()
+  await page.getByText('기획 요구사항 문서의 누락 항목을 검토해 주세요.').waitFor()
+  await page.getByText('누락과 근거를 보고서로 정리').waitFor()
+  assert.equal(await page.getByTestId('ai-review-hire').innerText(), '투입됨 (Mock)')
+  await page.reload()
+  assert.equal(await page.getByTestId('ai-review-specialist-handoff').count(), 0)
   await context.close()
 
-  ;({page,context} = await open('/projects/fixture-deleted/specialists/request'))
+  ;({ page, context } = await open('/projects/fixture-viewer/specialists/request'))
+  await page.getByText('프로젝트 소유자만 작성할 수 있습니다.', { exact: false }).waitFor()
+  assert.equal(await page.getByRole('button', { name: '요청 초안 미리보기' }).count(), 0)
+  await context.close()
+
+  ;({ page, context } = await open('/projects/fixture-deleted/specialists/request'))
   await page.getByText('프로젝트에 접근할 수 없거나 삭제된 프로젝트입니다.').waitFor()
   await context.close()
 
-  ;({page,context} = await open('/projects/fixture-missing/specialists/request'))
+  ;({ page, context } = await open('/projects/fixture-missing/specialists/request'))
   await page.getByText('프로젝트에 접근할 수 없거나 삭제된 프로젝트입니다.').waitFor()
   await context.close()
 
-  ;({page,context} = await open('/projects/fixture-owner/specialists/request', false))
+  ;({ page, context } = await open('/projects/fixture-owner/specialists/request', false))
   await page.waitForURL(/\/login\?redirect=/)
   await context.close()
-  console.log('S3 browser E2E PASS: owner draft/review/cancel/reload, viewer, deleted, missing, unauthenticated')
+  console.log('S3 browser E2E PASS: owner draft/review/cancel/handoff, viewer, deleted, missing, unauthenticated')
 } finally {
   await browser.close()
 }

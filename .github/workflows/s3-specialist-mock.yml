@@ -3,11 +3,14 @@ on:
   pull_request:
     paths:
       - 'src/lib/mockSpecialistRequest.ts'
+      - 'src/lib/specialistReviewHandoff.ts'
       - 'src/pages/SpecialistRequestMockPage.tsx'
+      - 'src/pages/ProjectAiReviewPage.tsx'
       - 'src/pages/ProjectTasksPage.tsx'
       - 'src/App.tsx'
       - 'tests/s3-specialist-request-mock.test.mjs'
       - 'tests/s3-specialist-access-contract.test.mjs'
+      - 'tests/specialist-review-handoff.test.mjs'
       - '.github/workflows/s3-specialist-mock.yml'
   workflow_dispatch:
 jobs:
@@ -20,6 +23,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: node --test tests/s3-specialist-request-mock.test.mjs tests/s3-specialist-access-contract.test.mjs
+      - run: node --test tests/s3-specialist-request-mock.test.mjs tests/s3-specialist-access-contract.test.mjs tests/specialist-review-handoff.test.mjs
       - run: npm run build
-      - run: npx eslint src/lib/mockSpecialistRequest.ts src/pages/SpecialistRequestMockPage.tsx src/pages/ProjectTasksPage.tsx src/App.tsx
+      - run: npx eslint src/lib/mockSpecialistRequest.ts src/lib/specialistReviewHandoff.ts src/pages/SpecialistRequestMockPage.tsx src/pages/ProjectAiReviewPage.tsx src/pages/ProjectTasksPage.tsx src/App.tsx
