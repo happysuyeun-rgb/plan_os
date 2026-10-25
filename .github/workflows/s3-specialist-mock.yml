@@ -1,0 +1,25 @@
+name: S3 specialist mock
+on:
+  pull_request:
+    paths:
+      - 'src/lib/mockSpecialistRequest.ts'
+      - 'src/pages/SpecialistRequestMockPage.tsx'
+      - 'src/pages/ProjectTasksPage.tsx'
+      - 'src/App.tsx'
+      - 'tests/s3-specialist-request-mock.test.mjs'
+      - 'tests/s3-specialist-access-contract.test.mjs'
+      - '.github/workflows/s3-specialist-mock.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/s3-specialist-request-mock.test.mjs tests/s3-specialist-access-contract.test.mjs
+      - run: npm run build
+      - run: npx eslint src/lib/mockSpecialistRequest.ts src/pages/SpecialistRequestMockPage.tsx src/pages/ProjectTasksPage.tsx src/App.tsx
