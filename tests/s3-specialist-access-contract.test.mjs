@@ -17,3 +17,8 @@ test('draft review is explicitly non-executable and cancellable',()=>{
  assert.match(page, /setContractPreview\(null\)/)
  assert.match(page, /setDraft\(null\)/)
 })
+test('mock contract review can hand off to ai-review without claiming paid hire',()=>{
+ assert.match(page, /writeSpecialistReviewHandoff/)
+ assert.match(page, /Mock 기획 검수로 이어가기/)
+ assert.match(page, /ai-review/)
+})
