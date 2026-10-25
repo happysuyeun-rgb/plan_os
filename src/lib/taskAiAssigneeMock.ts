@@ -33,12 +33,12 @@ function parseEntry(value: unknown): TaskAiAssigneeMock | null {
   if (!isRecord(value)) return null
   const kind = value.kind
   if (kind !== 'human' && kind !== 'agent') return null
-  const agentRoleId =
-    value.agentRoleId === null || value.agentRoleId === undefined
-      ? null
-      : typeof value.agentRoleId === 'string'
-        ? value.agentRoleId
-        : null
+  let agentRoleId: string | null = null
+  if (typeof value.agentRoleId === 'string') {
+    agentRoleId = value.agentRoleId
+  } else if (value.agentRoleId !== null && value.agentRoleId !== undefined) {
+    return null
+  }
   if (kind === 'agent' && agentRoleId !== MOCK_AI_ASSIGNEE_ROLE.id) return null
   if (kind === 'human' && agentRoleId !== null) return null
   const updatedAt = typeof value.updatedAt === 'string' ? value.updatedAt : ''
@@ -87,12 +87,8 @@ export function writeTaskAiAssignee(
     updatedAt: next.updatedAt ?? new Date().toISOString(),
   }
   const map = readTaskAiAssigneeMap(projectId)
-  if (kind === 'human' && agentRoleId === null) {
-    // Keep an explicit human marker so list/detail stay consistent after refresh.
-    map[taskId] = record
-  } else {
-    map[taskId] = record
-  }
+  // Persist explicit human|agent so list/detail stay consistent after refresh.
+  map[taskId] = record
   localStorage.setItem(storageKey(projectId), JSON.stringify(map))
   return record
 }
