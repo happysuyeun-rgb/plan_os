@@ -119,13 +119,59 @@ try {
   // --- Owner path: hire → run → accept → S1 → reload → re-review link ---
   await login(page, ownerEmail)
   await page.goto(site + `/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('ai-review-unpaid-preview').waitFor({ state: 'visible', timeout: 15000 })
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="ai-review-store-mode"]')
+      return el && /owner|editor/i.test(el.textContent || '')
+    },
+    { timeout: 20000 },
+  )
+  const storeMode = await page.getByTestId('ai-review-store-mode').innerText()
+  assert.match(storeMode, /SERVER_027|BROWSER_LOCAL|MEMORY/i)
+  console.log('PASS unpaid preview banner; store mode visible:', storeMode.trim())
+
   await page.getByTestId('ai-review-hire').click()
+  // AC-03 UX: fewer than 2 doc types blocks run
+  for (const type of ['prd', 'policy', 'wireframe', 'ia', 'screen_list']) {
+    const box = page.getByTestId(`ai-review-doc-${type}`)
+    if (await box.count() && await box.isChecked()) await box.uncheck()
+  }
+  await page.getByTestId('ai-review-doc-prd').check()
+  await page.getByTestId('ai-review-insufficient-block').waitFor({ state: 'visible', timeout: 5000 })
+  assert.equal(await page.getByTestId('ai-review-run').isDisabled(), true)
+  console.log('PASS AC-03 insufficient selection blocks run')
+
+  await page.getByTestId('ai-review-doc-policy').check()
+  await page.getByTestId('ai-review-doc-wireframe').check()
+  assert.equal(await page.getByTestId('ai-review-run').isDisabled(), false)
+
   await page.getByTestId('ai-review-run').click()
-  await page.getByTestId('ai-review-job').waitFor({ state: 'visible', timeout: 30000 })
+  try {
+    await page.getByTestId('ai-review-job').waitFor({ state: 'visible', timeout: 30000 })
+  } catch (err) {
+    const alert = await page.getByRole('alert').allInnerTexts().catch(() => [])
+    const body = await page.locator('main').innerText().catch(() => '')
+    throw new Error(
+      `run did not produce ai-review-job; alerts=${JSON.stringify(alert)}; main=${body.slice(0, 600)}; cause=${err}`,
+    )
+  }
+  await page.getByTestId('ai-review-source-manifest').waitFor({ state: 'visible', timeout: 10000 })
   const accept = page.locator('[data-testid^="ai-review-accept-"]').first()
   await accept.waitFor({ state: 'visible', timeout: 15000 })
   await accept.click()
-  await page.getByTestId('ai-review-message').waitFor({ state: 'visible', timeout: 20000 })
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="ai-review-message"]')
+      const t = el?.textContent || ''
+      return /S1 업무|재사용|수락/.test(t)
+    },
+    { timeout: 30000 },
+  ).catch(async (err) => {
+    const alert = await page.getByRole('alert').allInnerTexts().catch(() => [])
+    const msg = await page.getByTestId('ai-review-message').innerText().catch(() => '')
+    throw new Error(`accept did not update message; alerts=${JSON.stringify(alert)}; msg=${msg}; cause=${err}`)
+  })
   const msg = await page.getByTestId('ai-review-message').innerText()
   assert.match(msg, /S1 업무|재사용|수락/)
   console.log('PASS owner mock review accept → S1')
@@ -153,12 +199,24 @@ try {
   assert.equal(await page.getByTestId('ai-review-hire').isDisabled(), true)
   console.log('PASS viewer cannot hire/run')
 
-  // --- Editor: can run ---
+  // --- Editor: can run (hire may already be disabled if owner left a stored job) ---
   await login(page, editorEmail)
   await page.goto(site + `/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
-  await page.getByTestId('ai-review-hire').click()
-  assert.equal(await page.getByTestId('ai-review-hire').isDisabled(), true)
-  console.log('PASS editor can hire')
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="ai-review-store-mode"]')
+      return el && /editor/i.test(el.textContent || '')
+    },
+    { timeout: 20000 },
+  )
+  const editorHire = page.getByTestId('ai-review-hire')
+  await editorHire.waitFor({ state: 'visible', timeout: 15000 })
+  if (await editorHire.isEnabled()) {
+    await editorHire.click()
+  }
+  assert.equal(await editorHire.isDisabled(), true)
+  assert.equal(await page.getByTestId('ai-review-run').isDisabled(), false)
+  console.log('PASS editor can hire/run')
 
   // --- Cross-project: owner of A cannot open B as member ---
   await login(page, ownerEmail)

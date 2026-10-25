@@ -3,14 +3,17 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { canAiReview, assertCanAiReview } from '../src/lib/ai/reviewAccess.ts'
 
-test('Owner/Editor can run and accept; Viewer view-only', () => {
+test('AC-04: Owner/Editor can run and accept; Viewer view-only; null blocked', () => {
   assert.equal(canAiReview('owner', 'run'), true)
   assert.equal(canAiReview('editor', 'accept'), true)
   assert.equal(canAiReview('viewer', 'view'), true)
   assert.equal(canAiReview('viewer', 'run'), false)
   assert.equal(canAiReview('viewer', 'accept'), false)
+  assert.equal(canAiReview('viewer', 'request_changes'), false)
   assert.equal(canAiReview(null, 'view'), false)
+  assert.equal(canAiReview(null, 'run'), false)
   assert.throws(() => assertCanAiReview('viewer', 'accept'), /권한/)
+  assert.throws(() => assertCanAiReview(null, 'run'), /권한/)
 })
 
 test('permissions.ts grants ai.review.* aligned with reviewAccess', () => {
@@ -31,4 +34,5 @@ test('AI review page gates Viewer readonly and Owner/Editor actions', () => {
   assert.match(page, /ai-review-viewer-readonly/)
   assert.match(page, /resolveMemberRole/)
   assert.match(page, /loadLatestProjectReviewJob/)
+  assert.match(page, /ai-review-unpaid-preview/)
 })

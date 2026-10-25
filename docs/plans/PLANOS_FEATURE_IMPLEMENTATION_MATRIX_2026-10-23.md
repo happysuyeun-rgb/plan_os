@@ -1,22 +1,22 @@
 # PlanOS 기능 구현 매트릭스 (2026-10-23)
 
 정본 코드 (역사): `preview/planos-integrated-20261023`.  
-**2026-10-24 현행 코드:** `feat/planos-bcd-mock-review-20261024` / PR #45 · main tip `527e042`.  
+**2026-10-25 현행 코드:** GitHub `main` @ **`f780691`** (PR #45 포함).  
 상태값: `코드완료` / `검증완료(격리)` / `병합완료` / `운영완료` / `부분` / `Mock` / `미착수` / `설계만` / `DEPRECATED`.
 
 문서완료 ≠ 코드완료. **운영완료·Production은 현재 전 항목 해당 없음.**
 
-### 2026-10-24 정정 (본 표보다 우선)
+### 2026-10-25 정정 (본 표보다 우선)
 
 | ID | 이전 표기 | 정정 | 근거 |
 |---|---|---|---|
-| F-105 | 미착수/부분 | **코드완료(브랜치)** · Preview E2E 미증빙 | PR #45 상세·담당·이력 UI |
-| F-401~402 | main 미병합 | **병합완료** (main `527e042`) | PR #36 |
-| C04/DASH | 검증완료(격리) | **병합완료** + Preview 수용 미증빙 | PR #42 |
-| GEN | Mock | **Mock + BFF 계약** (유료 차단) | Vite+`api/ai/generate` |
-| AI-REV | 설계만 | **Mock 코드완료** · DB 027 미적용 · 실 LLM 미연결 | `/ai-review` |
-| main | 미착수 | Phase A **병합완료** · #45 **미병합** | GitHub |
-| Sonar #30/#36 | FAIL 차단 | **병합 후 해소/예외 처리됨** (역사 FAIL은 보존) | merged PRs |
+| F-105 | 코드완료(브랜치) | **병합완료** · Preview E2E 미증빙 | PR #45 → main |
+| F-401~402 | 병합완료 | **병합완료** 유지 | PR #36 |
+| C04/DASH | 병합완료 | **병합완료** + Preview 수용 미증빙 | PR #42 |
+| GEN | Mock + BFF | **Mock + BFF 계약** (유료 차단) · main | Vite+`api/ai/generate` |
+| AI-REV | Mock 코드완료(브랜치) | **Mock 병합완료(main)** · 027 호스티드 미적용 · 실 LLM 미연결 | `/ai-review` |
+| main | #45 미병합 | Phase A+#45 **병합완료** `f780691` | GitHub |
+| Sonar #30/#36/#45 | — | #45 Sonar Security A 통과 후 병합 | CI |
 
 ---
 
@@ -58,7 +58,7 @@
 |---|---|---|---|
 | F-501~504 | 큐·워커·검수실행·취소 | 설계만 | ADR-002, P1-5 |
 | F-601~603 | 보고서·수락·브리핑 | 설계만 | PR #28 |
-| AI-REV | 기획 검수 직원 | 설계만 | PR #28/#31 IMP-07 |
+| AI-REV | 기획 검수 직원 | **Mock 병합완료(main)** · 027 호스티드 미적용 | `/ai-review` · PR #45 |
 | AI-PM | 실제 AI PM 실행 | 설계만 | 사람 PM과 구분 필수 |
 | AI-HIRE | 채용·모델·등급·성향 | 설계만 | AI_STAFF_* specs |
 | AI-CAREER | 경력·동의·승급 | 설계만 | VERIFIED_EXPERIENCE_* |
@@ -72,11 +72,11 @@
 | MIG-001~026 | Preview DB 적용 | 검증완료(격리) |
 | MIG-ops | 운영 DB | 미착수 (read-only도 미실시) |
 | Preview | planos-preview.vercel.app | 검증완료(격리) |
-| main | 병합 | 미착수 |
+| main | 병합 | **완료** `f780691` (#45 포함) |
 | Production | 배포 | 미착수 |
 | Sonar #42 | OK | 검증완료 |
-| Sonar #36 | FAIL 중복 9% | 차단 |
-| Sonar #30 | FAIL security | 차단 |
+| Sonar #36/#30 | 역사 FAIL → 병합 후 해소 | 검증완료(병합) |
+| Sonar #45 | Security A | 검증완료(병합) |
 
 ---
 

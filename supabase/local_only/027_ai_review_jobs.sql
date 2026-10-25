@@ -15,6 +15,8 @@ create table if not exists public.ai_review_jobs (
   parent_review_job_id uuid references public.ai_review_jobs(id) on delete set null,
   source_task_id uuid references public.project_tasks(id) on delete set null,
   accepted_finding_task_ids jsonb not null default '{}'::jsonb,
+  source_manifest jsonb not null default '[]'::jsonb,
+  insufficient_input boolean not null default false,
   row_version integer not null default 0 check (row_version >= 0),
   error_message text,
   created_by uuid references auth.users(id) on delete set null,
@@ -32,6 +34,12 @@ create table if not exists public.ai_review_findings (
   id uuid primary key default gen_random_uuid(),
   job_id uuid not null references public.ai_review_jobs(id) on delete cascade,
   severity text not null check (severity in ('info','warning','blocker')),
+  category text not null default 'missing' check (category in (
+    'missing','inconsistent','untestable','permission_or_approval','failure_recovery'
+  )),
+  reviewer_state text not null default 'proposed' check (reviewer_state in (
+    'proposed','source_validated','human_confirmed','human_rejected','needs_review'
+  )),
   summary text not null,
   document_id uuid not null,
   document_type text not null,
@@ -45,6 +53,16 @@ create table if not exists public.ai_review_findings (
     start_offset is null or end_offset is null or end_offset >= start_offset
   )
 );
+
+-- Idempotent upgrades when create-table already existed without MVP columns
+alter table public.ai_review_jobs
+  add column if not exists source_manifest jsonb not null default '[]'::jsonb;
+alter table public.ai_review_jobs
+  add column if not exists insufficient_input boolean not null default false;
+alter table public.ai_review_findings
+  add column if not exists category text not null default 'missing';
+alter table public.ai_review_findings
+  add column if not exists reviewer_state text not null default 'proposed';
 
 create index if not exists ai_review_findings_job_idx
   on public.ai_review_findings (job_id);
@@ -128,6 +146,13 @@ create policy ai_review_finding_tasks_editors_insert on public.ai_review_finding
 revoke update, delete on public.ai_review_finding_tasks from authenticated, anon;
 
 -- CAS write: bump row_version only when expected matches
+drop function if exists public.cas_ai_review_job(
+  uuid, integer, text, uuid, uuid, uuid, jsonb, text
+);
+drop function if exists public.cas_ai_review_job(
+  uuid, integer, text, uuid, uuid, uuid, jsonb, text, jsonb, boolean
+);
+
 create or replace function public.cas_ai_review_job(
   p_id uuid,
   p_expected_version integer,
@@ -136,7 +161,9 @@ create or replace function public.cas_ai_review_job(
   p_parent_review_job_id uuid default null,
   p_source_task_id uuid default null,
   p_accepted_finding_task_ids jsonb default null,
-  p_error_message text default null
+  p_error_message text default null,
+  p_source_manifest jsonb default null,
+  p_insufficient_input boolean default null
 ) returns public.ai_review_jobs
 language plpgsql
 security invoker
@@ -153,6 +180,8 @@ begin
     source_task_id = coalesce(p_source_task_id, j.source_task_id),
     accepted_finding_task_ids = coalesce(p_accepted_finding_task_ids, j.accepted_finding_task_ids),
     error_message = coalesce(p_error_message, j.error_message),
+    source_manifest = coalesce(p_source_manifest, j.source_manifest),
+    insufficient_input = coalesce(p_insufficient_input, j.insufficient_input),
     row_version = j.row_version + 1,
     updated_at = now()
   where j.id = p_id
@@ -169,10 +198,10 @@ end;
 $$;
 
 revoke all on function public.cas_ai_review_job(
-  uuid, integer, text, uuid, uuid, uuid, jsonb, text
+  uuid, integer, text, uuid, uuid, uuid, jsonb, text, jsonb, boolean
 ) from public;
 grant execute on function public.cas_ai_review_job(
-  uuid, integer, text, uuid, uuid, uuid, jsonb, text
+  uuid, integer, text, uuid, uuid, uuid, jsonb, text, jsonb, boolean
 ) to authenticated;
 
 -- Idempotent bind finding → task (returns existing on conflict)

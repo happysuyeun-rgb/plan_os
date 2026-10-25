@@ -83,6 +83,8 @@ const finding = await rest('editor', 'POST', 'ai_review_findings', {
   id: findingId,
   job_id: jobId,
   severity: 'warning',
+  category: 'inconsistent',
+  reviewer_state: 'source_validated',
   summary: 'gap',
   document_id: randomUUID(),
   document_type: 'prd',

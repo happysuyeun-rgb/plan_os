@@ -20,6 +20,8 @@ test('review job allows the human-approval happy path', () => {
     findings: [{
       id: 'f-1',
       severity: 'warning',
+      category: 'inconsistent',
+      reviewerState: 'source_validated',
       summary: '목표 사용자 불일치',
       citation: {
         documentId: 'd-1',
@@ -29,10 +31,15 @@ test('review job allows the human-approval happy path', () => {
         rationale: '인터뷰는 개인 사용자를 가리킴',
       },
     }],
+    sourceManifest: [{ documentId: 'd-1', documentType: 'prd', revisionOrVersion: 2 }],
+    insufficientInput: false,
   })
   job = transitionReviewJob(job, 'accepted')
   assert.equal(job.status, 'accepted')
   assert.equal(job.findings[0].citation.quote.includes('기업'), true)
+  assert.equal(job.findings[0].category, 'inconsistent')
+  assert.equal(job.sourceManifest?.length, 1)
+  assert.equal(job.insufficientInput, false)
 })
 
 test('illegal and terminal transitions throw', () => {

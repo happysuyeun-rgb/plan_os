@@ -5,7 +5,14 @@
  */
 
 import { supabase } from '../supabase'
-import type { ReviewFinding, ReviewJob, ReviewJobStatus } from './reviewJob'
+import type {
+  ReviewFinding,
+  ReviewFindingCategory,
+  ReviewerState,
+  ReviewJob,
+  ReviewJobStatus,
+  SourceManifestEntry,
+} from './reviewJob'
 import { ReviewJobConflictError, type ReviewJobStoreBag } from './browserReviewJobStore'
 
 type JobRow = {
@@ -16,6 +23,8 @@ type JobRow = {
   parent_review_job_id: string | null
   source_task_id: string | null
   accepted_finding_task_ids: Record<string, string> | null
+  source_manifest: SourceManifestEntry[] | null
+  insufficient_input: boolean | null
   row_version: number
   error_message: string | null
   created_at: string
@@ -26,6 +35,8 @@ type FindingRow = {
   id: string
   job_id: string
   severity: ReviewFinding['severity']
+  category: ReviewFindingCategory | null
+  reviewer_state: ReviewerState | null
   summary: string
   document_id: string
   document_type: string
@@ -42,6 +53,8 @@ function rowToJob(row: JobRow, findings: ReviewFinding[]): ReviewJob {
     projectId: row.project_id,
     status: row.status,
     findings,
+    sourceManifest: row.source_manifest ?? undefined,
+    insufficientInput: row.insufficient_input ?? undefined,
     linkedTaskId: row.linked_task_id ?? undefined,
     parentReviewJobId: row.parent_review_job_id ?? undefined,
     sourceTaskId: row.source_task_id ?? undefined,
@@ -58,6 +71,8 @@ function findingToRow(jobId: string, f: ReviewFinding): Omit<FindingRow, 'job_id
     id: f.id,
     job_id: jobId,
     severity: f.severity,
+    category: f.category,
+    reviewer_state: f.reviewerState,
     summary: f.summary,
     document_id: f.citation.documentId,
     document_type: f.citation.documentType,
@@ -73,6 +88,8 @@ function rowToFinding(row: FindingRow): ReviewFinding {
   return {
     id: row.id,
     severity: row.severity,
+    category: row.category ?? 'missing',
+    reviewerState: row.reviewer_state ?? 'proposed',
     summary: row.summary,
     citation: {
       documentId: row.document_id,
@@ -105,6 +122,8 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
   }
 
   async putCas(job: ReviewJob, expectedVersion: number): Promise<ReviewJob> {
+    // Keep RPC args compatible with both pre/post-MVP CAS signatures (PostgREST cache).
+    // Manifest fields are patched via table UPDATE after CAS.
     const { data, error } = await supabase.rpc('cas_ai_review_job', {
       p_id: job.id,
       p_expected_version: expectedVersion,
@@ -121,15 +140,31 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
       }
       throw error
     }
-    const row = data as JobRow
-    if (job.findings.length > 0) {
+    await this.patchJobMeta(job)
+    // Findings are written once at awaiting_human; re-insert on accept would PK-conflict
+    // (027 revokes UPDATE, so upsert-update is unavailable).
+    if (job.status === 'awaiting_human' && job.findings.length > 0) {
       await this.replaceFindings(job.id, job.findings)
     }
     const findings = await loadFindings(job.id)
-    return rowToJob(row, findings)
+    const fresh = await this.get(job.id)
+    if (!fresh) {
+      return rowToJob(data as JobRow, findings)
+    }
+    return { ...fresh, findings }
+  }
+
+  private async patchJobMeta(job: ReviewJob): Promise<void> {
+    if (job.sourceManifest === undefined && job.insufficientInput === undefined) return
+    const patch: Record<string, unknown> = {}
+    if (job.sourceManifest !== undefined) patch.source_manifest = job.sourceManifest
+    if (job.insufficientInput !== undefined) patch.insufficient_input = job.insufficientInput
+    const { error } = await supabase.from('ai_review_jobs').update(patch).eq('id', job.id)
+    if (error) throw error
   }
 
   private async insertNew(job: ReviewJob): Promise<ReviewJob> {
+    // Insert classic columns only — MVP meta patched after (PostgREST schema-cache safe).
     const { data, error } = await supabase
       .from('ai_review_jobs')
       .insert({
@@ -146,17 +181,21 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
       .select('*')
       .single()
     if (error) throw error
-    if (job.findings.length > 0) {
+    await this.patchJobMeta(job)
+    if (job.status === 'awaiting_human' && job.findings.length > 0) {
       await this.replaceFindings(job.id, job.findings)
     }
     const findings = await loadFindings(job.id)
-    return rowToJob(data as JobRow, findings)
+    const fresh = await this.get(job.id)
+    return fresh ?? rowToJob(data as JobRow, findings)
   }
 
   private async replaceFindings(jobId: string, findings: ReviewFinding[]): Promise<void> {
-    // Findings are append-mostly; for awaiting_human we upsert by id.
+    // INSERT only — 027 revokes UPDATE on findings, so upsert(ON CONFLICT DO UPDATE) fails.
     const rows = findings.map((f) => findingToRow(jobId, f))
-    const { error } = await supabase.from('ai_review_findings').upsert(rows, { onConflict: 'id' })
+    const { error } = await supabase
+      .from('ai_review_findings')
+      .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
     if (error) throw error
   }
 
