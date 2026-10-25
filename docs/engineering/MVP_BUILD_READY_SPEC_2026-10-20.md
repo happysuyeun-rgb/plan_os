@@ -68,9 +68,10 @@ S1은 이전 Phase 0의 데이터 유실 결함과 **별도 브랜치에서 병�
 - `POST /api/v1/projects/:p/contracts` 201: owner 서명 전 draft만; 입력 검증. (**TARGET** · Mock=`review_only`)
 - `POST /api/v1/projects/:p/contracts/:id/accept` 200: owner JWT, terms_digest, manifest_digest, two caps/통화/만료, consent digest; 서버 원자적 고정. (**TARGET**)
 - `POST /api/v1/projects/:p/plans` 201: 사람 편집용 무과금 초안. **CURRENT≈`create_pm_plan`**(REST 아님).
-- `POST /api/v1/projects/:p/plans/:id/submit` 200: **TARGET.** CURRENT=`transition_pm_plan(request_approval)` → `pm_plan_approval_events`.
-- `POST /api/v1/projects/:p/approvals/:id/decide` 200: **TARGET.** CURRENT PM=`transition_pm_plan(approve|reject|needs_revision)`. **MVP에 editor 위임(delegation) 기능·테이블 없음.**
-- `POST /api/v1/projects/:p/runs` 202 · cancel · artifacts GET/acceptance: **전부 TARGET** (`ai_runs`/`ai_artifacts` DDL 없음). CURRENT Mock 수락=`acceptFindingAsTask`(version/digest 바인딩 없음).
+- `POST /api/v1/projects/:p/plans/:id/submit` 200 (**API-06 정본**): 계획 버전 고정·서버 승인 요청 생성. CURRENT=`transition_pm_plan(request_approval)`. ~~`…/plans/:id/approve`~~ 폐기 → 결정은 API-20.
+- `POST /api/v1/projects/:p/approvals/:id/decide` 200 (**API-20 정본** · 계획·고위험 승인 결정): CURRENT PM=`transition_pm_plan(approve|reject|needs_revision)`. **MVP에 editor 위임 없음.**
+- `POST /api/v1/projects/:p/artifacts/:id/accept` 200 (**API-22 정본**): owner + artifact version/digest. ~~`…/acceptance` POST~~ 폐기. GET `…/acceptance`는 조회 전용(선택).
+- `POST /api/v1/projects/:p/runs` 202 · cancel · artifacts GET: **TARGET** (`ai_runs`/`ai_artifacts` DDL 없음). CURRENT Mock 수락=`acceptFindingAsTask`(digest CAS 없음).
 
 **오류:** 401 unauthenticated, 403 명백한 역할 거부, 404 테넌트 리소스 부재 마스킹, 409 version/payload conflict, 412 동의/승인 누락, 422 상태 전이 금지, 429 예산 부족, 503 provider 장애. 같은 요청키+같은 payload는 동일 응답/리소스, 다른 payload는 409.
 
