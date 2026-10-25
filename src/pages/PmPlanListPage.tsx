@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { useMemberStore } from '../store/memberStore'
@@ -62,6 +63,8 @@ export default function PmPlanListPage() {
           </button>
         )}
       </div>
+
+      <DualEntryLaneNotice projectId={projectId} lane="human-pm" />
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {!ready && !error && <p role="status">계획을 불러오는 중...</p>}

@@ -211,9 +211,21 @@ try {
   )
   const editorHire = page.getByTestId('ai-review-hire')
   await editorHire.waitFor({ state: 'visible', timeout: 15000 })
-  if (await editorHire.isEnabled()) {
-    await editorHire.click()
+  // Owner may have left a SERVER job; hydrate can disable hire after first paint (TOCTOU).
+  const hireAlreadyDisabled = await page
+    .waitForFunction(
+      () => document.querySelector('[data-testid="ai-review-hire"]')?.disabled === true,
+      { timeout: 5000 },
+    )
+    .then(() => true)
+    .catch(() => false)
+  if (!hireAlreadyDisabled && (await editorHire.isEnabled())) {
+    await editorHire.click({ timeout: 5000 }).catch(() => undefined)
   }
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="ai-review-hire"]')?.disabled === true,
+    { timeout: 10000 },
+  )
   assert.equal(await editorHire.isDisabled(), true)
   assert.equal(await page.getByTestId('ai-review-run').isDisabled(), false)
   console.log('PASS editor can hire/run')
