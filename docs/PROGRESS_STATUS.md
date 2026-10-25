@@ -48,8 +48,11 @@
 ### 남은 P0/P1 (2026-10-25)
 
 - **P0:** Preview 호스티드 E2E 전수 · 운영 009/010≡013/014 **읽기 전용** 확인
-- **P1:** **(명시 승인 후)** Gate A-027 Preview 적용 — 런북 [`PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md`](./plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md) · 실 LLM · AI PM(E)
+- **P1 (코드·게이트 문서, DB/과금 없이):** AI 채용·AI PM(E) Mock · Gate C-LLM 런북 [`PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md`](./plans/PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md)
+- **P1-말미 (명시 승인):** Gate A-027 Preview 027 — 런북 [`PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md`](./plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md) · 유료 LLM 키/캡 · Production
 - **P2:** 인력사무소 · 서버 스토어 프로덕션 경로
+
+> **정책 (2026-10-25):** 호스티드 DB(027) 적용은 **개발 완료 후 맨 마지막**에 해도 된다. 그 전엔 browser Mock·placeholder BFF로 기능을 이어간다.
 
 ## 2026-10-19 최신 검수 스냅샷 (역사 보존 · 위 정본보다 우선하지 않음)
 
