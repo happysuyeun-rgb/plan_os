@@ -7,7 +7,7 @@ import {
   prototypeTaskRepository, permittedTransition,
   type PrototypeTask, type TaskStatus,
 } from '../lib/taskPrototype'
-
+import { formatTaskAssigneeDisplay, getTaskAiAssignee } from '../lib/taskAiAssigneeMock'
 import { listServerTasks, createServerTask, patchServerTask, TaskConflictError } from '../lib/api/projectTasks'
 
 const useServerTasks = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
@@ -249,7 +249,13 @@ export default function ProjectTasksPage() {
                     </h3>
                     {task.objective && <p className="mt-2 whitespace-pre-wrap text-sm">{task.objective}</p>}
                     {task.acceptanceCriteria.length > 0 && <ul className="mt-2 list-disc pl-5 text-sm" aria-label="업무 완료 기준">{task.acceptanceCriteria.map((v, i) => <li key={i}>{v}</li>)}</ul>}
-                    <p className="mt-1 text-xs text-gray-500">담당: {assigneeLabel(task.assigneeId)}</p>
+                    <p className="mt-1 text-xs text-gray-500" data-testid="task-list-assignee">
+                      담당:{' '}
+                      {formatTaskAssigneeDisplay(
+                        projectId ? getTaskAiAssignee(projectId, task.id).kind : 'human',
+                        assigneeLabel(task.assigneeId),
+                      )}
+                    </p>
                     <p className="mt-1">
                       <Link to={`/projects/${projectId}/tasks/${task.id}`} className="text-sm text-indigo-700 hover:underline">
                         상세·이력 보기
