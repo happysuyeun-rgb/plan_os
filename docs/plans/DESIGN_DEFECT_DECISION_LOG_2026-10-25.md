@@ -1,6 +1,6 @@
 # 설계·코드 결함 및 결정 로그
 
-**작성·수정일:** 2026-10-25 · **버전:** v1.1 (R2 추가 검수 반영)  
+**작성·수정일:** 2026-10-26 · **버전:** v1.2 (최종 검수 잔여 3항)  
 **작업 브랜치:** `fix/planos-f105-docs-align-20261025` (PR #59 · 1차+2차 문서 정합)  
 **금지:** 운영 DB mig · 유료 LLM · Production · 임의 main 병합
 
@@ -89,7 +89,14 @@
 | viewer/editor Mock vs TARGET RBAC 잠금 | DEC-RBAC-01 대기 |
 | placeholder 프로젝트 생성 로컬 가드 | 잔여 (REMAINING 1-B) |
 | FD-06 done 재오픈 | 미구현 |
-| RLS 실측·침투 | 0건 |
+| RLS·보안 검증 | **구분 필수** — 아래 §D.1 |
+
+### D.1 RLS / 보안 검증 상태 (혼동 금지)
+
+| 구분 | 범위 | 상태 (PR #59 기준) |
+|---|---|---|
+| **일회용 Supabase CI** | workflow `RLS Auth/JWT/PostgREST - disposable local Supabase` · job `auth-postgrest-integration` | **PASS** (제한된 Auth/JWT/PostgREST 회귀). 운영 DB·전체 역할 매트릭스·침투 ≠ 이 결과 |
+| **전체 보안 검증** | AUTH-01~12 전수, 운영/Preview RLS 재현, 침투(TM), service_role 우회, 유료 레인 RBAC | **미완료** — 「RLS 실측 0건」은 이 행만 의미. CI PASS를 보안 완료로 오인 금지 |
 
 ---
 
@@ -99,3 +106,4 @@
 |---|---|
 | 2026-10-25 | 초판: F105-01/02 수정, 상태·권한·추적 산출물, 핵심 문서 CURRENT/TARGET 정합 |
 | 2026-10-25 | v1.1: IT박사 2차(R2) API·DM·RBAC·TF·OPS 문서 반영 · 통합 해결표 |
+| 2026-10-26 | v1.2: blocked_recon 과금 문구 · API-06/20/22 정본 · RLS CI vs 전체검증 구분 |
