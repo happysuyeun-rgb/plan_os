@@ -1,11 +1,11 @@
 # PlanOS 3.0 — 권한·승인 정책 매트릭스
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** TARGET 정책 초안 / 보안 검토·DB 재현 전  
-**상위 기준:** [PRD](PRD.md) · [업무 흐름](TASK_FLOWS.md) · [화면 명세](../ux/SCREEN_SPEC.md)  
-**범위:** 사람 계정, AI 서비스 계약, PM/전문 AI 도구 실행의 서버 권한. 현재 RLS가 이를 충족한다는 의미는 아님.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** TARGET 정책 + **CURRENT 매트릭스 링크** / 보안 검토·DB 재현 전  
+**상위 기준:** [PRD](PRD.md) · [PERMISSION_MATRIX CURRENT](../plans/PERMISSION_MATRIX_2026-10-25.md) · [SCREEN_SPEC](../ux/SCREEN_SPEC.md)  
+**범위:** TARGET=실계약·실실행. CURRENT Mock 검수는 owner\|editor accept (`reviewAccess.ts`) — 유료화 시 owner-only 잠금은 DEC-RBAC-01. outsider=비멤버 null.
 
 ## 1. 권한 결정 원칙
 1. **기본 거부(default deny):** 인증·프로젝트 멤버십·계약·도구·승인·예산 중 하나라도 검증되지 않으면 실행하지 않는다.

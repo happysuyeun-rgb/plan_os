@@ -115,7 +115,8 @@ node --test ./tests/ai-staff-catalog-mock.test.mjs ./tests/specialist-review-han
 - F-302 실계약 · F-303 예산 원장 · 유료 LLM  
 - Preview 호스티드 027 적용 후 전수 E2E (Gate A-027)  
 - Production  
-- AI PM이 사람 PM(`/plans`)을 대체하는 UX
+- AI PM이 사람 PM(`/plans`)을 대체하는 UX  
+- **F-105 AI 담당 Mock**(`assignee kind=agent`) — 업무 메타데이터일 뿐이며 본 fixture의 채용·검수·실행과 **동일시하지 않음**
 
 ---
 

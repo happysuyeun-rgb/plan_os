@@ -1,11 +1,11 @@
 # PlanOS 3.0 × AI 인력사무소 — 사용자 업무 흐름 TF-01~30
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** 30개 업무 흐름 정의 초안 / UX·정책 검토 전  
-**상위 기준:** [통합 PRD v0.1](PRD.md)  
-**범위:** TARGET 요구사항. 현재 구현 완료/실행 검증을 의미하지 않음.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** TARGET TF 유지 · CURRENT 매핑은 [FEATURE_TRACEABILITY](../plans/FEATURE_TRACEABILITY_2026-10-25.md)  
+**상위 기준:** [PRD](PRD.md) · [DUAL_ENTRY](DUAL_ENTRY_CONTINUOUS_AI_STAFFING_2026-10-21.md)  
+**범위:** TARGET 요구. Mock·사람 PM·S1 CURRENT와 1:1 완료를 의미하지 않음. Solo/AI Team 상호배타 해석 금지.
 
 ## 공통 표기 및 수용 기준
 - 모든 TF는 **진입 조건 → 사용자/시스템 행동 → 산출 상태 → 실패/복구 → 권한·비용**을 포함한다.

@@ -1,11 +1,11 @@
 # PlanOS 3.0 — API 계약 명세 (TARGET)
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** 설계 초안 / 엔드포인트 구현·서버 테스트 전  
-**상위 문서:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [아키텍처](ARCHITECTURE.md) · [데이터 모델](DATA_MODEL.md)  
-**주의:** 모든 `/api/v1/...`는 **제안 URL**이다. 기존 React/Supabase API를 대체하거나 현재 서버에 존재한다는 의미가 아니다.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** TARGET REST 초안 / 대부분 미구현 · CURRENT는 Supabase client·Vite BFF Mock  
+**상위 문서:** [MVP_BUILD_READY](MVP_BUILD_READY_SPEC_2026-10-20.md) · [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md)  
+**주의:** `/api/v1/...`는 **제안**. CURRENT S1은 `projectTasks.ts` PostgREST, PM은 `pmPlans`, 검수는 review store/BFF placeholder.
 
 ## 1. API 기본 규칙
 - **인증:** Supabase 사용자 세션 검증 후 서버가 `actor_id` 산출. 요청 body의 user_id/owner_id를 신뢰하지 않음.

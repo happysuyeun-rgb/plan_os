@@ -60,7 +60,7 @@ export default function ProjectTaskDetailPage() {
         const found = items.find((item) => item.id === taskId) ?? null
         setTask(found)
         setAssigneeDraft(found?.assigneeId ?? '')
-        setAssigneeKindDraft(getTaskAiAssignee(projectId, taskId).kind)
+        setAssigneeKindDraft(getTaskAiAssignee(userId, projectId, taskId).kind)
         if (!found) setError('업무를 찾을 수 없습니다.')
       })
       .catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
@@ -155,13 +155,14 @@ export default function ProjectTaskDetailPage() {
     setSaving(true)
     setError('')
     try {
-      writeTaskAiAssignee(projectId, taskId, {
-        kind,
-        agentRoleId: kind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
-      })
+      // F105-01: persist durable task first; write Mock kind only after success.
       if (useServerTasks && 'version' in task) {
         const updated = await patchServerTask(projectId, taskId, task.version, {
           assigneeId: nextId,
+        })
+        writeTaskAiAssignee(userId, projectId, taskId, {
+          kind,
+          agentRoleId: kind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
         })
         setTask(updated)
         setAssigneeDraft(updated.assigneeId ?? '')
@@ -182,6 +183,10 @@ export default function ProjectTaskDetailPage() {
             : item,
         )
         await prototypeTaskRepository.replace(userId, projectId, nextItems)
+        writeTaskAiAssignee(userId, projectId, taskId, {
+          kind,
+          agentRoleId: kind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
+        })
         setTask(nextItems.find((item) => item.id === taskId) ?? null)
         setAssigneeDraft(nextId ?? '')
         setAssigneeKindDraft(kind)
@@ -243,7 +248,9 @@ export default function ProjectTaskDetailPage() {
             <p className="text-sm text-gray-700" data-testid="task-detail-assignee-summary">
               담당:{' '}
               {formatTaskAssigneeDisplay(
-                projectId && taskId ? getTaskAiAssignee(projectId, taskId).kind : 'human',
+                userId && projectId && taskId
+                  ? getTaskAiAssignee(userId, projectId, taskId).kind
+                  : 'human',
                 assigneeLabel(task.assigneeId),
               )}
             </p>

@@ -121,10 +121,14 @@
 - **추가 역할:** 첫 E2E 검증 후 확장. 화면상 인원 수만 늘리는 방식 금지.
 
 ### 6.2 업무 상태와 계약 상태
-- 업무: `draft → planned → awaiting_approval → queued → running → verifying → awaiting_acceptance → accepted`.
-- 예외: `blocked / failed / cancelled / rejected / needs_revision`. 각 전이는 서버 권한과 멱등성 검증 대상.
-- 서비스 계약: `draft → accepted → active → suspended/expired/terminated`. 계약 종료 시 신규 실행 중단, 진행 중 작업의 취소·정산·증빙 보존 규칙 적용.
-- **정확한 DB enum·전이표는 Phase 1 설계에서 확정.** 본 문서의 상태는 제품 요구 수준의 제안.
+- **리소스별 상태 (2026-10-25 canonical):** [STATUS_VOCABULARY_2026-10-25](../plans/STATUS_VOCABULARY_2026-10-25.md).
+- **사람 업무 CURRENT:** `todo → in_progress → in_review → done` (+ `blocked`). 구 서술 `draft/planned/awaiting_approval/…` 혼합은 **폐기**.
+- **사람 PM CURRENT:** `draft → pending_owner_approval → approved|rejected|needs_revision`.
+- **AI 검수 Mock CURRENT:** `queued → running → awaiting_human → accepted|rejected|failed`.
+- **계약 TARGET:** `draft → active → revoked|expired` (실화면 미구현). 화면 별칭 `accepted`는 사건.
+- 각 전이는 서버 권한·멱등성 대상(실계약/실실행은 승인 후).
+- **AI PM vs 사람 PM:** MVP CURRENT는 사람 PM `/plans` + 검수 Mock `/ai-review`. 유료 AI PM 자율 계획은 TARGET.
+- **이중진입:** [DUAL_ENTRY](DUAL_ENTRY_CONTINUOUS_AI_STAFFING_2026-10-21.md) — Solo/AI Team 상호배타 해석 금지.
 
 ## 7. 정책과 안전장치
 

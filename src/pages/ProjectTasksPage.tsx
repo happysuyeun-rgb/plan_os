@@ -252,7 +252,9 @@ export default function ProjectTasksPage() {
                     <p className="mt-1 text-xs text-gray-500" data-testid="task-list-assignee">
                       담당:{' '}
                       {formatTaskAssigneeDisplay(
-                        projectId ? getTaskAiAssignee(projectId, task.id).kind : 'human',
+                        userId && projectId
+                          ? getTaskAiAssignee(userId, projectId, task.id).kind
+                          : 'human',
                         assigneeLabel(task.assigneeId),
                       )}
                     </p>

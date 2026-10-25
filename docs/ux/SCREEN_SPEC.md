@@ -1,22 +1,30 @@
 # PlanOS 3.0 × AI 인력사무소 — 화면별 기능명세서
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** TARGET 화면 기능명세 초안 / 정책·개발 검토 전  
-**상위 문서:** [PRD](../product/PRD.md) · [TF-01~30](../product/TASK_FLOWS.md) · [IA](IA.md)  
-**범위:** MVP 핵심 9개 화면 상세 + 잔여 14개 화면의 통합/후속 방침. 아래 UI/API는 목표 정의이며 구현 완료가 아님.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** TARGET 상세 + **CURRENT 구현 경로 명시** / 정책·개발 검토  
+**상위 문서:** [PRD](../product/PRD.md) · [TF](../product/TASK_FLOWS.md) · [IA v0.3](IA.md) · [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md)  
+**범위:** 아래 N* `/workspace`·계약·실행 URL은 **TARGET**. CURRENT 구현은 IA C12~C20 (`/projects/.../tasks|plans|specialists|ai-review`).
+
+### CURRENT 핵심 화면 (구현) — 상세 필드 요약
+| ID | URL | 주요 필드·버튼 | 오류·복구 | 비고 |
+|---|---|---|---|---|
+| C12 | `/projects/:id/tasks` | 제목·목표·criteria·사람 담당·상태·삭제(owner) | 권한·저장 실패 | 상태 필터·역할 열은 부분 |
+| C13 | `/projects/:id/tasks/:taskId` | 상태·**담당 유형 human\|agent(F-105 Mock)**·이력 | 409 CAS·이력 로드 실패 | agent≠실행; specialists 링크 |
+| C14~15 | `/specialists` `…/request` | 1종 카드·초안·모의검토 | owner-only·접근 불가 | 결제/실행 CTA 없음 |
+| C16 | `/ai-review` | hire·문서선택·run·accept·수정요청 | unpaid 배너 | editor accept CURRENT |
+| C17~19 | `/plans`… | 사람 PM 초안·승인/반려/needs_revision | 버전 충돌 | AI PM 아님 |
 
 ## 1. 공통 설계 계약
 
 ### 1.1 공통 화면 상태
-- `loading`: 스켈레톤·재시도 금지. `empty`: 최초 행동 CTA. `error`: 실패 원인과 재시도. `forbidden`: 접근 불가 안내, 민감 내용 노출 금지. `not-found`: 존재하지 않는 ID 안내.
-- 쓰기 화면은 `pristine / dirty / saving / saved / conflict / error` 구분. 네트워크 오류로 입력 내용을 지우지 않음.
-- AI 실행 상태는 `draft / planned / awaiting_approval / queued / running / verifying / awaiting_acceptance / accepted / blocked / failed / cancelled / rejected / needs_revision`. 서버 상태가 진실의 원천.
-- 위험 작업 승인/거부/취소 버튼은 중복 제출 방지. 요청 중 비활성화, 멱등성 키 부여.
-- 사용량은 `예상/예약/확정/환불` 구분, 화폐/단위/시각 명시. 모델 응답만으로 '완료' 표시 금지.
-- 접근권한은 **서버 재검증**; 프런트 숨김은 보조. `owner/editor/viewer/outsider` 역할 세분화는 후속 권한 명세에서 확정.
-- 각 주요 행위는 `actor_id, project_id, resource_id, timestamp, correlation_id` 감사 로그 연결(데이터 필드명은 제안).
+- `loading` / `empty` / `error` / `forbidden`(민감 비노출) / `not-found`.
+- 쓰기: `pristine / dirty / saving / saved / conflict / error`. 네트워크 오류로 입력 미삭제.
+- **상태 canonical:** [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md). 구 혼용 `awaiting_approval`/`verifying` 금지.
+- 위험 작업 중복 제출 방지. 사용량 예상/예약/확정 구분. 모델만으로 완료 표시 금지.
+- 권한: [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md). outsider=비멤버 null.
+- 감사 로그 필드명은 제안; S1 events는 `project_task_events` CURRENT.
 
 ### 1.2 공통 화면 구성
 - 상단: 프로젝트명·현재 위치·접근 권한·예산 상태.
@@ -37,15 +45,15 @@
 - **수용:** 전환 전후 동일 프로젝트 ID·업무·문서·이력이 유지되고, 기존 `/projects/:projectId/:docType` 링크가 동작.
 
 ### N03 — 공통 업무 보드
-- **URL 후보:** `/workspace/:projectId/tasks` / **TF:** 13~18.
-- **영역:** 상태 컬럼, 담당(사람/AI), 우선순위, 기한, 승인 대기/실행 상태, 산출물 배지.
-- **액션:** 업무 생성/편집/필터/담당 변경, 업무 상세 진입, 승인된 업무 위임.
-- **필드:** title(필수), objective, assignee_type, assignee_id, status, acceptance_criteria, due_at(선택), artifact_refs.
-- **검증:** 제목 공백 금지, 프로젝트 멤버/활성 역할만 담당 가능, 허용된 상태 전이만.
-- **예외:** 동시 편집 충돌, 담당자 탈퇴, 계약 만료, 서버 저장 실패.
-- **수용:** 사람/AI 업무가 하나의 목록에 보이며, AI 업무가 승인 없이 running으로 바뀌지 않음.
+- **URL TARGET:** `/workspace/:projectId/tasks` · **URL CURRENT:** `/projects/:projectId/tasks` (C12) / **TF:** 13~18.
+- **CURRENT 영역:** 목록·생성·인라인 편집·사람 담당·soft-delete(owner)·상세 링크. AI kind 표시(F-105 Mock).
+- **TARGET 추가:** 상태 컬럼 보드, 우선순위·기한·산출물 배지, 승인 대기 열.
+- **필드 CURRENT:** title, objective, acceptance_criteria, assignee_id(human), status; assignee kind는 LS Mock.
+- **검증:** 제목 필수, 활성 멤버만 사람 담당, 허용 상태 전이.
+- **예외:** CAS 충돌, 멤버 탈퇴, 저장 실패. 계약 만료는 TARGET.
+- **수용:** AI kind 지정만으로 running 금지. F-105 ≠ specialists 채용.
 
-### N08 — AI PM 계획·검토
+### N08 — AI PM 계획·검토 (**TARGET** · CURRENT 사람 PM은 C17~C19)
 - **URL 후보:** `/workspace/:projectId/plan` / **TF:** 13~14.
 - **영역:** 프로젝트 목표, 제약, PM 계획 버전, 업무·의존성, 성공 기준, 도구, 비용 예상.
 - **액션:** 계획 초안 생성, 작업 순서/범위 수정, 재생성, 승인 요청, 기존 계획 비교.

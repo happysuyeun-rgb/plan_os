@@ -1,8 +1,9 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `70ca7c5` (#64 병합, 2026-11-02)  
+**기준 tip:** `main` @ `70ca7c5` (#64 병합, 2026-11-02) + 본 브랜치 F-105·설계 정합화  
 **정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**  
-**최신 스냅샷:** [PROGRESS_SNAPSHOT_2026-11-02.md](./PROGRESS_SNAPSHOT_2026-11-02.md)
+**최신 스냅샷:** [PROGRESS_SNAPSHOT_2026-11-02.md](./PROGRESS_SNAPSHOT_2026-11-02.md)  
+**정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md)
 
 ---
 
@@ -40,14 +41,14 @@
 - [x] S1 삭제·복원: UI를 DB(owner 전용)에 맞추기 (#52)
 - [x] S1 감사 이력 API → 화면에 연결 (#57 · 주체 표시·로드 실패 고지)
 - [x] S2 manifest ↔ 검수 실행 전 재검증 (#61)
-- [x] S1 AI 담당 지정 UI (F-105 Mock) (본 PR · 브라우저 메타만, 실행/DB mig 없음)
+- [x] S1 AI 담당 지정 UI (F-105 Mock) (브라우저 메타 · F105-01/02 정합 · 실행/DB mig 없음)
 - [ ] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소)
 
 ### 1-C. 품질·회귀
 
 - [ ] 전체 `npm run lint` 잔여 오류 정리
 - [ ] 번들 분할(청크 과대)
-- [x] PROGRESS / DUAL_ENTRY 문서의 “#25 보류” 등 구식 표기 → #49~#51 반영
+- [x] PROGRESS / DUAL_ENTRY 문서의 “#25 보류” 등 구식 표기 → #49~#51 반영 (본 PR)
 
 ---
 

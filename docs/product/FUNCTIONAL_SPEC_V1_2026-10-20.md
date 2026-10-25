@@ -1,7 +1,8 @@
 # PlanOS 3.0 × AI 인력사무소 — 통합 기능정의서 v1.0
-작성: 2026-10-20 · 상태: **제품 기준선 초안 / 실코드 대조 진행 중 / 미승인** · 담당: 제품기획 및 개발 통합
+작성: 2026-10-20 · **최종 수정: 2026-10-25 (CURRENT/TARGET 정합화)** · 상태: **제품 기준선 / 실코드 대조 갱신 / 미승인** · 담당: 제품기획 및 개발 통합
 
-> 본 문서는 기능의 단일 추적 기준선이다. 기능 구현·테스트·출시를 구분하며, 코드 검증 없이 완료라고 표시하지 않는다. 기술 수치는 실제 검증 전 확정하지 않는다.
+> 본 문서는 기능의 단일 추적 기준선이다. 기능 구현·테스트·출시를 구분하며, 코드 검증 없이 완료라고 표시하지 않는다.  
+> 상태·권한·화면 추적: [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](../plans/FEATURE_TRACEABILITY_2026-10-25.md) · [결함·결정 로그](../plans/DESIGN_DEFECT_DECISION_LOG_2026-10-25.md).
 
 ## 1. 근거·범위·우선권
 1. 제품 요구: [PRD v0.3](PRD.md), [통합 서비스 기획 v1.0](SERVICE_PLAN_V1_2026-10-20.md).
@@ -11,9 +12,9 @@
 5. 요구 충돌 우선순위: 사용자 확정 결정 > 운영·보안 강제 조건 > 이 문서 기능 계약 > 상세 구현 계획. 충돌 항목은 결정 로그에 보류로 등록한다.
 
 ## 2. 공통 기능 정책
-- 역할: owner(계약·비용·AI 실행 승인·산출물 수락), editor(사람 업무/문서 작업), viewer(읽기), outsider(접근 불가).
-- 프로젝트 안의 자료 및 업무는 `project_id`로 격리. 외부 사용자는 타 프로젝트 존재를 노출하지 않음.
-- 상태: 사람 업무 `todo/in_progress/in_review/blocked/done`. AI 실행 `queued/running/validating/succeeded/failed/cancel_requested/cancelled/blocked_reconciliation`와 분리.
+- 역할 CURRENT: owner / editor / viewer. **outsider = 비멤버(역할 null)** — HTTP 404 마스킹은 TARGET.
+- 프로젝트 안의 자료 및 업무는 `project_id`로 격리. 외부 사용자는 타 프로젝트 존재를 노출하지 않음(목표).
+- 상태: 사람 업무 `todo/in_progress/in_review/blocked/done`. 사람 PM `draft/pending_owner_approval/approved/rejected/needs_revision`. Mock ReviewJob `queued/running/awaiting_human/accepted/rejected/failed`. **TARGET 서버 run** `validating/succeeded/…` 는 Mock과 분리.
 - 쓰기 요청은 재요청 안전성(멱등성), optimistic version/409 충돌 처리, 이벤트 감사, 사용자 오류 복구가 필요.
 - 고객 데이터 외부 전송/유료 AI/배포/운영 DB 변경은 별도 승인 및 법적·원가 조건 확보 전 금지.
 - 완료 판정: 기능 시나리오 실제 E2E + 권한/RLS + 장애/회귀 테스트를 통과해야 **검증 완료**.
@@ -32,14 +33,14 @@
 | F-102 | S1 | 담당자 배정·업무 수정 | owner/editor | 활성 멤버 ID 및 접근권한 검증, version CAS | 권한 변경/409 | 경쟁 변경 덮어쓰기 없음 | 코드작성-통합미검증 |
 | F-103 | S1 | 상태 전이·차단 사유 | owner/editor | todo→in_progress→in_review→done, blocked→in_progress | 무효 상태/사유 미입력 | 서버에서 불법 전이 차단 | 코드작성-통합미검증 |
 | F-104 | S1 | 소프트 삭제·복원·감사 이력 | owner 삭제/복원, 멤버 이력 조회 | 삭제 시 원본 보존, 변경 주체/시간/버전 이벤트 | 이력 위조/무단 복원 | DB/브라우저 회귀 | 코드작성-통합미검증 |
-| F-105 | S1 | 성공기준·AI 담당·작업 상세 | 역할별 분리 | acceptance criteria, 사람/AI 담당 유형, 산출물 링크 | AI 지정만으로 실행되지 않음 | 상세·저장 E2E | **완료 기준 UI/API/SQL 코드 일부 작성·CI 확인**; AI 담당·업무 상세 및 실제 DB/E2E 미완료 |
-| F-201 | S2 | 감사 대상 프로젝트 문서 선택 | 프로젝트 접근자, 최종 확정 owner | 동일 프로젝트 문서 2종 이상, 목록·수정시각·버전 표시 | 다른 프로젝트/삭제/미저장 문서 | 잘못된 소스 선택 차단 | 설계만 |
-| F-202 | S2 | 입력 자료 버전·해시 고정 | owner 승인 | document ID+digest+revision, 범위/제외 항목 | 변경 발생 시 stale 409 | 실행 전 소스 재검증 | 설계만 |
-| F-301 | S3 | AI 역할 카드·권한 안내 | 프로젝트 접근자 | `requirements_auditor_v1`, 읽기 범위·모델·실제 도구 공개 | 근거 없는 경력/성공률 금지 | 실제 능력만 노출 | 설계만 |
-| F-302 | S3 | 계약 초안·동의·철회·만료 | owner | terms/manifest digest, 외부전송·상한·만료·허용 도구 | 무동의 실행 차단/계약 만료 | 동의 없는 외부 호출 0 | 설계만, 상용정책결정대기 |
-| F-303 | S3 | 예산 한도·예상 비용 고지 | owner | 계획/실행 상한, 비용 예약·확정 분리 | 원가 미확인/상한 초과 | 자동 초과 호출 금지 | 설계만, 공급자정책결정대기 |
-| F-401 | S4 | 무과금 사람 PM 계획 초안 | owner/editor 작성 | 업무 분해, 의존성, 성공기준, 버전 | 오래된 문서/범위 | 계획 초안 저장/재조회 | 설계만 |
-| F-402 | S4 | PM 계획 승인·반려·재수정 | owner 결정 | snapshot/version/digest 바인딩 CAS | 중복 클릭/구버전 승인 | 구버전 승인 무효 | 설계만 |
+| F-105 | S1 | 성공기준·AI 담당·작업 상세 | owner/editor 쓰기, 멤버 읽기 | criteria + **담당 유형 human\|agent Mock**(LS, user 스코프). 산출물 링크는 후속 | AI 지정≠실행·채용·과금. hire는 `/specialists*` | 상세 UI·Mock 저장·단위 테스트 | **CURRENT: 상세·criteria·F-105 Mock UI**; DB `assignee_kind`·실 E2E **미완** |
+| F-201 | S2 | 감사 대상 프로젝트 문서 선택 | 프로젝트 접근자, 최종 확정 owner | 동일 프로젝트 문서 2종 이상, 목록·수정시각·버전 표시 | 다른 프로젝트/삭제/미저장 문서 | 잘못된 소스 선택 차단 | 코드작성-통합미검증 (`/audits/new`) |
+| F-202 | S2 | 입력 자료 버전·해시 고정 | owner 승인 | document ID+digest+revision, 범위/제외 항목 | 변경 발생 시 stale 409 | 실행 전 소스 재검증 | 설계만/부분 |
+| F-301 | S3 | AI 역할 카드·권한 안내 | 프로젝트 멤버 | `requirements_auditor_v1` 1종 카탈로그 Mock | 근거 없는 경력/성공률 금지 | 실제 능력만 노출 | **CURRENT Mock** `/specialists` (#54) · 실도구/모델 미연결 |
+| F-302 | S3 | 계약 초안·동의·철회·만료 | owner | terms/manifest digest… | 무동의 실행 차단 | 동의 없는 외부 호출 0 | **TARGET** · CURRENT는 모의 검토 고지만(`/specialists/request`) |
+| F-303 | S3 | 예산 한도·예상 비용 고지 | owner | 계획/실행 상한… | ₩0 날조 금지 | 자동 초과 호출 금지 | **TARGET** · Mock은 「산정 불가/미정」 |
+| F-401 | S4 | 무과금 사람 PM 계획 초안 | owner/editor 작성 | 업무 분해, 성공기준, 버전 | 오래된 문서/범위 | 저장/재조회 | **CURRENT** `/plans` · AI PM 아님 |
+| F-402 | S4 | PM 계획 승인·반려·재수정 | owner 결정 | version/CAS 고도화 잔여 | 구버전 승인 | 구버전 무효 | **CURRENT UI** · 서버 CAS 강화는 잔여 |
 | F-501 | S5 | 실행 요청·서버 작업 큐 | owner | 활성 계약+승인+예산+자료검증 한 트랜잭션, outbox | 412/429/중복 요청 | 단일 job/예약 | 설계만 |
 | F-502 | S5 | 제한된 AI 문서 검수 수행 | 시스템 worker | 문서 읽기만, 근거 있는 finding 보고서 작성 | 외부 전송 미동의/도구 거부 | 실제 로그·작업 증빙 | 미구현, provider 승인대기 |
 | F-503 | S5 | 실행 상태·취소·재시도 | owner, 허용 열람자 | queued/running/validating 등 서버 상태, lease/attempt | 재시작/타임아웃/결과 불명확 | 중복 실행/과금 방지 | 설계만 |
@@ -52,21 +53,32 @@
 | F-801 | 후속 | 역할 면담·추천·평판·다직군 | 정책 승인 후 | 검증 가능한 실적만 공개 | 허위 광고 | MVP 후 별도 기준 | 후속 범위 |
 
 ## 4. 화면별 기능명세 인덱스
-| 화면 | 경로(목표) | 연결 기능 | 필수 오류·빈 상태 |
+
+### 4.1 CURRENT (구현·Mock)
+
+| 화면 | 경로 | 연결 기능 | 필수 오류·빈 상태 |
 |---|---|---|---|
-| 프로젝트 업무 목록 | `/projects/:projectId/tasks` | F-101~104 | 403/404, 빈 목록, 저장 실패 |
-| 프로젝트 업무 상세 | `/projects/:projectId/tasks/:taskId` | F-102~105 | 409, 수정내역, 삭제/복원 |
-| 감사 소스 선택 | `/projects/:projectId/audits/new` | F-201~202 | 미저장, 삭제·타 프로젝트, stale |
-| 역할·계약 | `/projects/:projectId/contracts/:contractId` | F-301~303 | 동의 전 불가, 비용/만료 |
-| PM 계획 | `/projects/:projectId/plans/:planId` | F-401~402 | 버전 충돌, 반려 사유 |
-| 실행 | `/projects/:projectId/runs/:runId` | F-501~504 | 취소/재시도/재접속 |
-| 결과 보고서 | `/projects/:projectId/artifacts/:artifactId` | F-601~603 | 근거 없음, 구버전 수락 금지 |
+| 업무 목록 | `/projects/:projectId/tasks` | F-101~104 | 빈 목록, 권한, 저장 실패 |
+| 업무 상세 | `/projects/:projectId/tasks/:taskId` | F-102~105 | 409, 이력 로드 실패, F-105≠실행 |
+| AI 카탈로그 Mock | `/projects/:projectId/specialists` | F-301 | 접근 불가, 결제 CTA 없음 |
+| 채용 요청 Mock | `/projects/:projectId/specialists/request` | F-301 | owner-only, 모의검토만 |
+| AI 기획 검수 Mock | `/projects/:projectId/ai-review` | (Mock 검수) | unpaid 배너, editor run/accept CURRENT |
+| 사람 PM | `/projects/:projectId/plans` `…/new` `…/:planId` | F-401~402 | 버전 충돌, 반려 사유 |
+| 감사 소스 | `/projects/:projectId/audits/new` | F-201~202 | 미저장·타 프로젝트 |
+
+### 4.2 TARGET (미구현 라우트 — CURRENT로 오인 금지)
+
+| 화면 | 경로(목표) | 연결 기능 |
+|---|---|---|
+| 역할·계약 | `/projects/:projectId/contracts/:contractId` | F-302~303 |
+| 실행 | `/projects/:projectId/runs/:runId` | F-501~504 |
+| 결과 보고서 | `/projects/:projectId/artifacts/:artifactId` | F-601~603 |
 
 ## 5. 검수/결함/정합성 레지스터
 | ID | 중요도 | 불일치·누락 | 현재 조정 및 차단 기준 |
 |---|---|---|---|
 | FD-01 | P0 | PRD의 `draft/planned/queued/running` 혼합 '업무 상태' vs 구현 사람 업무 5상태 | 사람 업무·계획·실행·산출물 상태를 각각 별도 리소스로 정규화 |
-| FD-02 | P0 | 기획 화면·상세 명세와 S1 현재 업무 UI는 수락기준·AI 담당/상세화 미구현 | F-105 별도 백로그/수용 테스트 필수 |
+| FD-02 | P0→완화 | (구) AI 담당/상세 미구현 | **2026-10-25:** 상세·criteria·F-105 Mock UI 반영. **잔여 P1:** DB `assignee_kind` 영속·브라우저 E2E·산출물 링크 |
 | FD-03 | P0 | 구현 상세의 REST + 멱등성 계약과 Supabase PostgREST 직접 CRUD가 상이 | 서버 보증되는 생성 멱등성·오류/버전 계약 구축 전 REST 계약 완료 금지 |
 | FD-04 | P0 | 마이그레이션 011은 정적 SQL 테스트만 통과; 별도 DB 실행·RLS 불명 | 운영 DB 적용 금지, 격리 DB 검증 필요 |
 | FD-05 | P0 | UI는 flag 기본 off + localStorage, 서버 모드도 실 E2E 미검증 | 브라우저 실제 테스트 후 통합 완료로 승격 |
