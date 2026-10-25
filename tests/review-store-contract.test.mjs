@@ -39,7 +39,8 @@ test('Preview 027 apply runbook is gated and forbids local-only script on hosted
   assert.match(runbook, /FORBIDDEN|금지/)
   assert.match(runbook, /PlanOS-Preview/)
   assert.match(runbook, /VITE_AI_REVIEW_STORE=server/)
-  assert.doesNotMatch(runbook, /db push.*027|migrations\/027/)
+  assert.match(runbook, /db push.*migrations에 027|migrations\/` 승격/)
+  assert.match(runbook, /호스티드 DB에 쓰지 않는다/)
 })
 
 test('server store and pipeline factory wiring', () => {
