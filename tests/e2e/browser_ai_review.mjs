@@ -199,12 +199,24 @@ try {
   assert.equal(await page.getByTestId('ai-review-hire').isDisabled(), true)
   console.log('PASS viewer cannot hire/run')
 
-  // --- Editor: can run ---
+  // --- Editor: can run (hire may already be disabled if owner left a stored job) ---
   await login(page, editorEmail)
   await page.goto(site + `/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
-  await page.getByTestId('ai-review-hire').click()
-  assert.equal(await page.getByTestId('ai-review-hire').isDisabled(), true)
-  console.log('PASS editor can hire')
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="ai-review-store-mode"]')
+      return el && /editor/i.test(el.textContent || '')
+    },
+    { timeout: 20000 },
+  )
+  const editorHire = page.getByTestId('ai-review-hire')
+  await editorHire.waitFor({ state: 'visible', timeout: 15000 })
+  if (await editorHire.isEnabled()) {
+    await editorHire.click()
+  }
+  assert.equal(await editorHire.isDisabled(), true)
+  assert.equal(await page.getByTestId('ai-review-run').isDisabled(), false)
+  console.log('PASS editor can hire/run')
 
   // --- Cross-project: owner of A cannot open B as member ---
   await login(page, ownerEmail)
