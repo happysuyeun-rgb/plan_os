@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { test } from 'node:test'
+
+test('store mode switch contract in factory source', () => {
+  const factory = readFileSync('src/lib/ai/reviewStoreFactory.ts', 'utf8')
+  const server = readFileSync('src/lib/ai/serverReviewJobStore.ts', 'utf8')
+  assert.match(factory, /VITE_AI_REVIEW_STORE/)
+  assert.match(factory, /REVIEW_STORE_MODE_SERVER/)
+  assert.match(factory, /REVIEW_STORE_MODE_BROWSER/)
+  assert.match(factory, /raw === 'server'/)
+  assert.match(server, /SERVER_027/)
+})
+
+test('027 executable SQL is local_only not migrations', () => {
+  const sql = readFileSync('supabase/local_only/027_ai_review_jobs.sql', 'utf8')
+  assert.match(sql, /create table if not exists public\.ai_review_jobs/)
+  assert.match(sql, /cas_ai_review_job/)
+  assert.match(sql, /bind_ai_review_finding_task/)
+  assert.match(sql, /can_access_project/)
+  assert.match(sql, /can_edit_project_content/)
+  assert.match(sql, /P4001/)
+  const apply = readFileSync('scripts/apply-027-local-only.mjs', 'utf8')
+  assert.match(apply, /127\.0\.0\.1|localhost/)
+  assert.match(apply, /SUPABASE_ACCESS_TOKEN/)
+  const draft = readFileSync('supabase/drafts/027_ai_review_jobs_DRAFT.sql', 'utf8')
+  assert.match(draft, /local_only\/027_ai_review_jobs\.sql/)
+  assert.doesNotMatch(draft, /create table if not exists public\.ai_review_jobs/)
+})
+
+test('server store and pipeline factory wiring', () => {
+  const server = readFileSync('src/lib/ai/serverReviewJobStore.ts', 'utf8')
+  const pipeline = readFileSync('src/lib/ai/reviewPipeline.ts', 'utf8')
+  assert.match(server, /cas_ai_review_job/)
+  assert.match(server, /ServerReviewJobStore/)
+  assert.match(pipeline, /createReviewStore/)
+})
+
+test('Playwright AI review E2E and API contracts exist', () => {
+  const e2e = readFileSync('tests/e2e/browser_ai_review.mjs', 'utf8')
+  assert.match(e2e, /ai-review-hire/)
+  assert.match(e2e, /ai-review-viewer-readonly/)
+  assert.match(e2e, /\/api\/ai\/generate/)
+  assert.match(e2e, /placeholder/)
+  assert.match(e2e, /other_project|otherProjectId/)
+})
