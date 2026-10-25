@@ -1,7 +1,7 @@
 # 설계·코드 결함 및 결정 로그
 
-**작성·수정일:** 2026-10-25 · **버전:** v1.0  
-**작업 브랜치:** `fix/planos-f105-docs-align-20261025` (PR #58 계열 결함 수정 + 문서 정합화)  
+**작성·수정일:** 2026-10-25 · **버전:** v1.1 (R2 추가 검수 반영)  
+**작업 브랜치:** `fix/planos-f105-docs-align-20261025` (PR #59 · 1차+2차 문서 정합)  
 **금지:** 운영 DB mig · 유료 LLM · Production · 임의 main 병합
 
 ---
@@ -32,15 +32,47 @@
 
 ---
 
+## B2. IT박사 2차 추가 검수 (문서 반영 · 코드 미구현 구분)
+
+| ID | Sev | 지적 | 판정 | 문서 조치 |
+|---|---|---|---|---|
+| R2-API-01 | P0 | 계획 submit/approve REST vs 이벤트 | **DOC** · CURRENT=`transition_pm_plan`+events | API_CONTRACTS §0 · MVP §4 |
+| R2-API-02 | P0 | 산출물 accept/revision/reject | **CODE-MISSING** · Mock≠API-22 | API_CONTRACTS · FEATURE_TRACE |
+| R2-API-03 | P0 | 계약 digest·입력 구조 | **CODE-MISSING** · Mock `review_only` | API-11 주석 |
+| R2-API-04 | P0 | 업무 생성 status·멱등·버전 충돌 | **DOC+부분코드** · create 멱등키 없음·patch CAS | API §0·MVP |
+| R2-API-05 | P0 | 철회·retry·reopen·usage·승인함 등 누락 | **CODE-MISSING**(승인함 pm만 근사) | API §0 표 |
+| R2-DM-01 | P0 | `audit_drafts` vs manifest | **DOC** · 정본=`audit_source_manifests` | DATA_MODEL · MVP |
+| R2-DM-02 | P0 | tasks 버전·삭제·기한·artifact | **DOC** · due/artifact FK 없음 | DATA_MODEL |
+| R2-DM-03 | P0 | 계약·수락 digest·ledger entry_type | **CODE-MISSING** | DATA_MODEL entry_type 후보 |
+| R2-DM-04 | P0 | PM 스냅샷/승인 이력 중복 | **DOC** · 단일 행+events | DATA_MODEL |
+| R2-DM-05 | P0 | 사람 assignee vs AI roleId | **DOC** · F-105 분리 | DATA_MODEL · F-105 |
+| R2-RBAC-01 | P0 | viewer 비공개 산출물 | **정책충돌** · Mock view 허용 | PERMISSIONS · MATRIX |
+| R2-RBAC-02 | P0 | editor 승인·실행·수락 | **정책충돌** · Mock editor A | MATRIX · DEC-RBAC-01 |
+| R2-RBAC-03 | P0 | MVP 위임 실존 여부 | **없음** | PERMISSIONS · DEC-RBAC-03 |
+| R2-TF-01 | P1 | MVP vs 인력사무소 경로 | **DOC** | TASK_FLOWS 두 경로 |
+| R2-TF-02 | P1 | TF-22 브리핑 위치 | **DOC** · `/ai-review` 근사 | TASK_FLOWS |
+| R2-TF-03 | P1 | 온보딩≠LLM 전송 동의 | **DOC** | TF-02 · THREAT |
+| R2-TF-04 | P1 | TF-03 기본 업무 자동 생성 | **DOC** · CURRENT 시드 없음 | TASK_FLOWS |
+| R2-OPS-01 | P1 | blocked_reconciliation 절차 | **DOC** (워커 전) | SERVICE_OPERATIONS |
+| R2-OPS-02 | P1 | 외부전송 고지·법적 검토 | **DOC** 미완 게이트 | THREAT · OP-03 |
+| R2-OPS-03 | P1 | 프롬프트 인젝션 | **DOC** · TM-03 보강 | THREAT |
+| R2-OPS-04 | P1 | KPI·측정 이벤트 | **미결정** · 후보만 | THREAT · PRD 유지 |
+| R2-OPS-05 | P1 | 분산 testid 통합 | **DOC** | FEATURE_TRACE 표 |
+
+---
+
 ## C. 미결정 (제품 결정 필요 · 코드 임의 변경 금지)
 
 | ID | 내용 | 영향 |
 |---|---|---|
-| DEC-RBAC-01 | Mock AI 검수 run/accept를 유료화 시 owner-only로 잠글 시점 | PERMISSIONS vs 코드 |
+| DEC-RBAC-01 | Mock AI 검수 run/accept·viewer view를 유료화 시 잠글 시점 | PERMISSIONS vs 코드 |
 | DEC-RBAC-02 | S3 채용 Mock을 editor 개방 여부 | SpecialistRequest |
+| DEC-RBAC-03 | editor 승인·실행·수락 **위임** API/DDL 도입 여부(POL-01) | API-20 「명시 위임자」 |
 | DEC-HTTP-01 | 비멤버 404 마스킹 도입 시점 | DocumentPage EmptyState |
 | DEC-IA-01 | `/workspace` vs `/projects` 점진 전환 (IA-D01) | DocumentPage KEEP |
 | DEC-F105-DB | `assignee_kind` DB 영속 시기 | mig 승인 전 localStorage 유지 |
+| DEC-KPI-01 | 성과 이벤트·목표 KPI 수치 | 계측/실험 설계 |
+| DEC-LEGAL-01 | 외부 모델 전송·보존·국외이전 고지 문안 | 유료 LLM 게이트 |
 
 ---
 
@@ -49,11 +81,15 @@
 | 항목 | 상태 |
 |---|---|
 | F-105 DB 영속·실 E2E | 미완 (Mock only) |
-| F-302 실계약·철회 화면 | 미구현 |
+| F-302 실계약·철회·digest consent | 미구현 |
+| API-14~23 runs/artifacts/usage/retry | 미구현 |
+| 범용 승인함·delegation | 미구현 (pm inbox만) |
 | Gate A-027 Preview 호스티드 | 미적용 |
 | 유료 LLM / Production | 금지·미진행 |
+| viewer/editor Mock vs TARGET RBAC 잠금 | DEC-RBAC-01 대기 |
 | placeholder 프로젝트 생성 로컬 가드 | 잔여 (REMAINING 1-B) |
 | FD-06 done 재오픈 | 미구현 |
+| RLS 실측·침투 | 0건 |
 
 ---
 
@@ -62,3 +98,4 @@
 | 날짜 | 내용 |
 |---|---|
 | 2026-10-25 | 초판: F105-01/02 수정, 상태·권한·추적 산출물, 핵심 문서 CURRENT/TARGET 정합 |
+| 2026-10-25 | v1.1: IT박사 2차(R2) API·DM·RBAC·TF·OPS 문서 반영 · 통합 해결표 |

@@ -57,29 +57,26 @@ S1은 이전 Phase 0의 데이터 유실 결함과 **별도 브랜치에서 병�
 
 ## 4. REST 계약 (최소 변경 가능한 범위)
 
-공통: `Authorization: Bearer <JWT>`; `Idempotency-Key`는 모든 최초 생성/결정/재시도 POST에 필수; 자원 수정 PATCH에는 `If-Match: "<version>"` 필수. 최초 생성 POST에 가상의 If-Match 요구 금지.
+공통 (**TARGET REST**): `Authorization: Bearer <JWT>`; `Idempotency-Key`는 모든 최초 생성/결정/재시도 POST에 필수; 자원 수정 PATCH에는 `If-Match: "<version>"` 필수. 최초 생성 POST에 가상의 If-Match 요구 금지.  
+**CURRENT 정본:** [API_CONTRACTS §0](API_CONTRACTS.md) — PM=`create_pm_plan`/`transition_pm_plan`, 업무=`projectTasks` PostgREST(+CAS), 검수=ReviewJob Mock. 아래 `/api/v1/...` 경로는 **미구현 제안**이다.
 
-- `POST /api/v1/projects/:p/tasks` 201: {title, objective, acceptanceCriteria[], assigneeKind:"human"|"agent", agentKey?}. **assigneeKind는 TARGET REST.** CURRENT는 `assignee_user_id` + 브라우저 F-105 Mock. 응답 {id,projectId,status:"todo",version:1}. owner/editor만; viewer 403.
-- `GET /api/v1/projects/:p/tasks?cursor=&status=` 200: 커서 기반 목록. 타 프로젝트/없는 ID 404.
+- `POST /api/v1/projects/:p/tasks` 201: {title, objective, acceptanceCriteria[], assigneeKind:"human"|"agent", agentKey?}. **assigneeKind는 TARGET REST.** CURRENT는 `assignee_user_id` + 브라우저 F-105 Mock · **Idempotency-Key 없음** · status default `todo`. 응답 {id,projectId,status:"todo",version:1}. owner/editor만; viewer 403.
+- `GET /api/v1/projects/:p/tasks?cursor=&status=` 200: 커서 기반 목록. 타 프로젝트/없는 ID 404. (**TARGET 페이징** · CURRENT는 단순 목록)
 - `GET /api/v1/projects/:p/tasks/:id` 200: 멤버에게 권한별 redacted 작업 정보.
-- `PATCH /api/v1/projects/:p/tasks/:id` 200: 수정 가능 필드 allowlist, expectedVersion CAS; stale 409.
-- `POST /api/v1/projects/:p/audit-drafts` 201: 동일 project 2개 이상 document_id + version/digest; 서버가 실제 최신/읽기 권한 검사.
-- `POST /api/v1/projects/:p/contracts` 201: owner 서명 전 draft만; 입력 검증.
-- `POST /api/v1/projects/:p/contracts/:id/accept` 200: owner JWT, terms_digest, manifest_digest, two caps/통화/만료, consent digest; 서버 원자적 고정.
-- `POST /api/v1/projects/:p/plans` 201: 사람 편집용 무과금 초안; 1개 audit task/입력 snapshot 참조.
-- `POST /api/v1/projects/:p/plans/:id/submit` 200: 계획 버전 고정/서버 승인 요청 생성.
-- `POST /api/v1/projects/:p/approvals/:id/decide` 200: owner decision/expectedVersion/digest CAS. **승인 요청 생성 API는 내부 서버 전용이며 공개 UI에 노출 금지**.
-- `POST /api/v1/projects/:p/runs` 202: 승인된 plan/active contract/manifest, request key. run+reservation+outbox는 단일 DB 커밋.
-- `GET /api/v1/projects/:p/runs/:id` 및 `.../events?cursor=` 200: 재진입 가능 지속 조회.
-- `POST /api/v1/projects/:p/runs/:id/cancel` 202/200: CAS, 요청 이후 신규 도구 호출 중단; 실행 중 공급자 취소 불가하면 정산 pending.
-- `GET /api/v1/projects/:p/artifacts/:id` 200: owner 전용 비공개 보고서 + 구조화 findings.
-- `POST /api/v1/projects/:p/artifacts/:id/acceptance` 200: owner + artifact version/digest 바인딩 결정. 다른 버전의 이전 승인 재사용 금지.
+- `PATCH /api/v1/projects/:p/tasks/:id` 200: 수정 가능 필드 allowlist, expectedVersion CAS; stale 409. soft-delete/`deletedAt`·restore=owner. **reopen API 없음**(FD-06).
+- `POST /api/v1/projects/:p/audit-drafts` 201: **명칭 TARGET 별칭.** CURRENT 정본 테이블=`audit_source_manifests` · RPC=`create_audit_source_manifest`.
+- `POST /api/v1/projects/:p/contracts` 201: owner 서명 전 draft만; 입력 검증. (**TARGET** · Mock=`review_only`)
+- `POST /api/v1/projects/:p/contracts/:id/accept` 200: owner JWT, terms_digest, manifest_digest, two caps/통화/만료, consent digest; 서버 원자적 고정. (**TARGET**)
+- `POST /api/v1/projects/:p/plans` 201: 사람 편집용 무과금 초안. **CURRENT≈`create_pm_plan`**(REST 아님).
+- `POST /api/v1/projects/:p/plans/:id/submit` 200: **TARGET.** CURRENT=`transition_pm_plan(request_approval)` → `pm_plan_approval_events`.
+- `POST /api/v1/projects/:p/approvals/:id/decide` 200: **TARGET.** CURRENT PM=`transition_pm_plan(approve|reject|needs_revision)`. **MVP에 editor 위임(delegation) 기능·테이블 없음.**
+- `POST /api/v1/projects/:p/runs` 202 · cancel · artifacts GET/acceptance: **전부 TARGET** (`ai_runs`/`ai_artifacts` DDL 없음). CURRENT Mock 수락=`acceptFindingAsTask`(version/digest 바인딩 없음).
 
 **오류:** 401 unauthenticated, 403 명백한 역할 거부, 404 테넌트 리소스 부재 마스킹, 409 version/payload conflict, 412 동의/승인 누락, 422 상태 전이 금지, 429 예산 부족, 503 provider 장애. 같은 요청키+같은 payload는 동일 응답/리소스, 다른 payload는 409.
 
 ## 5. 데이터 모델의 구현 불변 조건
 
-기존 프로젝트/문서/버전 테이블을 재사용하고 신규 `project_tasks`, `audit_drafts`, `agent_contracts`, `project_plans`, `ai_approvals`, `ai_runs`, `ai_outbox_events`, `ai_artifacts`, `ai_acceptances`, `ai_budget_reservations`, `ai_usage_ledger`, `ai_run_events`를 논리적으로 분리.
+기존 프로젝트/문서/버전 테이블을 재사용하고, **CURRENT 실존** `project_tasks`·`audit_source_manifests`·`pm_plans`(+`pm_plan_approval_events`)와 **TARGET 논리** `agent_contracts`, `project_plans`(이름 충돌 주의), `ai_approvals`, `ai_runs`, `ai_outbox_events`, `ai_artifacts`, `ai_acceptances`, `ai_budget_reservations`, `ai_usage_ledger`, `ai_run_events`를 분리. 구칭 `audit_drafts`는 문서 별칭일 뿐 DDL명이 아니다.
 
 공통: UUID PK, `project_id`, `created_at`, 필요한 `state_version`; 자식은 `(project_id,parent_id)` 복합 FK로 타 프로젝트 교차 연결 차단. `UNIQUE(project_id,id)` 부모 지원. 기존 `projects.id` 및 auth user FK는 실제 migration 확인 뒤 정확한 이름/타입 맞춤. `actor_id`는 클라이언트 값 신뢰 금지(JWT에서 서버 유도).
 
