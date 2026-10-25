@@ -1,6 +1,6 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `bbfe454` (#51 병합, 2026-10-25)  
+**기준 tip:** `main` @ `b50e99d` (#52 병합, 2026-10-25)  
 **정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**
 
 ---
@@ -12,6 +12,7 @@
 - [x] S3 채용 Mock `/specialists/request` (#49)
 - [x] 채용 → `/ai-review` 세션 핸드오프 (#50)
 - [x] staffing brief → Mock 검수 job 연동 (#51)
+- [x] 남은 개발 체크리스트 + S1 owner soft-delete (#52)
 
 ---
 
@@ -19,7 +20,7 @@
 
 ### 1-A. Phase E 잔여 Mock (우선)
 
-- [ ] 프로젝트 생성·대시보드에 “진행 중 AI 투입” 안내만 (이중진입 대체 금지)
+- [x] 프로젝트 생성·대시보드에 “진행 중 AI 투입” 안내만 (이중진입 대체 금지) (본 PR)
 - [ ] AI 직원 1종 카탈로그 카드 Mock (역할 설명만, 결제/실행 없음)
 - [ ] 사람 PM(`/plans`)과 AI 검수(`/ai-review`) 병행 고지 UX 정리
 - [ ] 채용→검수→finding 수락→S1 업무 연결 E2E를 fixture 문서로 보강
