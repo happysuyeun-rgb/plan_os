@@ -2,16 +2,15 @@
 
 게이트를 건너뛰고 “완료”로 승격하지 않는다.
 
-### 2026-10-24 게이트 현황 (최우선)
+### 2026-10-25 게이트 현황 (최우선)
 
 | Gate | 상태 | 증거 |
 |---|---|---|
-| Gate 0 (단위/S1/RLS) | #45 브랜치에서 반복 | `npm run test:unit` / CI S1·RLS |
+| Gate 0 (단위/S1/RLS) | main에서 반복 | `npm run test:unit` / CI S1·RLS·ai-review-local |
 | Gate A Preview 수용 | **미완료** | 전수 사용자 체크 미증빙 |
-| Gate B/C (#30/#36/#42 Ready→main) | **통과·병합** | main `527e042` |
-| Gate D 운영 DB | V1.1 적용됨 · **추가 mig/쓰기 금지** | 027 미적용 |
+| Gate B/C (#30/#36/#42/#45 →main) | **통과·병합** | main `f780691` |
+| Gate D 운영 DB | V1.1 적용됨 · **추가 mig/쓰기 금지** | 027 호스티드 미적용 |
 | Gate E Production | **미통과** | 배포 승인 없음 |
-| PR #45 → main | **차단(승인필요)** | OPEN |
 
 ---
 

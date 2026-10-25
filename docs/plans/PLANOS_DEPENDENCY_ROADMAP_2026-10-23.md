@@ -2,22 +2,23 @@
 
 ## 1. Git / PR 계보
 
-### 2026-10-24 현행 (최우선)
+### 2026-10-25 현행 (최우선)
 
 ```mermaid
 flowchart TB
-  main527[main_527e042] --> pr45[PR45_BCD_OPEN]
-  pr44[PR44_foundation_OPEN] -.-> pr45
-  pr45 -.->|승인후| mainNext[main_future]
+  mainF780[main_f780691] --> nextFeat[feat_from_main_only]
+  closed43[PR43_CLOSED] -.-> mainF780
+  closed44[PR44_CLOSED] -.-> mainF780
+  merged45[PR45_MERGED] --> mainF780
 ```
 
-| 순서 | PR | 상태 (2026-10-24) | 비고 |
+| 순서 | PR | 상태 (2026-10-25) | 비고 |
 |---|---|---|---|
 | 1 | #30 | **merged** | G1 |
 | 2 | #36 | **merged** | PM |
-| 3 | #42 | **merged** → main `527e042` | C04 |
-| 4 | #44 | OPEN (foundation WIP) | **#45에 흡수·후속** — 중복 병합 금지 |
-| 5 | #45 | OPEN · BCD 정본 브랜치 | Mock 검수·Preview API·영속; **main 미병합** |
+| 3 | #42 | **merged** | C04 |
+| 4 | #45 | **merged** → main `f780691` | BCD Mock 검수·로컬 027 |
+| 5 | #43/#44 | **CLOSED** | 중복/이식 완료 |
 
 ### 역사 계보 (2026-10-23 당시 · 보존)
 
@@ -39,7 +40,7 @@ flowchart TB
 | 3 | #42 | `716f9e6`+ | #36 브랜치 | CI·Sonar OK; 026 포함 → **병합** |
 | tip | preview | `7460e5b` | (통합 tip) | Preview 배포 소스 (역사) |
 
-**규칙:** #44와 #45를 동시에 main에 넣지 말 것. BCD는 **#45만** 승격 후보.
+**규칙:** 신규 기능 브랜치는 **확정 `main`(`f780691`+)에서만** 생성. 흡수된 Draft(#5~#24,#27 등)는 재병합하지 않는다.
 
 ## 2. DB 마이그레이션 의존
 

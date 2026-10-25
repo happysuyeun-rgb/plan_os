@@ -1,54 +1,53 @@
 # PlanOS 3.0 — 전체 개발 진행 현황
 
 **최초 작성일:** 2026-10-14  
-**최종 수정일:** 2026-10-24  
-**문서 버전:** v4.7  
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v4.8  
 **진행 상태:** 운영 중인 관리 문서 (개발 완료를 의미하지 않음)
 
-### 2026-10-24 PR 통합 정리 (#43·#44·#45)
+### 2026-10-25 PR 통합 완료 (#43·#44·#45)
 
 | PR | 고유성 | 처리 |
 |---|---|---|
-| **#45** | BCD 기능·로컬 027·Playwright E2E 정본 | **main 병합 후보** (승인 대기) |
-| **#44** | #45에 코드/테스트 완전 포함 (동일 계보 재작성) | 고유 이식 **없음** → 병합 후 중복 종료 권고 |
-| **#43** | ops RO 감사·Preview 자동/수동 문서 + DEPLOYMENT V1.1 표 | 고유 문서 2건+#45 DEPLOYMENT 선별 반영. 구형 “미착수” 상태 문구는 **이식 안 함** |
+| **#45** | BCD 기능·로컬 027·Playwright E2E 정본 | **main 병합 완료** (`f780691`, 2026-10-25) |
+| **#44** | #45에 코드/테스트 완전 포함 | **CLOSED** (중복) |
+| **#43** | ops RO·Preview 문서 + DEPLOYMENT V1.1 | 고유 문서 #45에 이식 후 **CLOSED** |
 
-> 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 아래 **2026-10-24 정본 스냅샷**이 현시점 우선. 그 이하 역사 섹션은 보존용이며 당시 표현을 덮어쓰지 않는다.
+> 기준: GitHub에서 실제 확인한 커밋·PR·Issue만 완료 근거로 인정. 아래 **2026-10-25 정본 스냅샷**이 현시점 우선. 그 이하 역사 섹션은 보존용이며 당시 표현을 덮어쓰지 않는다.
 
-## 2026-10-24 정본 스냅샷 (GitHub 실측 · 최우선)
+## 2026-10-25 정본 스냅샷 (GitHub 실측 · 최우선)
 
 ### 상태 레이어 (혼동 금지)
 
 | 레이어 | 상태 | 증거 |
 |---|---|---|
-| **GitHub main 병합** | Phase A 관련 **완료** | main tip `527e042` · PR [#30](https://github.com/happysuyeun-rgb/plan_os/pull/30)·[#36](https://github.com/happysuyeun-rgb/plan_os/pull/36)·[#42](https://github.com/happysuyeun-rgb/plan_os/pull/42) merged 2026-10-24 |
-| **코드 완료 (기능 브랜치)** | Phase B·C·D **부분~Mock** | PR [#45](https://github.com/happysuyeun-rgb/plan_os/pull/45) tip `4f0a232`+ · 브랜치 `feat/planos-bcd-mock-review-20261024` |
-| **단위·RLS CI** | #45 Baseline lint 통과(`4f0a232`) · 로컬 027 RLS/CAS 통과 | Preview/ops DB에 027 **미적용** |
-| **로컬 Playwright E2E** | **일회용 스택에서 통과** (Mock 검수→수락→S1→재검수·RBAC·API) | `tests/e2e/browser_ai_review.mjs` · workflow `ai-review-local-e2e.yml` |
+| **GitHub main 병합** | Phase A + BCD Mock **완료** | main tip **`f780691`** · #30/#36/#42/#45 merged |
+| **코드 완료** | Phase B·C·D **Mock이 main에 포함** | `/ai-review`, S1 상세, Vite/Preview AI BFF, local_only 027 |
+| **단위·RLS CI** | #45 병합 시 7체크 통과 (Sonar Security A 포함) | Preview/ops DB에 027 **미적용** |
+| **로컬 Playwright E2E** | **일회용 스택에서 통과** | `tests/e2e/browser_ai_review.mjs` · `ai-review-local-e2e.yml` |
 | **Preview 검증** | **미완료** (호스티드 Preview 전수·수동 스모크 미증빙) | — |
-| **운영 DB 스키마** | Phase A V1.1 통합 **적용됨** · **009/010 파일명 없음→013/014** | 운영 추가 쓰기·027 적용 **금지** |
+| **운영 DB 스키마** | Phase A V1.1 통합 **적용됨** · 추가 mig/027 **금지** | 009/010≡013/014 (파일명) |
 | **Production 출시** | **미완료** | 배포 승인 없음 |
 
 ### Phase 요약
 
 | Phase | 코드 | 테스트 | Preview | 운영 DB | Production |
 |---|---|---|---|---|---|
-| **A** G1·PM·C04 | main 병합 완료 | CI 당시 통과 | Preview 가이드 있음 | V1.1 스키마 통합 (추가 mig 금지) | 미배포 |
-| **B** S1 상세·권한·PM→S1·C04 | PR #45 코드 부분 완료 | 단위·S1·RLS·로컬 Playwright | 통합 Preview E2E 미완료 | 011 등 기존 | 미배포 |
-| **C** LLM | Provider·BFF·budget·Preview `/api` 기반 | 단위·BFF placeholder E2E | 유료 미연결 | n/a | 미배포 |
-| **D** 기획 검수 | Mock UI·브라우저/서버 스토어 전환·027 `local_only` | 단위·로컬 RLS·Playwright | Preview 전수 미증빙 | 027 **migrations 밖·호스티드 미적용** | 미배포 |
+| **A** G1·PM·C04 | main 병합 완료 | CI 통과 | Preview 가이드 있음 | V1.1 스키마 (추가 mig 금지) | 미배포 |
+| **B** S1 상세·권한 | **main 포함** (#45) | 단위·S1·RLS·로컬 Playwright | 통합 Preview E2E 미완료 | 011 등 기존 | 미배포 |
+| **C** LLM | Provider·BFF·budget (유료 차단) | 단위·BFF placeholder | 유료 미연결 | n/a | 미배포 |
+| **D** 기획 검수 | **Mock main 포함** · 027 `local_only` | 단위·로컬 RLS·Playwright | Preview 전수 미증빙 | 027 **호스티드 미적용** | 미배포 |
 | **E/F** AI PM·출시 | 미구현 | — | — | — | 미완료 |
 
 ### 브랜치 계보
 
-- **#44** `feat/planos-bcd-foundation-20261023-wip` — foundation WIP (OPEN). **#45가 후속 정본**.
-- **#45** `feat/planos-bcd-mock-review-20261024` — Mock 검수 + 로컬 027/ServerReviewJobStore/Playwright. **BCD 작업 기준 브랜치**.
-- main에 #45 **미병합** (승인 전).
+- **#45** MERGED → `main` @ `f780691`. **이후 모든 신규 브랜치는 이 tip에서만 분기.**
+- **#43/#44** CLOSED (중복/이식 완료).
 
-### 남은 P0/P1 (감사 2026-10-24 + 로컬 E2E 후)
+### 남은 P0/P1 (2026-10-25)
 
-- **P0:** Preview 호스티드 E2E 전수 · 운영 009/010≡013/014 동등성 **읽기 전용** 확인(쓰기 금지)
-- **P1:** 027 Preview DB 적용 승인 게이트 · `VITE_AI_REVIEW_STORE=server` Preview 전환 · 실 LLM · AI PM(E)
+- **P0:** Preview 호스티드 E2E 전수 · 운영 009/010≡013/014 **읽기 전용** 확인
+- **P1:** Mock 검수 MVP 스키마/AC 정렬 · 로컬 server-store CI · (승인 후) 027 Preview · 실 LLM · AI PM(E)
 - **P2:** 인력사무소 · 서버 스토어 프로덕션 경로
 
 ## 2026-10-19 최신 검수 스냅샷 (역사 보존 · 위 정본보다 우선하지 않음)

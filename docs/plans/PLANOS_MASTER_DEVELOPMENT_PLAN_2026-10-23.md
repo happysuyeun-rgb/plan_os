@@ -2,12 +2,11 @@
 
 | 항목 | 내용 |
 |---|---|
-| 작성일 | 2026-10-23 · **갱신 2026-10-24** |
-| 상태 | **정본 (실행용)**. 이후 진행은 이 문서 + Issue #41 + `PROGRESS_STATUS` 2026-10-24 스냅샷으로 추적 |
-| 기준 코드 (Phase A) | GitHub `main` @ `527e042` (PR #30→#36→#42 **병합 완료**) |
-| 기준 코드 (Phase B/C/D WIP) | PR [#45](https://github.com/happysuyeun-rgb/plan_os/pull/45) `feat/planos-bcd-mock-review-20261024` (**main 미병합**) |
-| 제품 정본 | Draft PR #28 서비스기획 v2.0 · PR #40 C04/V6 · Issue #41 PMO |
-| 금지 (유지) | **#45의 main 병합** · 운영 DB **추가** 쓰기 · Production · 유료 LLM · 027 운영 적용 — **별도 승인 전 금지** |
+| 작성일 | 2026-10-23 · **갱신 2026-10-25** |
+| 상태 | **정본 (실행용)**. 이후 진행은 이 문서 + Issue #41 + `PROGRESS_STATUS` 2026-10-25 스냅샷으로 추적 |
+| 기준 코드 | GitHub `main` @ **`f780691`** (PR #30→#36→#42→**#45** **병합 완료**) |
+| 제품 정본 | Draft PR #28 서비스기획 v2.0 · PR #40 C04/V6 · Issue #41 PMO (문서 선별 이식) |
+| 금지 (유지) | 운영 DB **추가** 쓰기 · Production · 유료 LLM · 027 호스티드 적용 — **별도 승인 전 금지** |
 
 > 기존 `PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md`, `CURSOR_INTEGRATION_EXECUTION_PLAN_*`, `roadmap/IMPLEMENTATION_PLAN.md`, `PROGRESS_STATUS.md`는 **이력·참조**. 일정·우선순위 충돌 시 **본 문서가 우선**한다.
 
