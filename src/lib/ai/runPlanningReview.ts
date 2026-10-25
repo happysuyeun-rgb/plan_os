@@ -20,7 +20,7 @@ import {
   type ReviewJobStore,
   type ReviewPipelineResult,
 } from './reviewPipeline'
-import type { ReviewJob } from './reviewJob'
+import type { ReviewJob, StaffBrief } from './reviewJob'
 
 const useServerTasks = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 
@@ -29,6 +29,19 @@ export type PlanningReviewRun = {
   job: ReviewJob
   documentCount: number
   findingCount: number
+}
+
+function normalizeStaffBrief(brief?: StaffBrief | null): StaffBrief | undefined {
+  if (!brief?.mockOnly) return undefined
+  const task = brief.task.trim()
+  const acceptanceCriteria = brief.acceptanceCriteria.trim()
+  if (!brief.roleId || task.length < 10 || acceptanceCriteria.length < 5) return undefined
+  return {
+    roleId: brief.roleId,
+    task,
+    acceptanceCriteria,
+    mockOnly: true,
+  }
 }
 
 export async function loadProjectReviewDocuments(projectId: string): Promise<CitationDocument[]> {
@@ -53,6 +66,7 @@ export async function startMockPlanningReview(
   store: ReviewJobStore = defaultReviewStore,
   documentTypes?: string[],
   role: MemberRole | null = 'owner',
+  staffBrief?: StaffBrief | null,
 ): Promise<PlanningReviewRun> {
   assertCanAiReview(role, 'run')
   let docs = await loadProjectReviewDocuments(projectId)
@@ -64,12 +78,14 @@ export async function startMockPlanningReview(
     throw new Error('검수할 문서가 없습니다. 먼저 PRD 등 문서를 작성하세요.')
   }
 
-  const mock = runMockPlanningReview(docs)
+  const brief = normalizeStaffBrief(staffBrief)
+  const mock = runMockPlanningReview(docs, { staffBrief: brief })
   assertFindingsMatchDocuments(mock.findings, docs)
   const job = createReviewJob(projectId)
   const awaiting = await submitFindingsForHumanReview(store, job, mock.findings, docs, {
     sourceManifest: mock.sourceManifest,
     insufficientInput: mock.insufficientInput,
+    staffBrief: brief,
   })
   return {
     mode: 'mock',

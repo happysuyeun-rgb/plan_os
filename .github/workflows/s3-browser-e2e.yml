@@ -7,6 +7,8 @@ on:
       - 'src/store/projectStore.ts'
       - 'src/lib/mockSpecialistRequest.ts'
       - 'src/lib/specialistReviewHandoff.ts'
+      - 'src/lib/ai/MockPlanningReviewProvider.ts'
+      - 'src/lib/ai/runPlanningReview.ts'
       - 'src/App.tsx'
       - 'tests/s3-browser-e2e.mjs'
       - '.github/workflows/s3-browser-e2e.yml'

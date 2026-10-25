@@ -57,6 +57,7 @@ export function createReviewJob(
 export type SubmitFindingsMeta = {
   sourceManifest?: ReviewJob['sourceManifest']
   insufficientInput?: boolean
+  staffBrief?: ReviewJob['staffBrief']
 }
 
 /** queued -> running -> awaiting_human with citation-backed findings. */
@@ -76,6 +77,7 @@ export async function submitFindingsForHumanReview(
     findings,
     sourceManifest: meta.sourceManifest,
     insufficientInput: meta.insufficientInput,
+    staffBrief: meta.staffBrief,
   })
   return store.put(next)
 }

@@ -55,6 +55,7 @@ try {
   await page.getByText('기획 요구사항 문서의 누락 항목을 검토해 주세요.').waitFor()
   await page.getByText('누락과 근거를 보고서로 정리').waitFor()
   assert.equal(await page.getByTestId('ai-review-hire').innerText(), '투입됨 (Mock)')
+  await page.getByTestId('ai-review-brief-run-hint').waitFor()
   await page.reload()
   assert.equal(await page.getByTestId('ai-review-specialist-handoff').count(), 0)
   await context.close()

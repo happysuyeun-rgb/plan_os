@@ -9,6 +9,7 @@ import type {
   ReviewFindingCategory,
   ReviewerState,
   SourceManifestEntry,
+  StaffBrief,
 } from './reviewJob'
 
 export type ReviewDocumentInput = {
@@ -78,9 +79,34 @@ function finding(
   }
 }
 
+function staffBriefFinding(docs: ReviewDocumentInput[], brief: StaffBrief): ReviewFinding | null {
+  if (!brief.mockOnly || !docs[0]) return null
+  const criteria = brief.acceptanceCriteria.trim().slice(0, 200)
+  const anchor = docs[0]
+  return finding(
+    'info',
+    'untestable',
+    '채용 요청 완료기준 대비 점검 (Mock · 계약/결제 아님)',
+    anchor,
+    anchor.content.slice(0, 24) || anchor.type,
+    `세션 staffing brief 완료기준: ${criteria}`,
+    'proposed',
+  )
+}
+
+export type MockPlanningReviewOptions = {
+  staffBrief?: StaffBrief
+}
+
 /** Pure heuristic reviewer for unit tests and Preview without paid AI. */
-export function runMockPlanningReview(docs: ReviewDocumentInput[]): MockPlanningReviewResult {
+export function runMockPlanningReview(
+  docs: ReviewDocumentInput[],
+  options: MockPlanningReviewOptions = {},
+): MockPlanningReviewResult {
   const sourceManifest = buildManifest(docs)
+  const briefFinding = options.staffBrief
+    ? staffBriefFinding(docs, options.staffBrief)
+    : null
 
   if (docs.length < MIN_REVIEW_DOCUMENTS) {
     const anchor = docs[0]
@@ -97,6 +123,7 @@ export function runMockPlanningReview(docs: ReviewDocumentInput[]): MockPlanning
           ),
         ]
       : []
+    if (briefFinding) findings.unshift(briefFinding)
     return {
       mode: 'mock',
       providerId: MOCK_PLANNING_REVIEWER_ID,
@@ -107,6 +134,7 @@ export function runMockPlanningReview(docs: ReviewDocumentInput[]): MockPlanning
   }
 
   const findings: ReviewFinding[] = []
+  if (briefFinding) findings.push(briefFinding)
   const byType = new Map(docs.map((d) => [d.type, d]))
 
   const prd = byType.get('prd')
