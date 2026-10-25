@@ -51,4 +51,5 @@ test('Playwright AI review E2E and API contracts exist', () => {
   const envWriter = readFileSync('tests/e2e/local_browser_env.mjs', 'utf8')
   assert.match(envWriter, /VITE_AI_REVIEW_STORE/)
   assert.match(envWriter, /server/)
+  assert.match(envWriter, /VITE_S1_SERVER_TASKS/)
 })

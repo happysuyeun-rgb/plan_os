@@ -120,6 +120,13 @@ try {
   await login(page, ownerEmail)
   await page.goto(site + `/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
   await page.getByTestId('ai-review-unpaid-preview').waitFor({ state: 'visible', timeout: 15000 })
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="ai-review-store-mode"]')
+      return el && /owner|editor/i.test(el.textContent || '')
+    },
+    { timeout: 20000 },
+  )
   const storeMode = await page.getByTestId('ai-review-store-mode').innerText()
   assert.match(storeMode, /SERVER_027|BROWSER_LOCAL|MEMORY/i)
   console.log('PASS unpaid preview banner; store mode visible:', storeMode.trim())
@@ -153,7 +160,18 @@ try {
   const accept = page.locator('[data-testid^="ai-review-accept-"]').first()
   await accept.waitFor({ state: 'visible', timeout: 15000 })
   await accept.click()
-  await page.getByTestId('ai-review-message').waitFor({ state: 'visible', timeout: 20000 })
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="ai-review-message"]')
+      const t = el?.textContent || ''
+      return /S1 업무|재사용|수락/.test(t)
+    },
+    { timeout: 30000 },
+  ).catch(async (err) => {
+    const alert = await page.getByRole('alert').allInnerTexts().catch(() => [])
+    const msg = await page.getByTestId('ai-review-message').innerText().catch(() => '')
+    throw new Error(`accept did not update message; alerts=${JSON.stringify(alert)}; msg=${msg}; cause=${err}`)
+  })
   const msg = await page.getByTestId('ai-review-message').innerText()
   assert.match(msg, /S1 업무|재사용|수락/)
   console.log('PASS owner mock review accept → S1')

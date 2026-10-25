@@ -30,6 +30,7 @@ jobs:
       PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-ai-review-supabase
       # Disposable local only — never hosted Preview/ops. App default remains browser when unset.
       VITE_AI_REVIEW_STORE: server
+      VITE_S1_SERVER_TASKS: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
