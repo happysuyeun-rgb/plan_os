@@ -22,7 +22,10 @@ test('Mock E2E: run-accept-task-reconnect with RBAC', () => {
   ]
   const mock = runMockPlanningReview(docs)
   assertFindingsMatchDocuments(mock.findings, docs)
+  assert.equal(mock.insufficientInput, false)
+  assert.equal(mock.sourceManifest.length, 2)
   assert.ok(mock.findings.length >= 1)
+  assert.ok(mock.findings.every((f) => f.category && f.reviewerState))
 
   let job = store.put({
     id: crypto.randomUUID(),
@@ -35,7 +38,13 @@ test('Mock E2E: run-accept-task-reconnect with RBAC', () => {
     updatedAt: new Date().toISOString(),
   })
   job = store.put(transitionReviewJob(job, 'running'))
-  job = store.put(transitionReviewJob(job, 'awaiting_human', { findings: mock.findings }))
+  job = store.put(
+    transitionReviewJob(job, 'awaiting_human', {
+      findings: mock.findings,
+      sourceManifest: mock.sourceManifest,
+      insufficientInput: mock.insufficientInput,
+    }),
+  )
 
   const findingId = job.findings[0].id
   const taskId = 's1-1'

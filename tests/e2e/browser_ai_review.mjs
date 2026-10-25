@@ -119,9 +119,29 @@ try {
   // --- Owner path: hire → run → accept → S1 → reload → re-review link ---
   await login(page, ownerEmail)
   await page.goto(site + `/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('ai-review-unpaid-preview').waitFor({ state: 'visible', timeout: 15000 })
+  const storeMode = await page.getByTestId('ai-review-store-mode').innerText()
+  assert.match(storeMode, /SERVER_027|BROWSER_LOCAL|MEMORY/i)
+  console.log('PASS unpaid preview banner; store mode visible:', storeMode.trim())
+
   await page.getByTestId('ai-review-hire').click()
+  // AC-03 UX: fewer than 2 doc types blocks run
+  for (const type of ['prd', 'policy', 'wireframe', 'ia', 'screen_list']) {
+    const box = page.getByTestId(`ai-review-doc-${type}`)
+    if (await box.count() && await box.isChecked()) await box.uncheck()
+  }
+  await page.getByTestId('ai-review-doc-prd').check()
+  await page.getByTestId('ai-review-insufficient-block').waitFor({ state: 'visible', timeout: 5000 })
+  assert.equal(await page.getByTestId('ai-review-run').isDisabled(), true)
+  console.log('PASS AC-03 insufficient selection blocks run')
+
+  await page.getByTestId('ai-review-doc-policy').check()
+  await page.getByTestId('ai-review-doc-wireframe').check()
+  assert.equal(await page.getByTestId('ai-review-run').isDisabled(), false)
+
   await page.getByTestId('ai-review-run').click()
   await page.getByTestId('ai-review-job').waitFor({ state: 'visible', timeout: 30000 })
+  await page.getByTestId('ai-review-source-manifest').waitFor({ state: 'visible', timeout: 10000 })
   const accept = page.locator('[data-testid^="ai-review-accept-"]').first()
   await accept.waitFor({ state: 'visible', timeout: 15000 })
   await accept.click()

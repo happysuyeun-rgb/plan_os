@@ -16,7 +16,10 @@ import {
   defaultReviewStore,
 } from '../lib/ai/reviewPipeline'
 import type { ReviewJob } from '../lib/ai/reviewJob'
-import { MOCK_PLANNING_REVIEWER_ID } from '../lib/ai/MockPlanningReviewProvider'
+import {
+  MIN_REVIEW_DOCUMENTS,
+  MOCK_PLANNING_REVIEWER_ID,
+} from '../lib/ai/MockPlanningReviewProvider'
 
 const DOC_OPTIONS = [
   { type: 'prd', label: 'PRD' },
@@ -28,7 +31,8 @@ const DOC_OPTIONS = [
 
 /**
  * Phase D UI: Mock planning-review staff. Vite BFF ≠ Preview api/ai/generate.
- * Jobs persist in browser-local store (not ops DB / 027).
+ * Jobs persist in browser-local store by default (not ops DB / 027).
+ * Unpaid preview only — no contract/payment UI, no paid LLM.
  */
 export default function ProjectAiReviewPage() {
   const { projectId } = useParams()
@@ -55,6 +59,8 @@ export default function ProjectAiReviewPage() {
   const canView = canAiReview(role, 'view')
   const canRun = canAiReview(role, 'run')
   const canAccept = canAiReview(role, 'accept')
+  const selectionInsufficient = selectedTypes.length < MIN_REVIEW_DOCUMENTS
+  const canExecuteRun = hired && canRun && !busy && !selectionInsufficient
 
   useEffect(() => {
     if (!projectId) return
@@ -88,7 +94,7 @@ export default function ProjectAiReviewPage() {
   }
 
   const onRun = async () => {
-    if (!projectId || !canRun) return
+    if (!projectId || !canRun || selectionInsufficient) return
     setBusy(true)
     setError('')
     setMessage('')
@@ -100,8 +106,11 @@ export default function ProjectAiReviewPage() {
         role,
       )
       setJob(result.job)
+      const insuff = result.job.insufficientInput
+        ? ' · 입력 부족(insufficient_input) — 품질 보증 아님'
+        : ''
       setMessage(
-        `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode})`,
+        `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode} · 유료 LLM 없음)${insuff}`,
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : '검수 실행 실패')
@@ -112,6 +121,10 @@ export default function ProjectAiReviewPage() {
 
   const onAccept = async (findingId: string) => {
     if (!job || !userId || !projectId || !canAccept) return
+    if (job.insufficientInput) {
+      setError('입력 부족 검수 결과는 업무로 수락할 수 없습니다. 문서를 추가한 뒤 다시 실행하세요.')
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -154,7 +167,7 @@ export default function ProjectAiReviewPage() {
   }
 
   const onReReview = async () => {
-    if (!projectId || !canRun) return
+    if (!projectId || !canRun || selectionInsufficient) return
     setBusy(true)
     setError('')
     try {
@@ -166,7 +179,7 @@ export default function ProjectAiReviewPage() {
       )
       setJob(result.job)
       setReReviewJobId(null)
-      setMessage(`재검수(Mock) 완료 · job=${result.job.id}`)
+      setMessage(`재검수(Mock) 완료 · job=${result.job.id} · 유료 LLM 없음`)
     } catch (e) {
       setError(e instanceof Error ? e.message : '재검수 실패')
     } finally {
@@ -175,7 +188,9 @@ export default function ProjectAiReviewPage() {
   }
 
   const showAccept =
-    canAccept && (job?.status === 'awaiting_human' || job?.status === 'accepted')
+    canAccept &&
+    !job?.insufficientInput &&
+    (job?.status === 'awaiting_human' || job?.status === 'accepted')
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
@@ -187,6 +202,12 @@ export default function ProjectAiReviewPage() {
         <p className="text-sm text-gray-600">
           사람 PM 계획과 별도입니다. 브라우저 로컬 저장({REVIEW_STORE_MODE}) · 027/운영 DB·유료 LLM 미적용.
           생성 API는 Vite 개발 미들웨어와 Preview <code className="text-xs">/api/ai/generate</code> 가 분리됩니다.
+        </p>
+        <p
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
+          data-testid="ai-review-unpaid-preview"
+        >
+          무과금 미리보기 · 예상 비용 $0 · 유료 LLM·계약·결제 UI 없음 (Mock 휴리스틱만)
         </p>
         <p className="text-xs text-gray-500" data-testid="ai-review-store-mode">
           저장 모드: {REVIEW_STORE_MODE} · 역할: {role ?? 'none'}
@@ -223,6 +244,9 @@ export default function ProjectAiReviewPage() {
 
           <section className="space-y-3 rounded-xl border border-gray-200 p-5" aria-label="범위">
             <h2 className="font-semibold">2. 검수 문서 범위</h2>
+            <p className="text-sm text-gray-600">
+              AC-01: 최소 {MIN_REVIEW_DOCUMENTS}개 문서 유형을 선택하세요. (현재 {selectedTypes.length}개)
+            </p>
             <div className="flex flex-wrap gap-3">
               {DOC_OPTIONS.map((opt) => (
                 <label key={opt.type} className="flex items-center gap-2 text-sm">
@@ -231,20 +255,30 @@ export default function ProjectAiReviewPage() {
                     checked={selectedTypes.includes(opt.type)}
                     onChange={() => toggleType(opt.type)}
                     disabled={!hired || busy || !canRun}
+                    data-testid={`ai-review-doc-${opt.type}`}
                   />
                   {opt.label}
                 </label>
               ))}
             </div>
-            <p className="text-xs text-gray-500">예상 비용: $0 (Mock · 토큰 미사용)</p>
+            {selectionInsufficient && hired && canRun && (
+              <p
+                role="alert"
+                className="rounded bg-amber-50 p-2 text-sm text-amber-900"
+                data-testid="ai-review-insufficient-block"
+              >
+                입력 부족: 문서 유형을 {MIN_REVIEW_DOCUMENTS}개 이상 선택해야 검수를 실행할 수 있습니다.
+              </p>
+            )}
+            <p className="text-xs text-gray-500">예상 비용: $0 (Mock · 토큰 미사용 · 유료 LLM 없음)</p>
             <button
               type="button"
-              disabled={!hired || !canRun || busy || selectedTypes.length === 0}
+              disabled={!canExecuteRun}
               onClick={() => void onRun()}
               className="rounded bg-indigo-700 px-4 py-2 text-sm text-white disabled:opacity-40"
               data-testid="ai-review-run"
             >
-              {busy ? '실행 중…' : '검수 실행 (Mock)'}
+              {busy ? '실행 중…' : '검수 실행 (Mock · 무과금)'}
             </button>
           </section>
         </>
@@ -259,12 +293,35 @@ export default function ProjectAiReviewPage() {
             3. 결과 · job {job.id.slice(0, 8)}… · {job.status}
             {job.version != null ? ` · v${job.version}` : ''}
           </h2>
+          {job.insufficientInput && (
+            <p
+              role="alert"
+              className="rounded bg-amber-50 p-3 text-sm text-amber-900"
+              data-testid="ai-review-insufficient-input"
+            >
+              insufficient_input: 입력 문서가 부족해 전체 품질을 주장하지 않습니다. 문서를 보강한 뒤 재실행하세요.
+            </p>
+          )}
+          {job.sourceManifest && job.sourceManifest.length > 0 && (
+            <p className="text-xs text-gray-600" data-testid="ai-review-source-manifest">
+              source_manifest:{' '}
+              {job.sourceManifest
+                .map(
+                  (m) =>
+                    `${m.documentType}${m.revisionOrVersion != null ? `@${m.revisionOrVersion}` : ''}`,
+                )
+                .join(', ')}
+            </p>
+          )}
           {job.findings.map((f) => {
             const linked = job.acceptedFindingTaskIds?.[f.id]
             return (
               <article key={f.id} className="space-y-2 rounded border border-gray-200 p-4 text-sm">
                 <p className="font-medium">
-                  [{f.severity}] {f.summary}
+                  [{f.severity}/{f.category}] {f.summary}
+                </p>
+                <p className="text-xs text-gray-500" data-testid={`ai-review-finding-state-${f.id}`}>
+                  reviewer_state: {f.reviewerState}
                 </p>
                 <p className="text-gray-600">
                   근거 ({f.citation.documentType}
@@ -317,7 +374,7 @@ export default function ProjectAiReviewPage() {
           {(job.status === 'accepted' || reReviewJobId) && canRun && (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || selectionInsufficient}
               onClick={() => void onReReview()}
               className="rounded bg-gray-800 px-4 py-2 text-sm text-white disabled:opacity-40"
               data-testid="ai-review-rereview"

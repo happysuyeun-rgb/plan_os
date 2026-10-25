@@ -67,7 +67,10 @@ export async function startMockPlanningReview(
   const mock = runMockPlanningReview(docs)
   assertFindingsMatchDocuments(mock.findings, docs)
   const job = createReviewJob(projectId)
-  const awaiting = await submitFindingsForHumanReview(store, job, mock.findings, docs)
+  const awaiting = await submitFindingsForHumanReview(store, job, mock.findings, docs, {
+    sourceManifest: mock.sourceManifest,
+    insufficientInput: mock.insufficientInput,
+  })
   return {
     mode: 'mock',
     job: awaiting,
@@ -98,6 +101,8 @@ export async function acceptFindingAsTask(
         `AI 기획 검수(Mock) job=${reviewJobId}`,
         `finding=${finding.id}`,
         `severity=${finding.severity}`,
+        `category=${finding.category}`,
+        `reviewer_state=${finding.reviewerState}`,
         `citation=${finding.citation.documentType} rev=${finding.citation.versionNumber ?? '?'} @${finding.citation.startOffset ?? 0}-${finding.citation.endOffset ?? 0}`,
         finding.citation.quote,
         finding.citation.rationale,

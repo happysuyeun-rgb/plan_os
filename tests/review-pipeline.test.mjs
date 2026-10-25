@@ -33,6 +33,8 @@ test('state machine supports the vertical-slice transitions', () => {
     findings: [{
       id: 'f1',
       severity: 'warning',
+      category: 'missing',
+      reviewerState: 'proposed',
       summary: 'x',
       citation: {
         documentId: 'd1',
@@ -55,4 +57,7 @@ test('027 executable SQL is local_only; draft is pointer only', () => {
   assert.match(draft, /FORBIDDEN|forbidden|승인/i)
   assert.match(local, /create table if not exists public\.ai_review_jobs/)
   assert.match(local, /cas_ai_review_job/)
+  assert.match(local, /source_manifest/)
+  assert.match(local, /insufficient_input/)
+  assert.match(local, /reviewer_state/)
 })

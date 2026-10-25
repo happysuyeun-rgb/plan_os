@@ -5,7 +5,14 @@
  */
 
 import { supabase } from '../supabase'
-import type { ReviewFinding, ReviewJob, ReviewJobStatus } from './reviewJob'
+import type {
+  ReviewFinding,
+  ReviewFindingCategory,
+  ReviewerState,
+  ReviewJob,
+  ReviewJobStatus,
+  SourceManifestEntry,
+} from './reviewJob'
 import { ReviewJobConflictError, type ReviewJobStoreBag } from './browserReviewJobStore'
 
 type JobRow = {
@@ -16,6 +23,8 @@ type JobRow = {
   parent_review_job_id: string | null
   source_task_id: string | null
   accepted_finding_task_ids: Record<string, string> | null
+  source_manifest: SourceManifestEntry[] | null
+  insufficient_input: boolean | null
   row_version: number
   error_message: string | null
   created_at: string
@@ -26,6 +35,8 @@ type FindingRow = {
   id: string
   job_id: string
   severity: ReviewFinding['severity']
+  category: ReviewFindingCategory | null
+  reviewer_state: ReviewerState | null
   summary: string
   document_id: string
   document_type: string
@@ -42,6 +53,8 @@ function rowToJob(row: JobRow, findings: ReviewFinding[]): ReviewJob {
     projectId: row.project_id,
     status: row.status,
     findings,
+    sourceManifest: row.source_manifest ?? undefined,
+    insufficientInput: row.insufficient_input ?? undefined,
     linkedTaskId: row.linked_task_id ?? undefined,
     parentReviewJobId: row.parent_review_job_id ?? undefined,
     sourceTaskId: row.source_task_id ?? undefined,
@@ -58,6 +71,8 @@ function findingToRow(jobId: string, f: ReviewFinding): Omit<FindingRow, 'job_id
     id: f.id,
     job_id: jobId,
     severity: f.severity,
+    category: f.category,
+    reviewer_state: f.reviewerState,
     summary: f.summary,
     document_id: f.citation.documentId,
     document_type: f.citation.documentType,
@@ -73,6 +88,8 @@ function rowToFinding(row: FindingRow): ReviewFinding {
   return {
     id: row.id,
     severity: row.severity,
+    category: row.category ?? 'missing',
+    reviewerState: row.reviewer_state ?? 'proposed',
     summary: row.summary,
     citation: {
       documentId: row.document_id,
@@ -95,7 +112,7 @@ async function loadFindings(jobId: string): Promise<ReviewFinding[]> {
   return (data as FindingRow[] | null)?.map(rowToFinding) ?? []
 }
 
-export class ServerReviewJobStore implements ReviewJobStoreBag {
+export class ServerReviewJobStore implements ReviewJobStorePort {
   async put(job: ReviewJob): Promise<ReviewJob> {
     const expected = typeof job.version === 'number' ? job.version : 0
     if (expected === 0) {
@@ -114,6 +131,8 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
       p_source_task_id: job.sourceTaskId ?? null,
       p_accepted_finding_task_ids: job.acceptedFindingTaskIds ?? {},
       p_error_message: job.errorMessage ?? null,
+      p_source_manifest: job.sourceManifest ?? null,
+      p_insufficient_input: job.insufficientInput ?? null,
     })
     if (error) {
       if (error.code === 'P4001' || /AI_REVIEW_VERSION_CONFLICT/i.test(error.message)) {
@@ -140,6 +159,8 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
         parent_review_job_id: job.parentReviewJobId ?? null,
         source_task_id: job.sourceTaskId ?? null,
         accepted_finding_task_ids: job.acceptedFindingTaskIds ?? {},
+        source_manifest: job.sourceManifest ?? [],
+        insufficient_input: job.insufficientInput ?? false,
         row_version: 1,
         error_message: job.errorMessage ?? null,
       })

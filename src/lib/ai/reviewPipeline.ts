@@ -54,19 +54,29 @@ export function createReviewJob(
   }
 }
 
-/** queued → running → awaiting_human with citation-backed findings. */
+export type SubmitFindingsMeta = {
+  sourceManifest?: ReviewJob['sourceManifest']
+  insufficientInput?: boolean
+}
+
+/** queued -> running -> awaiting_human with citation-backed findings. */
 export async function submitFindingsForHumanReview(
   store: ReviewJobStore,
   job: ReviewJob,
   findings: ReviewFinding[],
   docs?: CitationDocument[],
+  meta: SubmitFindingsMeta = {},
 ): Promise<ReviewJob> {
   if (docs) {
     assertFindingsMatchDocuments(findings, docs)
   }
   let next = transitionReviewJob(job, 'running')
   next = await store.put(next)
-  next = transitionReviewJob(next, 'awaiting_human', { findings })
+  next = transitionReviewJob(next, 'awaiting_human', {
+    findings,
+    sourceManifest: meta.sourceManifest,
+    insufficientInput: meta.insufficientInput,
+  })
   return store.put(next)
 }
 

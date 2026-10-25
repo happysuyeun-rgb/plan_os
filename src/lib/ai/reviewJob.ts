@@ -18,11 +18,35 @@ export type DocumentCitation = {
   rationale: string
 }
 
+/** Aligns with FIRST_SPECIALIST finding categories (Mock + future report). */
+export type ReviewFindingCategory =
+  | 'missing'
+  | 'inconsistent'
+  | 'untestable'
+  | 'permission_or_approval'
+  | 'failure_recovery'
+
+export type ReviewerState =
+  | 'proposed'
+  | 'source_validated'
+  | 'human_confirmed'
+  | 'human_rejected'
+  | 'needs_review'
+
+export type SourceManifestEntry = {
+  documentId: string
+  documentType: string
+  revisionOrVersion?: number
+}
+
 export type ReviewFinding = {
   id: string
   severity: 'info' | 'warning' | 'blocker'
+  category: ReviewFindingCategory
   summary: string
   citation: DocumentCitation
+  /** AI proposal vs human/source validation — never claim “accepted” from Mock alone. */
+  reviewerState: ReviewerState
 }
 
 export type ReviewJob = {
@@ -30,6 +54,10 @@ export type ReviewJob = {
   projectId: string
   status: ReviewJobStatus
   findings: ReviewFinding[]
+  /** Documents actually read for this run (Mock manifest). */
+  sourceManifest?: SourceManifestEntry[]
+  /** True when input docs were insufficient for a full audit. */
+  insufficientInput?: boolean
   linkedTaskId?: string
   /** findingId → taskId; prevents duplicate S1 tasks on re-accept / double-click. */
   acceptedFindingTaskIds?: Record<string, string>
