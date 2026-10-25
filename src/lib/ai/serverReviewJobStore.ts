@@ -112,7 +112,7 @@ async function loadFindings(jobId: string): Promise<ReviewFinding[]> {
   return (data as FindingRow[] | null)?.map(rowToFinding) ?? []
 }
 
-export class ServerReviewJobStore implements ReviewJobStorePort {
+export class ServerReviewJobStore implements ReviewJobStoreBag {
   async put(job: ReviewJob): Promise<ReviewJob> {
     const expected = typeof job.version === 'number' ? job.version : 0
     if (expected === 0) {
@@ -122,6 +122,8 @@ export class ServerReviewJobStore implements ReviewJobStorePort {
   }
 
   async putCas(job: ReviewJob, expectedVersion: number): Promise<ReviewJob> {
+    // Keep RPC args compatible with both pre/post-MVP CAS signatures (PostgREST cache).
+    // Manifest fields are patched via table UPDATE after CAS.
     const { data, error } = await supabase.rpc('cas_ai_review_job', {
       p_id: job.id,
       p_expected_version: expectedVersion,
@@ -131,8 +133,6 @@ export class ServerReviewJobStore implements ReviewJobStorePort {
       p_source_task_id: job.sourceTaskId ?? null,
       p_accepted_finding_task_ids: job.acceptedFindingTaskIds ?? {},
       p_error_message: job.errorMessage ?? null,
-      p_source_manifest: job.sourceManifest ?? null,
-      p_insufficient_input: job.insufficientInput ?? null,
     })
     if (error) {
       if (error.code === 'P4001' || /AI_REVIEW_VERSION_CONFLICT/i.test(error.message)) {
@@ -140,15 +140,29 @@ export class ServerReviewJobStore implements ReviewJobStorePort {
       }
       throw error
     }
-    const row = data as JobRow
+    await this.patchJobMeta(job)
     if (job.findings.length > 0) {
       await this.replaceFindings(job.id, job.findings)
     }
     const findings = await loadFindings(job.id)
-    return rowToJob(row, findings)
+    const fresh = await this.get(job.id)
+    if (!fresh) {
+      return rowToJob(data as JobRow, findings)
+    }
+    return { ...fresh, findings }
+  }
+
+  private async patchJobMeta(job: ReviewJob): Promise<void> {
+    if (job.sourceManifest === undefined && job.insufficientInput === undefined) return
+    const patch: Record<string, unknown> = {}
+    if (job.sourceManifest !== undefined) patch.source_manifest = job.sourceManifest
+    if (job.insufficientInput !== undefined) patch.insufficient_input = job.insufficientInput
+    const { error } = await supabase.from('ai_review_jobs').update(patch).eq('id', job.id)
+    if (error) throw error
   }
 
   private async insertNew(job: ReviewJob): Promise<ReviewJob> {
+    // Insert classic columns only — MVP meta patched after (PostgREST schema-cache safe).
     const { data, error } = await supabase
       .from('ai_review_jobs')
       .insert({
@@ -159,25 +173,25 @@ export class ServerReviewJobStore implements ReviewJobStorePort {
         parent_review_job_id: job.parentReviewJobId ?? null,
         source_task_id: job.sourceTaskId ?? null,
         accepted_finding_task_ids: job.acceptedFindingTaskIds ?? {},
-        source_manifest: job.sourceManifest ?? [],
-        insufficient_input: job.insufficientInput ?? false,
         row_version: 1,
         error_message: job.errorMessage ?? null,
       })
       .select('*')
       .single()
     if (error) throw error
+    await this.patchJobMeta(job)
     if (job.findings.length > 0) {
       await this.replaceFindings(job.id, job.findings)
     }
     const findings = await loadFindings(job.id)
-    return rowToJob(data as JobRow, findings)
+    const fresh = await this.get(job.id)
+    return fresh ?? rowToJob(data as JobRow, findings)
   }
 
   private async replaceFindings(jobId: string, findings: ReviewFinding[]): Promise<void> {
-    // Findings are append-mostly; for awaiting_human we upsert by id.
+    // INSERT only — 027 revokes UPDATE on findings, so upsert(ON CONFLICT DO UPDATE) fails.
     const rows = findings.map((f) => findingToRow(jobId, f))
-    const { error } = await supabase.from('ai_review_findings').upsert(rows, { onConflict: 'id' })
+    const { error } = await supabase.from('ai_review_findings').insert(rows)
     if (error) throw error
   }
 

@@ -106,4 +106,25 @@ if (result.status !== 0) {
   console.error(result.stderr || result.error)
   process.exit(result.status ?? 1)
 }
+
+// Refresh PostgREST schema cache so new columns/RPC are visible to the API.
+const reload = spawnTool(psqlBin, [
+  '-X',
+  '-v',
+  'ON_ERROR_STOP=1',
+  '-c',
+  "NOTIFY pgrst, 'reload schema'",
+])
+if (reload.error && reload.error.code === 'ENOENT') {
+  const container =
+    process.env.PLANOS_LOCAL_DB_CONTAINER ?? 'supabase_db_planos-ai-review-supabase'
+  spawnTool(
+    dockerBin,
+    ['exec', '-i', container, 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1'],
+    { input: "NOTIFY pgrst, 'reload schema';\n" },
+  )
+} else if (reload.status !== 0) {
+  console.warn('WARN: PostgREST schema reload notify failed', reload.stderr || reload.stdout)
+}
+
 console.log(`PASS applied ${sqlPath} to local-only ${host}:${port}`)

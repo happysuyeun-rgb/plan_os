@@ -140,7 +140,15 @@ try {
   assert.equal(await page.getByTestId('ai-review-run').isDisabled(), false)
 
   await page.getByTestId('ai-review-run').click()
-  await page.getByTestId('ai-review-job').waitFor({ state: 'visible', timeout: 30000 })
+  try {
+    await page.getByTestId('ai-review-job').waitFor({ state: 'visible', timeout: 30000 })
+  } catch (err) {
+    const alert = await page.getByRole('alert').allInnerTexts().catch(() => [])
+    const body = await page.locator('main').innerText().catch(() => '')
+    throw new Error(
+      `run did not produce ai-review-job; alerts=${JSON.stringify(alert)}; main=${body.slice(0, 600)}; cause=${err}`,
+    )
+  }
   await page.getByTestId('ai-review-source-manifest').waitFor({ state: 'visible', timeout: 10000 })
   const accept = page.locator('[data-testid^="ai-review-accept-"]').first()
   await accept.waitFor({ state: 'visible', timeout: 15000 })
