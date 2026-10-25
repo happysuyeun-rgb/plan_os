@@ -8,3 +8,5 @@
 -- idempotent bind_ai_review_finding_task, parent/source task links.
 --
 -- Status: executable local_only; Preview/ops application still requires explicit approval.
+-- Preview-only human runbook (no auto apply):
+--   docs/plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md
