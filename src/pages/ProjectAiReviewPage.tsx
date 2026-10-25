@@ -145,7 +145,13 @@ export default function ProjectAiReviewPage() {
             : '수락됨',
       )
     } catch (e) {
-      setError(e instanceof Error ? e.message : '수락 실패')
+      const detail =
+        e instanceof Error
+          ? e.message
+          : e && typeof e === 'object' && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : '수락 실패'
+      setError(detail || '수락 실패')
     } finally {
       setBusy(false)
     }

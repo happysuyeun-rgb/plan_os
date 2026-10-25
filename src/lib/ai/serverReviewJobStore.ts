@@ -141,7 +141,9 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
       throw error
     }
     await this.patchJobMeta(job)
-    if (job.findings.length > 0) {
+    // Findings are written once at awaiting_human; re-insert on accept would PK-conflict
+    // (027 revokes UPDATE, so upsert-update is unavailable).
+    if (job.status === 'awaiting_human' && job.findings.length > 0) {
       await this.replaceFindings(job.id, job.findings)
     }
     const findings = await loadFindings(job.id)
@@ -180,7 +182,7 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
       .single()
     if (error) throw error
     await this.patchJobMeta(job)
-    if (job.findings.length > 0) {
+    if (job.status === 'awaiting_human' && job.findings.length > 0) {
       await this.replaceFindings(job.id, job.findings)
     }
     const findings = await loadFindings(job.id)
@@ -191,7 +193,9 @@ export class ServerReviewJobStore implements ReviewJobStoreBag {
   private async replaceFindings(jobId: string, findings: ReviewFinding[]): Promise<void> {
     // INSERT only — 027 revokes UPDATE on findings, so upsert(ON CONFLICT DO UPDATE) fails.
     const rows = findings.map((f) => findingToRow(jobId, f))
-    const { error } = await supabase.from('ai_review_findings').insert(rows)
+    const { error } = await supabase
+      .from('ai_review_findings')
+      .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
     if (error) throw error
   }
 
