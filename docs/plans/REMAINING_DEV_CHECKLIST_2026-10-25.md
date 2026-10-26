@@ -37,7 +37,7 @@
 - [x] S1 감사 이력 API → 화면에 연결 (#57 · 주체 표시·로드 실패 고지)
 - [x] S1 AI 담당 지정 UI (F-105 Mock) (브라우저 메타 · F105-01/02 정합 · 실행/DB mig 없음)
 - [ ] S2 manifest ↔ 검수 실행 전 재검증 Mock (저장은 개발 플래그 유지 가능)
-- [ ] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소)
+- [x] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소 · `assertCanCreateProjectAgainstEnv`)
 
 ### 1-C. 품질·회귀
 

@@ -10,6 +10,7 @@
     "test:s1": "node --test tests/task-prototype.test.mjs",
     "test:unit": "node --experimental-strip-types --test tests/*.test.mjs",
     "test:e2e:ai-review": "node tests/e2e/browser_ai_review.mjs",
+    "test:e2e:mock-integrated": "node tests/mock-integrated-journey-e2e.mjs",
     "db:027-local": "node scripts/apply-027-local-only.mjs",
     "preview": "vite preview",
     "db:push": "node scripts/db-push.mjs",
