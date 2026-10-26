@@ -7,6 +7,7 @@ import type { MemberRole } from '../../types'
 import { fetchDocuments } from '../api/documents'
 import { fetchVersionSummaries } from '../api/versions'
 import { createServerTask } from '../api/projectTasks'
+import { assertAuditManifestCurrent } from '../api/auditManifests'
 import { prototypeTaskRepository } from '../taskPrototype'
 import { runMockPlanningReview } from './MockPlanningReviewProvider'
 import { assertCanAiReview } from './reviewAccess'
@@ -61,24 +62,46 @@ export async function loadProjectReviewDocuments(projectId: string): Promise<Cit
   }))
 }
 
+export type StartMockPlanningReviewOptions = {
+  documentTypes?: string[]
+  role?: MemberRole | null
+  staffBrief?: StaffBrief | null
+  /**
+   * When set, F-202 re-verifies the server-stored digests immediately before
+   * the Mock run. Missing/stale/unauthorized → AuditManifestStaleError (409).
+   * Omit to keep legacy type-based Mock runs (AI-review E2E regression path).
+   */
+  auditManifestId?: string | null
+}
+
 export async function startMockPlanningReview(
   projectId: string,
   store: ReviewJobStore = defaultReviewStore,
-  documentTypes?: string[],
+  documentTypesOrOptions?: string[] | StartMockPlanningReviewOptions,
   role: MemberRole | null = 'owner',
   staffBrief?: StaffBrief | null,
 ): Promise<PlanningReviewRun> {
-  assertCanAiReview(role, 'run')
+  const options: StartMockPlanningReviewOptions = Array.isArray(documentTypesOrOptions)
+    ? { documentTypes: documentTypesOrOptions, role, staffBrief }
+    : { role, staffBrief, ...(documentTypesOrOptions ?? {}) }
+
+  assertCanAiReview(options.role ?? 'owner', 'run')
+
+  if (options.auditManifestId) {
+    // Server recomputes digests from documents.content — never trusts the browser.
+    await assertAuditManifestCurrent(options.auditManifestId)
+  }
+
   let docs = await loadProjectReviewDocuments(projectId)
-  if (documentTypes?.length) {
-    const allow = new Set(documentTypes)
+  if (options.documentTypes?.length) {
+    const allow = new Set(options.documentTypes)
     docs = docs.filter((d) => allow.has(d.type))
   }
   if (docs.length === 0) {
     throw new Error('검수할 문서가 없습니다. 먼저 PRD 등 문서를 작성하세요.')
   }
 
-  const brief = normalizeStaffBrief(staffBrief)
+  const brief = normalizeStaffBrief(options.staffBrief)
   const mock = runMockPlanningReview(docs, { staffBrief: brief })
   assertFindingsMatchDocuments(mock.findings, docs)
   const job = createReviewJob(projectId)
