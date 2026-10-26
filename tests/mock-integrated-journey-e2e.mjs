@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Mock integrated journey — single Chromium path.
  *
  * Modes:
@@ -6,11 +6,12 @@
  * 2) FIXTURE (VITE_S3_E2E_FIXTURE Vite already up): catalog→handoff only (no fake docs)
  *
  * Never invent documents/tasks. Session handoff ≠ server review job persistence.
+ * Seed/login shared via tests/e2e/disposableAiReviewFixture.mjs
  */
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright'
+import { createLoginHelpers, seedAiReviewFixture } from './e2e/disposableAiReviewFixture.mjs'
 
 const site = process.env.PLANOS_E2E_BASE || 'http://127.0.0.1:5173'
 const shotDir = 'artifacts/mock-integrated-e2e'
@@ -25,7 +26,7 @@ function record(id, status, detail, ids = {}) {
 function writeResults(extra = {}) {
   writeFileSync(
     `${shotDir}/results.json`,
-    JSON.stringify({ tip: 'd40f975+', mode: extra.mode, results, ...extra }, null, 2),
+    JSON.stringify({ tip: 'aecaa1f+', mode: extra.mode, results, ...extra }, null, 2),
   )
 }
 
@@ -83,117 +84,35 @@ async function runFixtureSubset() {
 }
 
 async function runDisposableIntegrated() {
-  const { assertUuid, createAdminClient } = await import('./helpers/rest.mjs')
-  const { runPsqlSeed } = await import('./helpers/psql.mjs')
-  const { readLocalSupabaseEnv } = await import('./helpers/supabaseStatus.mjs')
-
-  const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
-  assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required for disposable mode')
-  const variables = readLocalSupabaseEnv(localDir)
-  const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
-  const dbPort = process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
-  assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
-
-  const stamp = Date.now()
-  const ownerEmail = `mock-int-owner-${stamp}@example.test`
-  const editorEmail = `mock-int-editor-${stamp}@example.test`
-  const viewerEmail = `mock-int-viewer-${stamp}@example.test`
-  const outsiderEmail = `mock-int-out-${stamp}@example.test`
-  const password = 'Synthetic-mock-int-password-123!'
-  const projectId = randomUUID()
-  const otherProjectId = randomUUID()
-
-  function expand(sql, vars) {
-    let out = sql
-    for (const [key, value] of Object.entries(vars)) {
-      if (key.endsWith('_email')) {
-        out = out.replaceAll(`:'${key}'`, `'${String(value).replace(/'/g, "''")}'`)
-      } else {
-        assertUuid(value, key)
-        out = out.replaceAll(`:'${key}'`, `'${value}'`)
-      }
-    }
-    return out
-  }
-
-  const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
-  async function createUser(email, name) {
-    const created = await admin('/auth/v1/admin/users', 'POST', {
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: name },
-    })
-    assertUuid(created.id, email)
-    return created.id
-  }
-
-  const ownerId = await createUser(ownerEmail, 'Mock Int Owner')
-  const editorId = await createUser(editorEmail, 'Mock Int Editor')
-  const viewerId = await createUser(viewerEmail, 'Mock Int Viewer')
-  const outsiderId = await createUser(outsiderEmail, 'Outsider')
-
-  runPsqlSeed(
-    expand(readFileSync('tests/e2e/seed_ai_review.sql', 'utf8'), {
-      owner_id: ownerId,
-      editor_id: editorId,
-      viewer_id: viewerId,
-      outsider_id: outsiderId,
-      project_id: projectId,
-      other_project_id: otherProjectId,
-      editor_email: editorEmail,
-      viewer_email: viewerEmail,
-    }),
-    { dbPort },
-  )
-  record('seed', 'PASS', 'seed_ai_review.sql', { projectId, ownerId })
+  // Isolated emailPrefix so this suite does not collide with browser_ai_review on same stack.
+  const fixture = await seedAiReviewFixture({
+    emailPrefix: 'mock-int',
+    ownerName: 'Mock Int Owner',
+    editorName: 'Mock Int Editor',
+    viewerName: 'Mock Int Viewer',
+  })
+  const {
+    site: journeySite,
+    projectId,
+    otherProjectId,
+    ownerId,
+    editorId,
+    viewerId,
+    ownerEmail,
+    viewerEmail,
+    password,
+  } = fixture
+  const { login } = createLoginHelpers({ site: journeySite, password })
+  record('seed', 'PASS', 'seed_ai_review.sql via disposableAiReviewFixture', { projectId, ownerId })
 
   let browser
   try {
     browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] })
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } })
 
-    async function clearSession() {
-      await page.context().clearCookies()
-      await page.goto(site + '/login', { waitUntil: 'domcontentloaded', timeout: 30000 })
-      await page.evaluate(() => {
-        try {
-          localStorage.clear()
-        } catch {
-          /* ignore */
-        }
-        try {
-          sessionStorage.clear()
-        } catch {
-          /* ignore */
-        }
-      })
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await page.locator('input[type=email]').waitFor({ state: 'visible', timeout: 15000 })
-    }
-
-    async function login(email) {
-      await clearSession()
-      await page.locator('input[type=email]').fill(email)
-      await page.locator('input[type=password]').fill(password)
-      await page.getByRole('button', { name: '임시 로그인' }).click()
-      await page.waitForURL(
-        (url) => url.pathname === '/dashboard' || url.pathname === '/onboarding',
-        { timeout: 30000 },
-      )
-      if (page.url().includes('/onboarding')) {
-        const next = page.getByRole('button').filter({ hasText: /시작|완료|다음|건너/ }).first()
-        if (await next.count()) await next.click()
-        await page.waitForURL(
-          (url) => url.pathname === '/dashboard' || url.pathname.startsWith('/projects'),
-          { timeout: 30000 },
-        )
-      }
-    }
-
     // --- A1 project entry (seeded — no fabricated project) ---
-    await login(ownerEmail)
-    await page.goto(`${site}/projects/${projectId}/tasks`, { waitUntil: 'domcontentloaded' })
+    await login(page, ownerEmail)
+    await page.goto(`${journeySite}/projects/${projectId}/tasks`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(800)
     record('A1-project-entry', 'PASS', 'entered seeded project tasks', {
       url: page.url(),
@@ -202,7 +121,7 @@ async function runDisposableIntegrated() {
     await page.screenshot({ path: `${shotDir}/a1-tasks.png` })
 
     // --- A2 human PM lane notice (approval loop separate) ---
-    await page.goto(`${site}/projects/${projectId}/plans`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${journeySite}/projects/${projectId}/plans`, { waitUntil: 'domcontentloaded' })
     const dual = page.getByTestId('dual-entry-lane-notice')
     await dual.waitFor({ state: 'visible', timeout: 20000 })
     assert.equal(await dual.getAttribute('data-lane'), 'human-pm')
@@ -210,7 +129,6 @@ async function runDisposableIntegrated() {
       url: page.url(),
       projectId,
     })
-    // Full PM approve CAS is covered by browser_pm_plan_loop — not claimed here.
     record(
       'A2-pm-approval-loop',
       'BLOCKED',
@@ -219,7 +137,9 @@ async function runDisposableIntegrated() {
     )
 
     // --- A3 catalog ---
-    await page.goto(`${site}/projects/${projectId}/specialists`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${journeySite}/projects/${projectId}/specialists`, {
+      waitUntil: 'domcontentloaded',
+    })
     await page.getByTestId('ai-staff-catalog-card').waitFor({ timeout: 15000 })
     record('A3-catalog', 'PASS', 'AI staff catalog 1 role', { url: page.url(), projectId })
 
@@ -301,7 +221,7 @@ async function runDisposableIntegrated() {
     })
 
     // --- A7 F-105 AI assignee on that task ---
-    await page.goto(`${site}/projects/${projectId}/tasks/${taskId}`, {
+    await page.goto(`${journeySite}/projects/${projectId}/tasks/${taskId}`, {
       waitUntil: 'domcontentloaded',
     })
     await page.getByTestId('task-detail-assignee-kind').waitFor({ timeout: 20000 })
@@ -310,7 +230,10 @@ async function runDisposableIntegrated() {
     await page.getByTestId('task-detail-assignee-save').click()
     await page.getByTestId('task-detail-assignee-summary').waitFor()
     await page.waitForFunction(
-      () => /실행 아님|AI/.test(document.querySelector('[data-testid="task-detail-assignee-summary"]')?.textContent || ''),
+      () =>
+        /실행 아님|AI/.test(
+          document.querySelector('[data-testid="task-detail-assignee-summary"]')?.textContent || '',
+        ),
       { timeout: 15000 },
     )
     const lsKind = await page.evaluate(
@@ -333,19 +256,26 @@ async function runDisposableIntegrated() {
     })
 
     // --- A8 task list ---
-    await page.goto(`${site}/projects/${projectId}/tasks`, { waitUntil: 'domcontentloaded' })
-    await page.waitForFunction(
-      (id) => document.body.innerText.includes(id.slice(0, 8)) || document.querySelector(`a[href*="${id}"]`),
+    await page.goto(`${journeySite}/projects/${projectId}/tasks`, { waitUntil: 'domcontentloaded' })
+    await page
+      .waitForFunction(
+        (id) =>
+          document.body.innerText.includes(id.slice(0, 8)) ||
+          document.querySelector(`a[href*="${id}"]`),
+        taskId,
+        { timeout: 20000 },
+      )
+      .catch(async () => {
+        await page.getByText('[검수]', { exact: false }).first().waitFor({ timeout: 10000 })
+      })
+    record('A8-task-list', 'PASS', 'S1 list shows accepted task', {
+      projectId,
       taskId,
-      { timeout: 20000 },
-    ).catch(async () => {
-      // Title-based: accepted task title starts with [검수]
-      await page.getByText('[검수]', { exact: false }).first().waitFor({ timeout: 10000 })
+      url: page.url(),
     })
-    record('A8-task-list', 'PASS', 'S1 list shows accepted task', { projectId, taskId, url: page.url() })
 
     // --- A9 reload durability split ---
-    await page.goto(`${site}/projects/${projectId}/tasks/${taskId}`, {
+    await page.goto(`${journeySite}/projects/${projectId}/tasks/${taskId}`, {
       waitUntil: 'domcontentloaded',
     })
     await page.getByTestId('task-detail-assignee-summary').waitFor({ timeout: 20000 })
@@ -353,15 +283,19 @@ async function runDisposableIntegrated() {
     assert.match(afterReloadSummary, /실행 아님|AI|agent/i)
     record('A9-f105-reload', 'PASS', 'F-105 LS survives reload', { projectId, taskId })
 
-    await page.goto(`${site}/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${journeySite}/projects/${projectId}/ai-review`, {
+      waitUntil: 'domcontentloaded',
+    })
     await page.getByTestId('ai-review-job').waitFor({ state: 'visible', timeout: 30000 })
     record('A9-review-job-reload', 'PASS', 'SERVER review job survives reload (≠ session handoff)', {
       projectId,
     })
 
     // --- B viewer cannot hire (same seeded project) ---
-    await login(viewerEmail)
-    await page.goto(`${site}/projects/${projectId}/ai-review`, { waitUntil: 'domcontentloaded' })
+    await login(page, viewerEmail)
+    await page.goto(`${journeySite}/projects/${projectId}/ai-review`, {
+      waitUntil: 'domcontentloaded',
+    })
     await page.getByTestId('ai-review-viewer-readonly').waitFor({ timeout: 20000 })
     assert.equal(await page.getByTestId('ai-review-hire').isDisabled(), true)
     record('B-viewer-hire', 'PASS', 'viewer hire disabled', { projectId })
