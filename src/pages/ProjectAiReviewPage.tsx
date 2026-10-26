@@ -60,7 +60,9 @@ export default function ProjectAiReviewPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [changeReason, setChangeReason] = useState('')
-  const [auditManifestId, setAuditManifestId] = useState<string | null>(null)
+  const [manifestTrackId, setManifestTrackId] = useState<string | undefined>(undefined)
+  const [hiredFromManifest, setHiredFromManifest] = useState(false)
+  const [manifestBanner, setManifestBanner] = useState('')
 
   if (projectId !== handoffTrackId) {
     setHandoffTrackId(projectId)
@@ -85,21 +87,32 @@ export default function ProjectAiReviewPage() {
   const canRun = canAiReview(role, 'run')
   const canAccept = canAiReview(role, 'accept')
   const selectionInsufficient = selectedTypes.length < MIN_REVIEW_DOCUMENTS
-  const canExecuteRun = hired && canRun && !busy && !selectionInsufficient
+  const effectivelyHired = hired || hiredFromManifest
+  const canExecuteRun = effectivelyHired && canRun && !busy && !selectionInsufficient
+
+  // Derive S2 gate id during render (query wins over session) — no effect setState.
+  const auditManifestId = (() => {
+    if (!projectId) return null
+    return searchParams.get('manifest') || loadProjectManifest(projectId)?.manifestId || null
+  })()
+
+  if (projectId !== manifestTrackId) {
+    setManifestTrackId(projectId)
+    const fromQuery = searchParams.get('manifest')
+    if (fromQuery) {
+      setHiredFromManifest(true)
+      setManifestBanner(`S2 manifest ${fromQuery.slice(0, 8)}… 연결 · 실행 직전 서버 digest 재검증`)
+    } else {
+      setHiredFromManifest(false)
+      setManifestBanner('')
+    }
+  }
 
   useEffect(() => {
     if (!projectId) return
     void setCurrentProject(projectId)
     void fetchMembers(projectId).catch(() => undefined)
-    const fromQuery = searchParams.get('manifest')
-    const fromSession = loadProjectManifest(projectId)?.manifestId ?? null
-    const resolved = fromQuery || fromSession
-    setAuditManifestId(resolved)
-    if (fromQuery) {
-      setHired(true)
-      setMessage(`S2 manifest ${fromQuery.slice(0, 8)}… 연결 · 실행 직전 서버 digest 재검증`)
-    }
-  }, [projectId, setCurrentProject, fetchMembers, searchParams])
+  }, [projectId, setCurrentProject, fetchMembers])
 
   useEffect(() => {
     if (!projectId || !canView) return
@@ -325,12 +338,12 @@ export default function ProjectAiReviewPage() {
             <p className="text-sm text-gray-700">역할: 기획 문서 누락·충돌 휴리스틱 검수</p>
             <button
               type="button"
-              disabled={!canRun || hired || busy}
+              disabled={!canRun || effectivelyHired || busy}
               onClick={onHire}
               className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-40"
               data-testid="ai-review-hire"
             >
-              {hired ? '투입됨 (Mock)' : 'Mock 기획 검수 직원 투입'}
+              {effectivelyHired ? '투입됨 (Mock)' : 'Mock 기획 검수 직원 투입'}
             </button>
           </section>
 
@@ -346,14 +359,14 @@ export default function ProjectAiReviewPage() {
                     type="checkbox"
                     checked={selectedTypes.includes(opt.type)}
                     onChange={() => toggleType(opt.type)}
-                    disabled={!hired || busy || !canRun}
+                    disabled={!effectivelyHired || busy || !canRun}
                     data-testid={`ai-review-doc-${opt.type}`}
                   />
                   {opt.label}
                 </label>
               ))}
             </div>
-            {selectionInsufficient && hired && canRun && (
+            {selectionInsufficient && effectivelyHired && canRun && (
               <p
                 role="alert"
                 className="rounded bg-amber-50 p-2 text-sm text-amber-900"
@@ -382,6 +395,11 @@ export default function ProjectAiReviewPage() {
       )}
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
+      {manifestBanner && !message && (
+        <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900" data-testid="ai-review-s2-manifest">
+          {manifestBanner}
+        </p>
+      )}
       {message && <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900" data-testid="ai-review-message">{message}</p>}
 
       {canView && job && (
