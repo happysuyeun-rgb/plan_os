@@ -9,10 +9,14 @@ on:
       - 'api/ai/**'
       - 'supabase/local_only/**'
       - 'tests/e2e/browser_ai_review.mjs'
+      - 'tests/mock-integrated-journey-e2e.mjs'
       - 'tests/e2e/seed_ai_review.sql'
       - 'tests/rls/test_local_supabase_ai_review.mjs'
       - 'scripts/apply-027-local-only.mjs'
       - '.github/workflows/ai-review-local-e2e.yml'
+      - 'src/lib/localDevAuth.ts'
+      - 'src/store/projectStore.ts'
+      - 'src/pages/ProjectCreatePage.tsx'
   workflow_dispatch:
 
 permissions:
@@ -100,6 +104,15 @@ jobs:
           exit 1
       - name: Playwright Mock AI review E2E
         run: node tests/e2e/browser_ai_review.mjs
+      - name: Playwright Mock integrated journey E2E
+        run: node tests/mock-integrated-journey-e2e.mjs
+      - name: Upload integrated journey artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mock-integrated-e2e
+          path: artifacts/mock-integrated-e2e/
+          if-no-files-found: warn
       - name: Cleanup
         if: always()
         run: |

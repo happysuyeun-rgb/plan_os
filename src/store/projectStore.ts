@@ -11,7 +11,7 @@ import {
   updateProject as apiUpdateProject,
 } from '../lib/api/projects'
 import { logProjectActivity } from '../lib/api/activities'
-import { isLocalDevAuth } from '../lib/localDevAuth'
+import { assertCanCreateProjectAgainstEnv, isLocalDevAuth } from '../lib/localDevAuth'
 import { useAuthStore } from './authStore'
 import { usePlanStore } from './planStore'
 
@@ -79,6 +79,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createProject: async (data) => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) throw new Error('로그인이 필요합니다')
+    // Fail fast on placeholder URL — avoids hung local E2E against fake host.
+    assertCanCreateProjectAgainstEnv()
     const project = await apiCreateProject({ ...data, user_id: userId })
     set((s) => ({ projects: [project, ...s.projects] }))
     return project
