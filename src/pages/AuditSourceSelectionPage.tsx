@@ -56,6 +56,7 @@ export default function AuditSourceSelectionPage() {
   const [manifestId, setManifestId] = useState('')
   const [persisting, setPersisting] = useState(false)
   const [verifyingRun, setVerifyingRun] = useState(false)
+  const [needsReselect, setNeedsReselect] = useState(false)
   const requestKey = useRef<string | null>(null)
 
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function AuditSourceSelectionPage() {
   const resetSelectionState = () => {
     setChecked(false)
     setManifestId('')
+    setNeedsReselect(false)
     requestKey.current = null
     setCandidates([])
     setNotice('')
@@ -194,8 +196,8 @@ export default function AuditSourceSelectionPage() {
       if (e instanceof AuditManifestStaleError) {
         setError(e.message)
         setChecked(false)
-        setManifestId('')
-        requestKey.current = null
+        setNeedsReselect(true)
+        // Keep manifestId visible until the user explicitly reselects, so recovery CTA stays on screen.
         clearProjectManifest(projectId)
       } else if (e instanceof AuditManifestAccessError) {
         setError(e.message)
@@ -278,23 +280,31 @@ export default function AuditSourceSelectionPage() {
             </section>
           )}
 
-          {manifestId && (
-            <section className="space-y-3 rounded-lg border border-green-200 bg-green-50/40 p-4" aria-label="저장된 manifest">
-              <h2 className="font-semibold">서버 manifest 준비됨</h2>
-              <p className="break-all text-sm">스냅샷 ID: {manifestId}</p>
+          {(manifestId || needsReselect) && (
+            <section
+              className={`space-y-3 rounded-lg border p-4 ${needsReselect ? 'border-amber-300 bg-amber-50/50' : 'border-green-200 bg-green-50/40'}`}
+              aria-label="저장된 manifest"
+            >
+              <h2 className="font-semibold">
+                {needsReselect ? '문서가 변경됨 — manifest 갱신 필요' : '서버 manifest 준비됨'}
+              </h2>
+              {manifestId && <p className="break-all text-sm">스냅샷 ID: {manifestId}</p>}
               <p className="text-sm text-gray-700">
-                검수 실행 버튼은 서버에서 digest를 다시 확인합니다. 문서가 바뀌었다면 409로 차단되며
-                문서를 다시 선택·갱신해야 합니다.
+                {needsReselect
+                  ? '문서를 다시 선택하고 서버 manifest를 새로 저장한 뒤 실행하세요.'
+                  : '검수 실행 버튼은 서버에서 digest를 다시 확인합니다. 문서가 바뀌었다면 409로 차단되며 문서를 다시 선택·갱신해야 합니다.'}
               </p>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={verifyingRun}
-                  onClick={() => { void runWithGate() }}
-                  className="rounded bg-green-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
-                >
-                  실행 직전 재검증 후 Mock 검수
-                </button>
+                {!needsReselect && (
+                  <button
+                    type="button"
+                    disabled={verifyingRun}
+                    onClick={() => { void runWithGate() }}
+                    className="rounded bg-green-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                  >
+                    실행 직전 재검증 후 Mock 검수
+                  </button>
+                )}
                 <button
                   type="button"
                   className="rounded border px-4 py-2 text-sm"
