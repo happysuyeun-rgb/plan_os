@@ -1,17 +1,48 @@
 # PlanOS 3.0 — API 계약 명세 (TARGET)
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** 설계 초안 / 엔드포인트 구현·서버 테스트 전  
-**상위 문서:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [아키텍처](ARCHITECTURE.md) · [데이터 모델](DATA_MODEL.md)  
-**주의:** 모든 `/api/v1/...`는 **제안 URL**이다. 기존 React/Supabase API를 대체하거나 현재 서버에 존재한다는 의미가 아니다.
+**최종 수정일:** 2026-10-26  
+**문서 버전:** v0.4  
+**진행 상태:** TARGET REST 초안 / 대부분 미구현 · CURRENT는 Supabase client·Vite BFF Mock  
+**상위 문서:** [MVP_BUILD_READY](MVP_BUILD_READY_SPEC_2026-10-20.md) · [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md)  
+**주의:** `/api/v1/...`는 **제안**. CURRENT S1은 `projectTasks.ts` PostgREST, PM은 `pmPlans`, 검수는 review store/BFF placeholder.
+
+## 0. CURRENT 정본 (코드·SQL 대조 · 2026-10-25 R2)
+
+아래 TARGET REST와 **이름이 달라도 CURRENT가 우선**한다. 문서 정합 ≠ 구현 완료.
+
+| 영역 | CURRENT 경로 | 비고 |
+|---|---|---|
+| 사람 PM 생성 | RPC `create_pm_plan` (`pmPlans.createPmPlan`, `client_request_id` 멱등) | API-05 REST 아님 |
+| 사람 PM 초안 편집 | RPC `save_pm_plan_draft` | |
+| 사람 PM 제출·승인·반려·수정요청 | RPC `transition_pm_plan` (`request_approval`\|`approve`\|`reject`\|`needs_revision`) → `pm_plan_approval_events` | TARGET 정본=§0.1 |
+| 승인함 근사 | RPC `get_dashboard_pending_approvals` (**pm_plans `pending_owner_approval`만**) | 범용 `ai_approvals` inbox=TARGET |
+| S1 업무 생성 | PostgREST insert · status DB default `todo` · **Idempotency-Key 없음** | TARGET REST 공통 멱등 규칙과 분리 |
+| S1 업무 수정·삭제/복원 | `patchServerTask` + `expectedVersion` (P4001) · `deletedAt` soft-delete · restore=owner | 전용 DELETE REST 없음 |
+| S1 reopen | **없음** (done 종결) | FD-06 TARGET |
+| Mock 검수 수락/수정요청 | `acceptFindingAsTask` / `requestReviewChanges` (ReviewJob store) | API-22 **아님** |
+| 계약 동의 | Mock `previewMockContract`=`review_only` · **digest/termsVersion 없음** | API-11 TARGET |
+| 계약 철회·run retry·cost ledger | **미구현** | TARGET · revoke canonical=`revoked`(terminate와 별칭 정리 전) |
+| 감사 소스 | RPC `create_audit_source_manifest` · 테이블 `audit_source_manifests` | `audit_drafts` 명칭 폐기 |
+
+### 0.1 TARGET endpoint 정본 — 계획 승인 · 산출물 수락 (단일 기준)
+
+구현·OpenAPI·화면 명세는 아래 **정본만** 쓴다. 과거 문서 경로는 별칭으로만 기록하고 신규 구현에 쓰지 않는다.
+
+| 행위 | 정본 메서드·경로 | API ID | 폐기·별칭 (구현 금지) |
+|---|---|---|---|
+| 계획 제출(승인 요청 생성) | `POST /api/v1/projects/:projectId/plans/:planId/submit` | API-06 | CURRENT=`transition_pm_plan(request_approval)` |
+| 계획·고위험 승인 **결정** | `POST /api/v1/projects/:projectId/approvals/:approvalId/decide` | **API-20** | ~~`POST …/plans/:planId/approve`~~ (구 API-06 경로) → **API-20으로 통합** |
+| 산출물 수락/반려/수정요청 | `POST /api/v1/projects/:projectId/artifacts/:artifactId/accept` | **API-22** | ~~`POST …/artifacts/:id/acceptance`~~ → **API-22와 동일 의미, 경로 폐기** |
+| 산출물 수락 이력 조회 | `GET /api/v1/projects/:projectId/artifacts/:artifactId/acceptance` | (조회 전용) | 결정 POST와 혼용 금지 |
+
+**규칙:** 계획 승인 결정은 계획 전용 `/approve`가 아니라 **승인함 리소스 API-20** 하나다. 산출물 사람 결정은 **API-22 `/accept` 하나**다. machine verify ≠ accept.
 
 ## 1. API 기본 규칙
 - **인증:** Supabase 사용자 세션 검증 후 서버가 `actor_id` 산출. 요청 body의 user_id/owner_id를 신뢰하지 않음.
 - **스코프:** 프로젝트 리소스는 항상 `projectId`와 자원 소속 검증. AI worker는 서비스 주체+특정 run/task/contract에 한정.
-- **쓰기:** `Idempotency-Key` 필수(계약 동의·승인·run 생성·취소·정산). 중복 요청은 동일 결과 반환.
-- **동시성:** `If-Match` 또는 `expectedVersion`으로 충돌 감지. 승인·계약 조건 변경 시 새 승인.
+- **쓰기 (TARGET REST):** `Idempotency-Key` 필수(계약 동의·승인·run 생성·취소·정산). **CURRENT:** PM 생성만 `client_request_id`; S1 task create는 멱등 키 없음.
+- **동시성:** `If-Match` 또는 `expectedVersion`으로 충돌 감지. CURRENT S1 patch·PM draft/transition이 version CAS 사용.
 - **비용:** 통화코드 ISO 4217, 최소 단위 정수(`amountMinor`), estimate/reserved/actual 구분.
 - **페이지네이션:** `limit`(기본 20, 최대 100), opaque `cursor`. 정렬 안정성 보장.
 - **감사:** 서버 `requestId/traceId` 반환, 로그에서 민감정보 마스킹.
@@ -25,10 +56,10 @@
 |---|---|---|---|---|---|
 | API-01 | GET `/api/v1/projects/:projectId/workspace` | 멤버 | projectId | 브리프/업무/AI 팀/비용 요약 | 04~06 |
 | API-02 | GET `/api/v1/projects/:projectId/tasks` | 멤버 | status,assignee,cursor | 사람·AI 공통 업무 목록 | 15~18 |
-| API-03 | POST `/api/v1/projects/:projectId/tasks` | owner/editor | title,objective,assignee,criteria | taskId, draft | 15 |
-| API-04 | PATCH `/api/v1/projects/:projectId/tasks/:taskId` | owner/editor | expectedVersion,변경 필드 | 업데이트/충돌 | 15 |
-| API-05 | POST `/api/v1/projects/:projectId/plans` | owner/editor | objective,scope,modelPreference? | planId, planned(초안) | 13 |
-| API-06 | POST `/api/v1/projects/:projectId/plans/:planId/approve` | owner(기본) | expectedVersion,decision,reason | 승인 이벤트·계획 버전 | 14 |
+| API-03 | POST `/api/v1/projects/:projectId/tasks` | owner/editor | title,objective,assignee,criteria | **TARGET REST.** CURRENT=PostgREST insert·default `todo`·멱등키 없음 | 15 |
+| API-04 | PATCH `/api/v1/projects/:projectId/tasks/:taskId` | owner/editor | expectedVersion,변경 필드 | **근사 CURRENT**=`patchServerTask`(+deletedAt soft-delete) | 15 |
+| API-05 | POST `/api/v1/projects/:projectId/plans` | owner/editor | objective,scope,modelPreference? | **TARGET.** CURRENT=`create_pm_plan` | 13 |
+| API-06 | POST `/api/v1/projects/:projectId/plans/:planId/submit` | owner/editor | expectedVersion | 계획 버전 고정·서버 승인 요청 생성. **결정=API-20.** CURRENT=`transition_pm_plan(request_approval)` | 14 |
 
 ## 3. AI 인력사무소·계약
 
@@ -38,9 +69,9 @@
 | API-08 | GET `/api/v1/agents/:agentId` | 회원/공개 정책 | agentId | 도구·제약·검증 정보 | 08 |
 | API-09 | POST `/api/v1/agents/:agentId/interviews` | 회원 | projectId,goal,answers | 적합성 설명/제약 | 09 |
 | API-10 | POST `/api/v1/projects/:projectId/contracts` | owner | agentId,scope,allowedTools,budgetCapMinor,currency,expiresAt | draft 계약·조건 버전 | 10 |
-| API-11 | POST `/api/v1/projects/:projectId/contracts/:contractId/accept` | owner | termsVersion,explicitConsent | active 계약·감사 이벤트 | 11 |
-| API-12 | POST `/api/v1/projects/:projectId/assignments` | owner | contractId,agentId | 배치 ID·킥오프 | 12 |
-| API-13 | POST `/api/v1/projects/:projectId/contracts/:contractId/terminate` | owner | reason,cancelPolicy | 새 실행 차단·정산 진행 | 28 |
+| API-11 | POST `/api/v1/projects/:projectId/contracts/:contractId/accept` | owner | termsDigest,manifestDigest,budgetCaps,currency,expiresAt,consentDigest,explicitConsent | **TARGET.** Mock `previewMockContract`는 digest/법적 consent **없음**(`review_only`) | 11 |
+| API-12 | POST `/api/v1/projects/:projectId/assignments` | owner | contractId,agentId | 배치 ID·킥오프 · **TARGET** | 12 |
+| API-13 | POST `/api/v1/projects/:projectId/contracts/:contractId/terminate` | owner | reason,cancelPolicy | **TARGET.** 상태 canonical=`revoked`(terminate≡revoke 별칭 정리 전) | 28 |
 
 ## 4. 실행·승인·증빙·비용
 
@@ -50,12 +81,12 @@
 | API-15 | GET `/api/v1/projects/:projectId/runs` | 멤버(권한별 필터) | status,cursor | 실행 요약 목록 | 18 |
 | API-16 | GET `/api/v1/projects/:projectId/runs/:runId` | 멤버(권한별) | runId | 상태·도구/검증·비용·증빙 | 18,20~22 |
 | API-17 | POST `/api/v1/projects/:projectId/runs/:runId/cancel` | owner/허용자 | reason,expectedVersion | 202 취소 요청 상태 | 24 |
-| API-18 | POST `/api/v1/projects/:projectId/runs/:runId/retry` | owner/허용자 | expectedVersion,reason | 신규 attempt 또는 run ID | 24 |
-| API-19 | GET `/api/v1/projects/:projectId/approvals` | 멤버(권한별) | status,cursor | 승인 대기/완료 목록 | 19,23 |
-| API-20 | POST `/api/v1/projects/:projectId/approvals/:approvalId/decide` | owner/명시 위임자 | decision,expectedVersion,approvalDigest | 승인/거부/만료 판정 | 19 |
-| API-21 | GET `/api/v1/projects/:projectId/artifacts/:artifactId` | 멤버(권한별) | artifactId | 버전·검증 결과·보안 링크 | 21~23 |
-| API-22 | POST `/api/v1/projects/:projectId/artifacts/:artifactId/accept` | owner/명시 위임자 | decision,note,expectedVersion | accepted/rejected/needs_revision | 23 |
-| API-23 | GET `/api/v1/projects/:projectId/usage` | owner | period,cursor | estimate/reserved/actual/refund 원장 요약 | 27 |
+| API-18 | POST `/api/v1/projects/:projectId/runs/:runId/retry` | owner/허용자 | expectedVersion,reason | **TARGET-only** (워커 없음) | 24 |
+| API-19 | GET `/api/v1/projects/:projectId/approvals` | 멤버(권한별) | status,cursor | **TARGET.** CURRENT 근사=`get_dashboard_pending_approvals`(pm만) | 19,23 |
+| API-20 | POST `/api/v1/projects/:projectId/approvals/:approvalId/decide` | owner/명시 위임자 | decision,expectedVersion,approvalDigest | **계획·고위험 승인 결정 정본.** MVP **delegation 없음** · CURRENT PM=`transition_pm_plan(approve\|reject\|needs_revision)` | 14,19 |
+| API-21 | GET `/api/v1/projects/:projectId/artifacts/:artifactId` | 멤버(권한별) | artifactId | **TARGET** (`ai_artifacts` 없음) | 21~23 |
+| API-22 | POST `/api/v1/projects/:projectId/artifacts/:artifactId/accept` | owner/명시 위임자 | decision,note,expectedVersion+digest | **산출물 사람 결정 정본.** 구경로 `…/acceptance` POST 폐기. CURRENT Mock≠본 API | 23 |
+| API-23 | GET `/api/v1/projects/:projectId/usage` | owner | period,cursor | **TARGET.** ledger DDL 없음 · Mock=`pricing_unavailable` | 27 |
 
 ## 5. 핵심 요청/응답 예시
 

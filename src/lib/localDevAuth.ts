@@ -8,6 +8,16 @@ export function isLocalDevAuth(): boolean {
   return !url || url.includes('placeholder.supabase.co')
 }
 
+/** Dev-only: block DB project create against placeholder URL (does not change hosted/ops). */
+export const PLACEHOLDER_PROJECT_CREATE_BLOCKED =
+  'PLACEHOLDER_SUPABASE_BLOCKED: placeholder.supabase.co에서는 프로젝트 DB 생성을 하지 않습니다. 일회용 local Supabase 또는 실연결 환경을 사용하세요.'
+
+export function assertCanCreateProjectAgainstEnv(): void {
+  if (isLocalDevAuth()) {
+    throw new Error(PLACEHOLDER_PROJECT_CREATE_BLOCKED)
+  }
+}
+
 export function readLocalDevUser(): User | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY)

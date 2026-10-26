@@ -1,7 +1,8 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `29264be` (#56 병합, 2026-10-25)  
-**정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**
+**기준 tip:** `main` @ `fde3a6d` (#57) + 본 브랜치 F-105 결함수정·설계 정합화 **1차+2차(R2)** (main 미병합 · PR #59)  
+**정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**  
+**정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) (R2 표 포함)
 
 ---
 
@@ -17,6 +18,7 @@
 - [x] AI 직원 1종 카탈로그 카드 Mock (#54)
 - [x] 사람 PM(`/plans`) ↔ AI 검수(`/ai-review`) 병행 고지 (#55)
 - [x] 채용→검수→S1 E2E fixture 문서 (#56)
+- [x] S1 감사 이력 주체·로드 오류 고지 (#57)
 
 ---
 
@@ -32,10 +34,10 @@
 ### 1-B. S1/S2 품질 (기존 코드 다듬기)
 
 - [x] S1 삭제·복원: UI를 DB(owner 전용)에 맞추기 (#52)
-- [x] S1 감사 이력 API → 화면에 연결 (본 PR · 주체 표시·로드 실패 고지)
-- [ ] S1 AI 담당 지정 UI (F-105 Mock)
+- [x] S1 감사 이력 API → 화면에 연결 (#57 · 주체 표시·로드 실패 고지)
+- [x] S1 AI 담당 지정 UI (F-105 Mock) (브라우저 메타 · F105-01/02 정합 · 실행/DB mig 없음)
 - [ ] S2 manifest ↔ 검수 실행 전 재검증 Mock (저장은 개발 플래그 유지 가능)
-- [ ] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소)
+- [x] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소 · `assertCanCreateProjectAgainstEnv`)
 
 ### 1-C. 품질·회귀
 
@@ -85,6 +87,6 @@
 
 ## 추천 다음 1개 (작음)
 
-1. **S1 AI 담당 지정 UI (F-105 Mock)** — 실행 트리거 아님, 이중진입 유지  
-2. 또는 **placeholder 환경 프로젝트 생성 로컬 가드** — 로컬 E2E 단절 해소  
-3. 또는 **S2 manifest ↔ 검수 재검증 Mock** — 저장은 개발 플래그 유지 가능  
+1. **placeholder 환경 프로젝트 생성 로컬 가드** — 로컬 E2E 단절 해소  
+2. 또는 **S2 manifest ↔ 검수 재검증 Mock** — 저장은 개발 플래그 유지 가능  
+3. 또는 전체 `npm run lint` 잔여 오류 정리  

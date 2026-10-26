@@ -1,10 +1,10 @@
 # PlanOS 3.0 — 첫 전문 AI 업무 UX 와이어플로 v0.1
 
-**작성/최종 수정:** 2026-10-20 KST  
-**상태:** Phase 1 P1-3 사용자 동선·예외·권한·화면 인계 **설계 초안**, 최종 UX·정책 승인/실제 구현·접근성 테스트 **미완료**  
-**대상:** `requirements_auditor_v1` 기획 검수 AI — 프로젝트 소속 문서 2개 이상 근거 검수 및 비공개 감사 보고서.  
-**근거:** [PRD](../product/PRD.md) · [첫 전문 AI 수용 조건](../product/FIRST_SPECIALIST_AI_MVP_2026-10-19.md) · [계약/비용 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md) · [IA](IA.md) · [화면명세](SCREEN_SPEC.md) · [TF-01~30](../product/TASK_FLOWS.md) · [권한 정책](../product/PERMISSIONS_POLICY.md).  
-**환경:** TARGET 화면/가상 URL. 현행 앱에 구현된 경로가 아니며 고객 계약/외부 모델 호출은 하지 않는다. Phase 2~3 내부 최소 계약 실증과 Phase 5 고객용 인력사무소 화면을 분리한다.
+**작성:** 2026-10-20 · **최종 수정:** 2026-10-25  
+**상태:** TARGET 여정 설계 + CURRENT Mock 경로 주석 · 접근성/실계약 E2E **미완료**  
+**대상:** `requirements_auditor_v1`  
+**근거:** [IA v0.3](IA.md) · [HIRE_REVIEW fixture](../plans/HIRE_REVIEW_S1_E2E_FIXTURE_2026-10-25.md) · [DUAL_ENTRY](../product/DUAL_ENTRY_CONTINUOUS_AI_STAFFING_2026-10-21.md)  
+**환경:** 본문 mermaid의 N19/N20/N08 등은 **TARGET**. CURRENT Mock: `/specialists` → `/specialists/request` → `/ai-review` (실계약·유료 LLM 없음). 사람 PM은 `/plans` 병행.
 
 ## 1. 사용자 가치 및 화면 원칙
 - **첫 사용자 약속:** 사용자가 작성한 PRD·IA 등 선택한 프로젝트 문서를 읽고, 서로 어긋나거나 빠진 요구사항을 **증빙이 달린 점검 보고서**로 전달한다. 정확도를 보증하지 않으며 사람 최종 검토 필수.

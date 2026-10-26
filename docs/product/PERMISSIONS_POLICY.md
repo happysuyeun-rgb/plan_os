@@ -1,11 +1,11 @@
 # PlanOS 3.0 — 권한·승인 정책 매트릭스
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** TARGET 정책 초안 / 보안 검토·DB 재현 전  
-**상위 기준:** [PRD](PRD.md) · [업무 흐름](TASK_FLOWS.md) · [화면 명세](../ux/SCREEN_SPEC.md)  
-**범위:** 사람 계정, AI 서비스 계약, PM/전문 AI 도구 실행의 서버 권한. 현재 RLS가 이를 충족한다는 의미는 아님.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** TARGET 정책 + **CURRENT 매트릭스 링크** / 보안 검토·DB 재현 전  
+**상위 기준:** [PRD](PRD.md) · [PERMISSION_MATRIX CURRENT](../plans/PERMISSION_MATRIX_2026-10-25.md) · [SCREEN_SPEC](../ux/SCREEN_SPEC.md)  
+**범위:** TARGET=실계약·실실행. CURRENT Mock 검수는 owner\|editor accept (`reviewAccess.ts`) — 유료화 시 owner-only 잠금은 DEC-RBAC-01. outsider=비멤버 null.
 
 ## 1. 권한 결정 원칙
 1. **기본 거부(default deny):** 인증·프로젝트 멤버십·계약·도구·승인·예산 중 하나라도 검증되지 않으면 실행하지 않는다.
@@ -74,10 +74,12 @@
 **거부 응답 규칙:** 자원 존재 여부 노출을 피하기 위해 타 프로젝트 자원은 안전한 not-found 또는 forbidden 처리. UI는 권한 거부 사유를 설명하되 비밀 정보는 표시하지 않는다.
 
 ### 2026-10-19 최초 전문 AI R0/R1 단일 역할 게이트 (안)
-- **초기 MVP 기본:** owner만 서비스 계약·유료 PM 계획 생성 범위 동의/예산 확정·계획 승인·전문 AI 실행·보고서 수락. editor의 기존 문서/계획 초안 작성 권한은 유지하되 유료 호출·최종 승인·수락 위임은 별도 결정 전 금지. viewer/outsider의 신규 비공개 감사 산출물 조회도 기본 거부(프로젝트 구성원이라는 이유만으로 AI 감사 내역을 공개하지 않음).
+- **초기 MVP 기본(TARGET 유료 레인):** owner만 서비스 계약·유료 PM 계획 생성 범위 동의/예산 확정·계획 승인·전문 AI 실행·보고서 수락. editor의 기존 문서/계획 초안 작성 권한은 유지하되 유료 호출·최종 승인·수락 위임은 별도 결정 전 금지. viewer/outsider의 신규 **비공개 AI 산출물** 조회도 기본 거부.
+- **CURRENT Mock 불일치 (문서≠코드 해결 보류·DEC-RBAC-01):** `reviewAccess.ts` — viewer는 `/ai-review` **view 허용**(Mock findings 포함), owner\|editor는 run/accept/request_changes 허용. 이는 TARGET「viewer 비공개 산출물 거부」「editor 무위임 수락 거부」와 **충돌**. 유료/실계약 도입 전 정책 잠금 시점 미결정.
+- **위임(delegation):** TARGET은 owner가 editor에게 범위/금액/만료를 명시 위임할 수 있다고 적혀 있으나, **MVP 코드·DDL·API에 위임 기능은 존재하지 않음**(매트릭스의 「명시 위임자」=미구현). POL-01 결정 전 구현 금지.
 - **R0**: 계약에서 선택한 같은 프로젝트 documentId+digest 읽기만 허용. **R1**: 오케스트레이터 승인된 신규 artifact 생성만 허용. 실제 문서의 R2 PATCH, 외부 R3 행위는 최초 전문 역할에서 금지.
 - AI PM 계획 **모델 호출도 비용 발생 실행**이므로 owner 계약/데이터 처리·예산 동의 전 호출 금지. 공급자 원가 미확정의 비용·환불 결정을 AI에 위임 금지.
-- [P1-2 상세 정책](MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md) / [교차감사](../quality/PHASE1_CROSS_AUDIT_2026-10-19.md). 실제 RLS·service_role 정책 서버 실증 및 상용 법적 승인은 아직 없음.
+- [P1-2 상세 정책](MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md) · [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md). 실제 RLS·service_role 정책 서버 실증 및 상용 법적 승인은 아직 없음.
 
 ## 5. RLS/권한 테스트 연결 (격리 개발 DB에서만)
 
@@ -123,3 +125,4 @@
 |---|---|---|---|
 | 2026-10-16 | v0.1 | 사용자/AI 역할 권한, 위험 등급, 서버 평가, 격리 DB 테스트 매트릭스 정의 | 검토 전 |
 | 2026-10-16 | v0.2 | TARGET/CURRENT SQL 권한 차이와 service_role 재검증·운영자 권한 미결정 명시 | 검토 전 |
+| 2026-10-25 | v0.3 | R2: Mock viewer/editor vs TARGET 비공개 산출물·위임 부재 명시 | 문서 정합 |

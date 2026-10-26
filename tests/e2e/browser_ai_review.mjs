@@ -3,111 +3,27 @@
  * Requires PLANOS_LOCAL_SUPABASE_DIR + Vite on :5173 (see workflow).
  */
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { mkdirSync } from 'node:fs'
 import { chromium } from 'playwright'
-import { assertUuid, createAdminClient } from '../helpers/rest.mjs'
-import { runPsqlSeed } from '../helpers/psql.mjs'
-import { readLocalSupabaseEnv } from '../helpers/supabaseStatus.mjs'
+import { createLoginHelpers, seedAiReviewFixture } from './disposableAiReviewFixture.mjs'
 
-const localDir = process.env.PLANOS_LOCAL_SUPABASE_DIR
-assert(localDir, 'PLANOS_LOCAL_SUPABASE_DIR is required')
-const variables = readLocalSupabaseEnv(localDir)
-const api = process.env.PLANOS_LOCAL_API_URL ?? 'http://127.0.0.1:54321'
-const dbPort = process.env.PLANOS_LOCAL_DB_PORT ?? '54322'
-assert(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(api), 'Local API URL must be loopback')
-const site = 'http://127.0.0.1:5173'
-
-const stamp = Date.now()
-const ownerEmail = `ai-review-owner-${stamp}@example.test`
-const editorEmail = `ai-review-editor-${stamp}@example.test`
-const viewerEmail = `ai-review-viewer-${stamp}@example.test`
-const outsiderEmail = `ai-review-out-${stamp}@example.test`
-const password = 'Synthetic-ai-review-password-123!'
-const projectId = randomUUID()
-const otherProjectId = randomUUID()
-
-function expand(sql, vars) {
-  let out = sql
-  for (const [key, value] of Object.entries(vars)) {
-    if (key.endsWith('_email')) {
-      out = out.replaceAll(`:'${key}'`, `'${String(value).replace(/'/g, "''")}'`)
-    } else {
-      assertUuid(value, key)
-      out = out.replaceAll(`:'${key}'`, `'${value}'`)
-    }
-  }
-  return out
-}
-
-const admin = createAdminClient({ apiUrl: api, serviceKey: variables.SERVICE_ROLE_KEY })
-async function createUser(email, name) {
-  const created = await admin('/auth/v1/admin/users', 'POST', {
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: name },
-  })
-  assertUuid(created.id, email)
-  return created.id
-}
-
-const ownerId = await createUser(ownerEmail, 'AI Review Owner')
-const editorId = await createUser(editorEmail, 'AI Review Editor')
-const viewerId = await createUser(viewerEmail, 'AI Review Viewer')
-const outsiderId = await createUser(outsiderEmail, 'Outsider')
-
-runPsqlSeed(
-  expand(readFileSync('tests/e2e/seed_ai_review.sql', 'utf8'), {
-    owner_id: ownerId,
-    editor_id: editorId,
-    viewer_id: viewerId,
-    outsider_id: outsiderId,
-    project_id: projectId,
-    other_project_id: otherProjectId,
-    editor_email: editorEmail,
-    viewer_email: viewerEmail,
-  }),
-  { dbPort },
-)
+const fixture = await seedAiReviewFixture({
+  emailPrefix: 'ai-review',
+  ownerName: 'AI Review Owner',
+  editorName: 'AI Review Editor',
+  viewerName: 'AI Review Viewer',
+})
+const {
+  site,
+  projectId,
+  otherProjectId,
+  ownerEmail,
+  editorEmail,
+  viewerEmail,
+  password,
+} = fixture
+const { login } = createLoginHelpers({ site, password })
 console.log('PASS seeded AI review project + members')
-
-async function clearSession(page) {
-  await page.context().clearCookies()
-  await page.goto(site + '/login', { waitUntil: 'domcontentloaded', timeout: 30000 })
-  await page.evaluate(() => {
-    try { localStorage.clear() } catch { /* ignore */ }
-    try { sessionStorage.clear() } catch { /* ignore */ }
-  })
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.locator('input[type=email]').waitFor({ state: 'visible', timeout: 15000 })
-}
-
-async function login(page, email) {
-  await clearSession(page)
-  await page.locator('input[type=email]').fill(email)
-  await page.locator('input[type=password]').fill(password)
-  await page.getByRole('button', { name: '임시 로그인' }).click()
-  try {
-    await page.waitForURL(
-      (url) => url.pathname === '/dashboard' || url.pathname === '/onboarding',
-      { timeout: 30000 },
-    )
-  } catch (err) {
-    const body = await page.locator('body').innerText().catch(() => '')
-    throw new Error(
-      `login failed for ${email}; url=${page.url()}; body=${body.slice(0, 400)}; cause=${err}`,
-    )
-  }
-  if (page.url().includes('/onboarding')) {
-    // Seed should mark onboarding complete; if not, advance past the gate.
-    const next = page.getByRole('button').filter({ hasText: /시작|완료|다음|건너/ }).first()
-    if (await next.count()) await next.click()
-    await page.waitForURL((url) => url.pathname === '/dashboard' || url.pathname.startsWith('/projects'), {
-      timeout: 30000,
-    })
-  }
-}
 
 let browser
 const shotDir = 'artifacts/browser-qa'
@@ -135,7 +51,7 @@ try {
   // AC-03 UX: fewer than 2 doc types blocks run
   for (const type of ['prd', 'policy', 'wireframe', 'ia', 'screen_list']) {
     const box = page.getByTestId(`ai-review-doc-${type}`)
-    if (await box.count() && await box.isChecked()) await box.uncheck()
+    if ((await box.count()) && (await box.isChecked())) await box.uncheck()
   }
   await page.getByTestId('ai-review-doc-prd').check()
   await page.getByTestId('ai-review-insufficient-block').waitFor({ state: 'visible', timeout: 5000 })
@@ -160,18 +76,22 @@ try {
   const accept = page.locator('[data-testid^="ai-review-accept-"]').first()
   await accept.waitFor({ state: 'visible', timeout: 15000 })
   await accept.click()
-  await page.waitForFunction(
-    () => {
-      const el = document.querySelector('[data-testid="ai-review-message"]')
-      const t = el?.textContent || ''
-      return /S1 업무|재사용|수락/.test(t)
-    },
-    { timeout: 30000 },
-  ).catch(async (err) => {
-    const alert = await page.getByRole('alert').allInnerTexts().catch(() => [])
-    const msg = await page.getByTestId('ai-review-message').innerText().catch(() => '')
-    throw new Error(`accept did not update message; alerts=${JSON.stringify(alert)}; msg=${msg}; cause=${err}`)
-  })
+  await page
+    .waitForFunction(
+      () => {
+        const el = document.querySelector('[data-testid="ai-review-message"]')
+        const t = el?.textContent || ''
+        return /S1 업무|재사용|수락/.test(t)
+      },
+      { timeout: 30000 },
+    )
+    .catch(async (err) => {
+      const alert = await page.getByRole('alert').allInnerTexts().catch(() => [])
+      const msg = await page.getByTestId('ai-review-message').innerText().catch(() => '')
+      throw new Error(
+        `accept did not update message; alerts=${JSON.stringify(alert)}; msg=${msg}; cause=${err}`,
+      )
+    })
   const msg = await page.getByTestId('ai-review-message').innerText()
   assert.match(msg, /S1 업무|재사용|수락/)
   console.log('PASS owner mock review accept → S1')
