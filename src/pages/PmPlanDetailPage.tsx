@@ -151,10 +151,14 @@ export default function PmPlanDetailPage() {
               <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-800">
                 {plan.source === 'human' ? '사람이 작성한 계획' : 'AI가 제안한 계획'}
               </span>
-              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium">
+              <span
+                role="status"
+                aria-label={`계획 상태 ${PM_PLAN_STATUS_LABELS[plan.status]}`}
+                className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium"
+              >
                 상태: {PM_PLAN_STATUS_LABELS[plan.status]}
               </span>
-              <span className="text-xs text-gray-500">버전 {plan.version}</span>
+              <span className="text-xs text-gray-500" aria-label={`계획 버전 ${plan.version}`}>버전 {plan.version}</span>
             </div>
             {plan.status === 'approved' && (
               <p className="text-sm text-gray-600">승인은 계획 승인을 기록한 것입니다. AI 실행이나 결제가 시작되지 않았습니다.</p>

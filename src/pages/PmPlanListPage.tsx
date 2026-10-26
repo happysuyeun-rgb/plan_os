@@ -74,13 +74,29 @@ export default function PmPlanListPage() {
         </p>
       )}
       <ul className="space-y-3">
-        {plans.map((plan) => (
-          <li key={plan.id} className="rounded-xl border p-4">
+        {[...plans]
+          .sort((a, b) => {
+            const rank = (s: PmPlan['status']) => (s === 'pending_owner_approval' ? 0 : 1)
+            const byStatus = rank(a.status) - rank(b.status)
+            if (byStatus !== 0) return byStatus
+            return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          })
+          .map((plan) => (
+          <li
+            key={plan.id}
+            className={`rounded-xl border p-4 ${plan.status === 'pending_owner_approval' ? 'border-amber-300 bg-amber-50/40' : ''}`}
+          >
             <div className="flex items-center justify-between gap-3">
               <Link className="font-semibold text-indigo-800 underline" to={`/projects/${plan.project_id}/plans/${plan.id}`}>
                 {plan.objective.slice(0, 80)}{plan.objective.length > 80 ? '…' : ''}
               </Link>
-              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium">
+              <span
+                className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
+                  plan.status === 'pending_owner_approval'
+                    ? 'bg-amber-100 text-amber-900'
+                    : 'bg-gray-100'
+                }`}
+              >
                 {PM_PLAN_STATUS_LABELS[plan.status]}
               </span>
             </div>
