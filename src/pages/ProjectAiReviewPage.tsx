@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
@@ -25,6 +25,8 @@ import {
   consumeSpecialistReviewHandoff,
   type SpecialistReviewHandoff,
 } from '../lib/specialistReviewHandoff'
+import { AuditManifestStaleError } from '../lib/api/auditManifests'
+import { loadProjectManifest } from '../lib/s2ManifestSession'
 
 const DOC_OPTIONS = [
   { type: 'prd', label: 'PRD' },
@@ -41,6 +43,7 @@ const DOC_OPTIONS = [
  */
 export default function ProjectAiReviewPage() {
   const { projectId } = useParams()
+  const [searchParams] = useSearchParams()
   const user = useAuthStore((s) => s.user)
   const userId = user?.id
   const { currentProject, setCurrentProject } = useProjectStore()
@@ -57,6 +60,7 @@ export default function ProjectAiReviewPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [changeReason, setChangeReason] = useState('')
+  const [auditManifestId, setAuditManifestId] = useState<string | null>(null)
 
   if (projectId !== handoffTrackId) {
     setHandoffTrackId(projectId)
@@ -87,7 +91,15 @@ export default function ProjectAiReviewPage() {
     if (!projectId) return
     void setCurrentProject(projectId)
     void fetchMembers(projectId).catch(() => undefined)
-  }, [projectId, setCurrentProject, fetchMembers])
+    const fromQuery = searchParams.get('manifest')
+    const fromSession = loadProjectManifest(projectId)?.manifestId ?? null
+    const resolved = fromQuery || fromSession
+    setAuditManifestId(resolved)
+    if (fromQuery) {
+      setHired(true)
+      setMessage(`S2 manifest ${fromQuery.slice(0, 8)}… 연결 · 실행 직전 서버 digest 재검증`)
+    }
+  }, [projectId, setCurrentProject, fetchMembers, searchParams])
 
   useEffect(() => {
     if (!projectId || !canView) return
@@ -133,22 +145,26 @@ export default function ProjectAiReviewPage() {
     setError('')
     setMessage('')
     try {
-      const result = await startMockPlanningReview(
-        projectId,
-        defaultReviewStore,
-        selectedTypes,
+      const result = await startMockPlanningReview(projectId, defaultReviewStore, {
+        documentTypes: selectedTypes,
         role,
-        activeBrief,
-      )
+        staffBrief: activeBrief,
+        auditManifestId,
+      })
       setJob(result.job)
       const insuff = result.job.insufficientInput
         ? ' · 입력 부족(insufficient_input) — 품질 보증 아님'
         : ''
+      const gated = auditManifestId ? ' · S2 digest 재검증 PASS' : ''
       setMessage(
-        `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode} · 유료 LLM 없음)${insuff}`,
+        `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode} · 유료 LLM 없음)${insuff}${gated}`,
       )
     } catch (e) {
-      setError(e instanceof Error ? e.message : '검수 실행 실패')
+      if (e instanceof AuditManifestStaleError) {
+        setError(`${e.message} (HTTP ${e.status})`)
+      } else {
+        setError(e instanceof Error ? e.message : '검수 실행 실패')
+      }
     } finally {
       setBusy(false)
     }
@@ -212,18 +228,21 @@ export default function ProjectAiReviewPage() {
     setBusy(true)
     setError('')
     try {
-      const result = await startMockPlanningReview(
-        projectId,
-        defaultReviewStore,
-        selectedTypes,
+      const result = await startMockPlanningReview(projectId, defaultReviewStore, {
+        documentTypes: selectedTypes,
         role,
-        activeBrief,
-      )
+        staffBrief: activeBrief,
+        auditManifestId,
+      })
       setJob(result.job)
       setReReviewJobId(null)
       setMessage(`재검수(Mock) 완료 · job=${result.job.id} · 유료 LLM 없음`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '재검수 실패')
+      if (e instanceof AuditManifestStaleError) {
+        setError(`${e.message} (HTTP ${e.status})`)
+      } else {
+        setError(e instanceof Error ? e.message : '재검수 실패')
+      }
     } finally {
       setBusy(false)
     }
@@ -257,6 +276,19 @@ export default function ProjectAiReviewPage() {
       </header>
 
       <DualEntryLaneNotice projectId={projectId} lane="ai-review" />
+
+      {projectId && (
+        <p className="text-sm text-gray-600">
+          S2 문서 digest 고정이 필요하면{' '}
+          <Link className="text-indigo-700 underline" to={`/projects/${projectId}/audits/new`}>
+            검수 문서 선택
+          </Link>
+          에서 manifest를 저장하세요.
+          {auditManifestId ? (
+            <span className="ml-2 text-xs text-green-800">연결됨: {auditManifestId.slice(0, 8)}…</span>
+          ) : null}
+        </p>
+      )}
 
       {!canView && (
         <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900">
