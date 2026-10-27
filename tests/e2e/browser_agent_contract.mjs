@@ -83,7 +83,7 @@ try {
   await page.locator('textarea').nth(0).fill('요구사항 문서 두 건의 누락과 불일치를 검수해 주세요.')
   await page.locator('textarea').nth(1).fill('누락 항목과 근거를 표로 정리')
   await page.getByRole('button', { name: '요청 초안 미리보기' }).click()
-  await page.getByText('요청 초안 · 로컬 미리보기').waitFor({ state: 'visible', timeout: 10000 })
+  await page.getByText('요청 초안 생성됨').waitFor({ state: 'visible', timeout: 10000 })
   await page.locator('label').filter({ hasText: /유료 LLM/ }).locator('input[type=checkbox]').check()
   await page.getByRole('button', { name: '계약 조건 모의 검토' }).click()
   await page.getByTestId('contract-save-draft').click()
