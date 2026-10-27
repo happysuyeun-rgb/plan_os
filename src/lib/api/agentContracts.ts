@@ -2,7 +2,6 @@ import { supabase } from '../supabase'
 import { AuditManifestStaleError } from './auditManifests'
 import {
   AGENT_CONTRACT_CONSENT_STATEMENT,
-  AGENT_CONTRACT_TERMS_VERSION,
   MOCK_BUDGET_CAP_MINOR,
 } from '../agentContractTerms'
 
@@ -80,13 +79,11 @@ function throwContractError(error: { code?: string; message?: string } | null): 
     message.includes('CONTRACT_VERSION_CONFLICT') ||
     message.includes('INVALID_CONTRACT_TRANSITION') ||
     message.includes('CONTRACT_EXPIRED') ||
-    (code === 'P4001' && !message.includes('STALE_SOURCE'))
+    code === 'P4001'
   ) {
-    const kind = message.includes('CONTRACT_EXPIRED')
-      ? 'CONTRACT_EXPIRED'
-      : message.includes('CONTRACT_VERSION_CONFLICT')
-        ? 'CONTRACT_VERSION_CONFLICT'
-        : 'INVALID_CONTRACT_TRANSITION'
+    let kind = 'INVALID_CONTRACT_TRANSITION'
+    if (message.includes('CONTRACT_EXPIRED')) kind = 'CONTRACT_EXPIRED'
+    else if (message.includes('CONTRACT_VERSION_CONFLICT')) kind = 'CONTRACT_VERSION_CONFLICT'
     throw new AgentContractConflictError(kind, message || kind)
   }
   if (
@@ -184,4 +181,8 @@ export async function listAgentContractEvents(contractId: string): Promise<Agent
   return (data as AgentContractEventRow[]) ?? []
 }
 
-export { AGENT_CONTRACT_TERMS_VERSION, AGENT_CONTRACT_CONSENT_STATEMENT, MOCK_BUDGET_CAP_MINOR }
+export {
+  AGENT_CONTRACT_TERMS_VERSION,
+  AGENT_CONTRACT_CONSENT_STATEMENT,
+  MOCK_BUDGET_CAP_MINOR,
+} from '../agentContractTerms'

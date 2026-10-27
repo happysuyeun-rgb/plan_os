@@ -19,10 +19,14 @@ test('server contract draft requires consent and can be cancelled locally',()=>{
  assert.match(page, /setDraft\(null\)/)
  assert.match(page, /AGENT_CONTRACT_CONSENT_STATEMENT/)
 })
-test('approved server contract can run Mock worker and hand off without claiming paid hire',()=>{
+test('approved server contract can run Mock worker, accept report, and hand off without paid hire',()=>{
  assert.match(page, /enqueueAndProcessMockRun/)
  assert.match(page, /Mock worker 서버 실행/)
+ assert.match(page, /publishAiArtifactFromRun/)
+ assert.match(page, /decideAiArtifact/)
+ assert.match(page, /결과 수락 · S1 연결/)
  assert.match(page, /writeSpecialistReviewHandoff/)
- assert.match(page, /ai-review\?contract=/)
+ assert.match(page, /Mock 기획 검수로 이어가기/)
+ assert.match(page, /ai-review/)
  assert.match(page, /유료 LLM/)
 })
