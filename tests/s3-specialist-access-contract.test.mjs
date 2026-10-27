@@ -12,13 +12,16 @@ test('request UI requires current project and user verification',()=>{
  assert.match(page, /verifiedUserId === userId/)
  assert.match(page, /currentProject\?\.user_id === userId/)
 })
-test('draft review is explicitly non-executable and cancellable',()=>{
- assert.match(page, /계약\/승인\/결제\/실행 불가/)
+test('server contract draft requires consent and can be cancelled locally',()=>{
+ assert.match(page, /createAgentContractDraft/)
+ assert.match(page, /acceptAgentContract/)
  assert.match(page, /setContractPreview\(null\)/)
  assert.match(page, /setDraft\(null\)/)
+ assert.match(page, /AGENT_CONTRACT_CONSENT_STATEMENT/)
 })
-test('mock contract review can hand off to ai-review without claiming paid hire',()=>{
+test('approved server contract can hand off to ai-review without claiming paid hire',()=>{
  assert.match(page, /writeSpecialistReviewHandoff/)
- assert.match(page, /Mock 기획 검수로 이어가기/)
- assert.match(page, /ai-review/)
+ assert.match(page, /승인된 계약으로 Mock 검수 이어가기/)
+ assert.match(page, /ai-review\?contract=/)
+ assert.match(page, /유료 LLM/)
 })
