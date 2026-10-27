@@ -2,7 +2,6 @@ import { supabase } from '../supabase'
 import { AuditManifestStaleError } from './auditManifests'
 import {
   AGENT_CONTRACT_CONSENT_STATEMENT,
-  AGENT_CONTRACT_TERMS_VERSION,
   MOCK_BUDGET_CAP_MINOR,
 } from '../agentContractTerms'
 
