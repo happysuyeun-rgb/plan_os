@@ -1,0 +1,114 @@
+name: F-C artifacts accept S1 local E2E disposable
+
+on:
+  pull_request:
+    paths:
+      - 'src/pages/SpecialistRequestMockPage.tsx'
+      - 'src/lib/api/aiArtifacts.ts'
+      - 'src/lib/api/aiRuns.ts'
+      - 'src/lib/api/agentContracts.ts'
+      - 'supabase/migrations/029_agent_contracts_mvp.sql'
+      - 'supabase/migrations/030_ai_runs_mock_worker.sql'
+      - 'supabase/migrations/031_ai_artifacts_accept_s1.sql'
+      - 'tests/e2e/browser_ai_artifact_accept.mjs'
+      - 'tests/e2e/local_browser_env.mjs'
+      - 'tests/rls/test_local_supabase_ai_artifacts.mjs'
+      - '.github/workflows/fc-artifacts-local-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: planos-fc-artifacts-local-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-fc-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-fc-artifacts-supabase
+      VITE_S1_SERVER_TASKS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.84.2
+      - name: Install PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -qq -y postgresql-client
+          fi
+      - name: Refuse hosted credentials
+        run: |
+          for variable in SUPABASE_ACCESS_TOKEN SUPABASE_DB_URL SUPABASE_DB_PASSWORD; do
+            if [ -n "$(printenv "$variable" || true)" ]; then
+              echo "::error::Unexpected hosted Supabase configuration"
+              exit 1
+            fi
+          done
+      - name: Start disposable local Supabase
+        run: |
+          set -euo pipefail
+          mkdir -p "$PLANOS_LOCAL_SUPABASE_DIR"
+          cd "$PLANOS_LOCAL_SUPABASE_DIR"
+          supabase init
+          if ! supabase start --exclude realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta,mailpit > /tmp/planos-fc-start.log 2>&1; then
+            grep -Ei 'error|failed' /tmp/planos-fc-start.log | head -40 || true
+            exit 1
+          fi
+      - name: Apply repo migrations
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          set -euo pipefail
+          for migration in supabase/migrations/*.sql; do
+            psql -X -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: RLS F-C artifacts
+        run: |
+          npm ci --ignore-scripts
+          node tests/rls/test_local_supabase_ai_artifacts.mjs
+      - name: Configure Vite for local Supabase
+        run: node tests/e2e/local_browser_env.mjs
+      - name: Install Playwright Chromium
+        run: |
+          npm install --ignore-scripts --no-save --package-lock=false playwright@1.58.2
+          node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Start Vite
+        run: |
+          (npm run dev -- --host 127.0.0.1 > /tmp/planos-vite-fc.log 2>&1 & echo $! > /tmp/planos-vite-fc.pid)
+          for attempt in $(seq 1 50); do
+            if curl -fsS -o /dev/null http://127.0.0.1:5173/login; then exit 0; fi
+            sleep 1
+          done
+          tail -n 80 /tmp/planos-vite-fc.log || true
+          exit 1
+      - name: Playwright F-C artifact E2E
+        run: node tests/e2e/browser_ai_artifact_accept.mjs
+      - name: Upload F-C screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fc-artifact-e2e
+          path: artifacts/fc-artifact-e2e/
+          if-no-files-found: warn
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f /tmp/planos-vite-fc.pid ]; then kill "$(cat /tmp/planos-vite-fc.pid)" || true; fi
+          rm -f .env.local
+          if [ -d "$PLANOS_LOCAL_SUPABASE_DIR/supabase" ]; then
+            ( cd "$PLANOS_LOCAL_SUPABASE_DIR" && supabase stop --no-backup ) || true
+          fi
