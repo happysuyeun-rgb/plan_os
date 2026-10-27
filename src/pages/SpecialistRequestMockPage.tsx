@@ -42,6 +42,14 @@ import {
   type AiUsageLedgerRow,
   AiRunConflictError,
 } from '../lib/api/aiRuns'
+import {
+  decideAiArtifact,
+  listAiArtifactEvents,
+  listProjectAiArtifacts,
+  publishAiArtifactFromRun,
+  type AiArtifactEventRow,
+  type AiArtifactRow,
+} from '../lib/api/aiArtifacts'
 
 function newRequestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -75,6 +83,8 @@ export default function SpecialistRequestMockPage() {
   const [serverRun, setServerRun] = useState<AiRunRow | null>(null)
   const [runEvents, setRunEvents] = useState<AiRunEventRow[]>([])
   const [usageRows, setUsageRows] = useState<AiUsageLedgerRow[]>([])
+  const [artifact, setArtifact] = useState<AiArtifactRow | null>(null)
+  const [artifactEvents, setArtifactEvents] = useState<AiArtifactEventRow[]>([])
 
   useEffect(() => {
     let mounted = true
@@ -133,12 +143,23 @@ export default function SpecialistRequestMockPage() {
           setRunEvents([])
           setUsageRows([])
         }
+        const arts = await listProjectAiArtifacts(projectId)
+        if (!mounted) return
+        const latestArt = arts[0] ?? null
+        setArtifact(latestArt)
+        if (latestArt) {
+          const aev = await listAiArtifactEvents(latestArt.id)
+          if (mounted) setArtifactEvents(aev)
+        } else {
+          setArtifactEvents([])
+        }
       })
       .catch(() => {
         if (mounted) {
           setEvents([])
           setRunEvents([])
           setUsageRows([])
+          setArtifactEvents([])
         }
       })
     return () => {
@@ -181,6 +202,11 @@ export default function SpecialistRequestMockPage() {
     setUsageRows(await listAiUsageForRun(run.id))
   }
 
+  const refreshArtifact = async (row: AiArtifactRow) => {
+    setArtifact(row)
+    setArtifactEvents(await listAiArtifactEvents(row.id))
+  }
+
   const runMockWorker = async () => {
     if (!owner || !serverContract || serverContract.status !== 'active') {
       setError('승인된 서버 계약으로만 Mock worker를 실행할 수 있습니다.')
@@ -193,9 +219,30 @@ export default function SpecialistRequestMockPage() {
       await refreshRun(run)
       if (run.status === 'succeeded') {
         setRunIdempotencyKey(newRequestId())
+        const published = await publishAiArtifactFromRun(run.id)
+        await refreshArtifact(published)
       } else if (run.status === 'failed') {
         setError(run.error_message ?? run.error_code ?? 'Mock 실행이 실패했습니다.')
       }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const decideReport = async (decision: 'accepted' | 'rejected' | 'revision_requested') => {
+    if (!owner || !artifact) return
+    setBusy(true)
+    setError('')
+    try {
+      const row = await decideAiArtifact(
+        artifact.id,
+        artifact.version,
+        decision,
+        decision === 'accepted' ? '결과 수락 및 S1 연결' : decision === 'rejected' ? '결과 반려' : '수정 요청',
+      )
+      await refreshArtifact(row)
     } catch (e) {
       setError(mapError(e))
     } finally {
@@ -211,7 +258,10 @@ export default function SpecialistRequestMockPage() {
       const queued = await retryFailedAiRun(serverRun.id, serverRun.version)
       const processed = await processMockAiRun(queued.id)
       await refreshRun(processed)
-      if (processed.status === 'failed') {
+      if (processed.status === 'succeeded') {
+        const published = await publishAiArtifactFromRun(processed.id)
+        await refreshArtifact(published)
+      } else if (processed.status === 'failed') {
         setError(processed.error_message ?? processed.error_code ?? 'Mock 재시도가 실패했습니다.')
       }
     } catch (e) {
@@ -551,6 +601,73 @@ export default function SpecialistRequestMockPage() {
                 >
                   실패 실행 재시도
                 </button>
+              )}
+            </section>
+          )}
+
+          {artifact && (
+            <section
+              role="status"
+              aria-label="서버 보고서"
+              className="mb-6 rounded-xl border border-emerald-300 bg-emerald-50 p-5"
+              data-testid="server-artifact-panel"
+            >
+              <h2 className="text-lg font-bold">서버 보고서 · 사람 수락 (F-C)</h2>
+              <p className="mt-2 text-sm" data-testid="server-artifact-status">
+                상태: {artifact.status} · version {artifact.version}
+              </p>
+              <p className="mt-1 text-xs break-all" data-testid="server-artifact-id">
+                ID: {artifact.id} · digest {artifact.content_digest}
+              </p>
+              {artifact.linked_task_id && projectId && (
+                <p className="mt-2 text-sm" data-testid="server-artifact-task">
+                  S1 연결 업무:{' '}
+                  <Link className="underline" to={`/projects/${projectId}/tasks/${artifact.linked_task_id}`}>
+                    {artifact.linked_task_id}
+                  </Link>
+                </p>
+              )}
+              {artifactEvents.length > 0 && (
+                <ol className="mt-3 space-y-1 text-xs" data-testid="server-artifact-events">
+                  {artifactEvents.map((ev) => (
+                    <li key={ev.id}>
+                      {ev.event_type}
+                      {ev.comment ? ` · ${ev.comment}` : ''}
+                      {ev.linked_task_id ? ` · task ${ev.linked_task_id.slice(0, 8)}` : ''}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {(artifact.status === 'published' || artifact.status === 'revision_requested') && (
+                <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void decideReport('accepted')}
+                    className="rounded-md bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                    data-testid="artifact-accept"
+                  >
+                    결과 수락 · S1 연결
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void decideReport('revision_requested')}
+                    className="rounded-md border px-4 py-2 text-sm disabled:opacity-50"
+                    data-testid="artifact-revision"
+                  >
+                    수정 요청
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void decideReport('rejected')}
+                    className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-800 disabled:opacity-50"
+                    data-testid="artifact-reject"
+                  >
+                    반려
+                  </button>
+                </div>
               )}
             </section>
           )}
