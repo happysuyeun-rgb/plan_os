@@ -26,6 +26,7 @@ test('approved server contract can run Mock worker, accept report, and hand off 
  assert.match(page, /decideAiArtifact/)
  assert.match(page, /결과 수락 · S1 연결/)
  assert.match(page, /writeSpecialistReviewHandoff/)
- assert.match(page, /ai-review\?contract=/)
+ assert.match(page, /Mock 기획 검수로 이어가기/)
+ assert.match(page, /ai-review/)
  assert.match(page, /유료 LLM/)
 })

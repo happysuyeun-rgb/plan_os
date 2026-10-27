@@ -78,7 +78,7 @@ try {
   await page.locator('textarea').nth(1).fill('수락 후 업무 링크가 보여야 함')
   await page.getByRole('button', { name: '요청 초안 미리보기' }).click()
   await page.locator('label').filter({ hasText: /유료 LLM/ }).locator('input[type=checkbox]').check()
-  await page.getByRole('button', { name: '계약 조건 검토 후 서버 저장 준비' }).click()
+  await page.getByRole('button', { name: '계약 조건 모의 검토' }).click()
   await page.getByTestId('contract-save-draft').click()
   await page.getByTestId('contract-consent-check').check()
   await page.getByTestId('contract-accept').click()

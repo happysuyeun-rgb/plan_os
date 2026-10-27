@@ -58,6 +58,14 @@ function newRequestId(): string {
   return '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0')
 }
 
+const fixtureMode = import.meta.env.DEV && import.meta.env.VITE_S3_E2E_FIXTURE === 'true'
+
+function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested'): string {
+  if (decision === 'accepted') return '결과 수락 및 S1 연결'
+  if (decision === 'rejected') return '결과 반려'
+  return '수정 요청'
+}
+
 export default function SpecialistRequestMockPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
@@ -115,6 +123,7 @@ export default function SpecialistRequestMockPage() {
   useEffect(() => {
     let mounted = true
     if (!projectId || !userId || verifiedProjectId !== projectId) return
+    if (fixtureMode) return
     void listProjectAgentContracts(projectId)
       .then(async (rows) => {
         if (!mounted) return
@@ -236,12 +245,7 @@ export default function SpecialistRequestMockPage() {
     setBusy(true)
     setError('')
     try {
-      const row = await decideAiArtifact(
-        artifact.id,
-        artifact.version,
-        decision,
-        decision === 'accepted' ? '결과 수락 및 S1 연결' : decision === 'rejected' ? '결과 반려' : '수정 요청',
-      )
+      const row = await decideAiArtifact(artifact.id, artifact.version, decision, decisionComment(decision))
       await refreshArtifact(row)
     } catch (e) {
       setError(mapError(e))
@@ -370,21 +374,28 @@ export default function SpecialistRequestMockPage() {
 
   const continueToMockReview = () => {
     if (!projectId) return
-    if (!serverContract || serverContract.status !== 'active') {
+    const activeContract = serverContract?.status === 'active' ? serverContract : null
+    if (!fixtureMode && !activeContract) {
       setError('Mock 검수로 이어가려면 서버 계약을 승인해야 합니다.')
       return
     }
     try {
       const handoffDraft =
         draft ??
-        createMockDraft({
-          roleId: MOCK_SPECIALIST.id,
-          projectId,
-          task: String(serverContract.scope_json?.task ?? ''),
-          acceptanceCriteria: String(serverContract.scope_json?.acceptanceCriteria ?? ''),
-        })
+        (activeContract
+          ? createMockDraft({
+              roleId: MOCK_SPECIALIST.id,
+              projectId,
+              task: String(activeContract.scope_json?.task ?? ''),
+              acceptanceCriteria: String(activeContract.scope_json?.acceptanceCriteria ?? ''),
+            })
+          : null)
+      if (!handoffDraft) {
+        setError('이어갈 요청 초안이 없습니다.')
+        return
+      }
       writeSpecialistReviewHandoff(buildHandoffFromDraft(handoffDraft))
-      navigate(`/projects/${projectId}/ai-review?contract=${serverContract.id}`)
+      navigate(`/projects/${projectId}/ai-review${activeContract ? `?contract=${activeContract.id}` : ''}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : '검수 화면으로 이어갈 수 없습니다.')
     }
@@ -415,7 +426,7 @@ export default function SpecialistRequestMockPage() {
       ) : !owner ? (
         <div className="space-y-4">
           <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            서버 계약 초안·승인은 프로젝트 소유자만 수행할 수 있습니다. 멤버는 저장된 계약 조회만 가능합니다.
+            현재 Mock 업무 요청은 프로젝트 소유자만 작성할 수 있습니다. 멤버는 저장된 계약 조회만 가능합니다.
           </div>
           {serverContract && (
             <section
@@ -721,26 +732,39 @@ export default function SpecialistRequestMockPage() {
           {contractPreview && !serverContract && (
             <section role="status" aria-label="모의 계약 검토" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
               <h2 className="font-semibold">로컬 검토 → 서버 초안</h2>
-              <p>로컬 미리보기는 실행 권한이 없습니다. 아래 버튼으로 서버에 계약 초안을 저장하세요.</p>
+              <p>검토 상태: {contractPreview.status} · 로컬 미리보기는 실행 권한이 없습니다.</p>
               <div className="mt-3 rounded border border-amber-300 bg-white p-3">
-                <h3 className="font-semibold">예상 비용·예산 (Mock)</h3>
-                <p>유료 과금 없음 · Mock 상한 {MOCK_BUDGET_CAP_MINOR} KRW minor · {budgetReview?.reason}</p>
+                <h3 className="font-semibold">예상 비용·예산 검토 (Mock)</h3>
+                <p>예상 비용: 산정 불가 · 최대 청구금액: 미정 · 결제: 불가</p>
+                <p className="mt-1">유료 과금 없음 · Mock 상한 {MOCK_BUDGET_CAP_MINOR} KRW minor · {budgetReview?.reason}</p>
               </div>
-              <button
-                type="button"
-                disabled={busy || !manifestId}
-                onClick={() => void saveServerDraft()}
-                className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
-                data-testid="contract-save-draft"
-              >
-                서버에 계약 초안 저장
-              </button>
+              {!fixtureMode && (
+                <button
+                  type="button"
+                  disabled={busy || !manifestId}
+                  onClick={() => void saveServerDraft()}
+                  className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                  data-testid="contract-save-draft"
+                >
+                  서버에 계약 초안 저장
+                </button>
+              )}
+              {fixtureMode && (
+                <button
+                  type="button"
+                  onClick={continueToMockReview}
+                  className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white"
+                  data-testid="specialist-continue-ai-review"
+                >
+                  Mock 기획 검수로 이어가기
+                </button>
+              )}
             </section>
           )}
 
           {draft && (
             <section aria-label="업무 요청 초안" className="mt-6 rounded-xl border border-green-300 bg-green-50 p-5">
-              <h2 className="text-lg font-bold">요청 초안 · 로컬 미리보기</h2>
+              <h2 className="text-lg font-bold">요청 초안 생성됨 · 실행 대기 아님</h2>
               <p className="mt-2 whitespace-pre-wrap text-sm">{draft.task}</p>
               <h3 className="mt-3 font-semibold">완료 기준</h3>
               <p className="whitespace-pre-wrap text-sm">{draft.acceptanceCriteria}</p>
@@ -763,7 +787,7 @@ export default function SpecialistRequestMockPage() {
                     disabled={!noticeRead}
                     className="mt-3 rounded bg-gray-900 px-3 py-2 text-sm text-white disabled:opacity-50"
                   >
-                    계약 조건 검토 후 서버 저장 준비
+                    계약 조건 모의 검토
                   </button>
                 </div>
               )}
