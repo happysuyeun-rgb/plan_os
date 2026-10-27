@@ -85,7 +85,7 @@ try {
   await page.getByRole('button', { name: '요청 초안 미리보기' }).click()
   await page.getByText('요청 초안 · 로컬 미리보기').waitFor({ state: 'visible', timeout: 10000 })
   await page.locator('label').filter({ hasText: /유료 LLM/ }).locator('input[type=checkbox]').check()
-  await page.getByRole('button', { name: '계약 조건 검토 후 서버 저장 준비' }).click()
+  await page.getByRole('button', { name: '계약 조건 모의 검토' }).click()
   await page.getByTestId('contract-save-draft').click()
   await page.getByTestId('server-contract-panel').waitFor({ state: 'visible', timeout: 25000 })
   await page.getByTestId('server-contract-status').getByText('draft', { exact: false }).waitFor({ state: 'visible' })
