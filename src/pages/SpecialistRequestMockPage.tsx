@@ -60,6 +60,12 @@ function newRequestId(): string {
 
 const fixtureMode = import.meta.env.DEV && import.meta.env.VITE_S3_E2E_FIXTURE === 'true'
 
+function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested'): string {
+  if (decision === 'accepted') return '결과 수락 및 S1 연결'
+  if (decision === 'rejected') return '결과 반려'
+  return '수정 요청'
+}
+
 export default function SpecialistRequestMockPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
@@ -239,12 +245,7 @@ export default function SpecialistRequestMockPage() {
     setBusy(true)
     setError('')
     try {
-      const row = await decideAiArtifact(
-        artifact.id,
-        artifact.version,
-        decision,
-        decision === 'accepted' ? '결과 수락 및 S1 연결' : decision === 'rejected' ? '결과 반려' : '수정 요청',
-      )
+      const row = await decideAiArtifact(artifact.id, artifact.version, decision, decisionComment(decision))
       await refreshArtifact(row)
     } catch (e) {
       setError(mapError(e))
@@ -425,7 +426,7 @@ export default function SpecialistRequestMockPage() {
       ) : !owner ? (
         <div className="space-y-4">
           <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            서버 계약 초안·승인은 프로젝트 소유자만 수행할 수 있습니다. 멤버는 저장된 계약 조회만 가능합니다.
+            현재 Mock 업무 요청은 프로젝트 소유자만 작성할 수 있습니다. 멤버는 저장된 계약 조회만 가능합니다.
           </div>
           {serverContract && (
             <section
