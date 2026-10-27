@@ -5,6 +5,7 @@ on:
       - 'src/lib/mockSpecialistRequest.ts'
       - 'src/lib/agentContractTerms.ts'
       - 'src/lib/api/agentContracts.ts'
+      - 'src/lib/api/aiRuns.ts'
       - 'src/lib/specialistReviewHandoff.ts'
       - 'src/lib/ai/MockPlanningReviewProvider.ts'
       - 'src/lib/ai/runPlanningReview.ts'
@@ -33,4 +34,4 @@ jobs:
       - run: npm ci
       - run: node --test tests/s3-specialist-request-mock.test.mjs tests/s3-specialist-access-contract.test.mjs tests/agent-contract-terms.test.mjs tests/specialist-review-handoff.test.mjs tests/mock-staff-brief-review.test.mjs
       - run: npm run build
-      - run: npx eslint src/lib/mockSpecialistRequest.ts src/lib/agentContractTerms.ts src/lib/api/agentContracts.ts src/lib/specialistReviewHandoff.ts src/lib/ai/MockPlanningReviewProvider.ts src/lib/ai/runPlanningReview.ts src/lib/ai/reviewJob.ts src/lib/ai/reviewPipeline.ts src/pages/SpecialistRequestMockPage.tsx src/pages/ProjectAiReviewPage.tsx src/pages/ProjectTasksPage.tsx src/App.tsx
+      - run: npx eslint src/lib/mockSpecialistRequest.ts src/lib/agentContractTerms.ts src/lib/api/agentContracts.ts src/lib/api/aiRuns.ts src/lib/specialistReviewHandoff.ts src/lib/ai/MockPlanningReviewProvider.ts src/lib/ai/runPlanningReview.ts src/lib/ai/reviewJob.ts src/lib/ai/reviewPipeline.ts src/pages/SpecialistRequestMockPage.tsx src/pages/ProjectAiReviewPage.tsx src/pages/ProjectTasksPage.tsx src/App.tsx

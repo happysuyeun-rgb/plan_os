@@ -30,6 +30,18 @@ import {
   AgentContractConflictError,
 } from '../lib/api/agentContracts'
 import { AuditManifestStaleError } from '../lib/api/auditManifests'
+import {
+  enqueueAndProcessMockRun,
+  listAiRunEvents,
+  listAiUsageForRun,
+  listProjectAiRuns,
+  processMockAiRun,
+  retryFailedAiRun,
+  type AiRunEventRow,
+  type AiRunRow,
+  type AiUsageLedgerRow,
+  AiRunConflictError,
+} from '../lib/api/aiRuns'
 
 function newRequestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -59,6 +71,10 @@ export default function SpecialistRequestMockPage() {
   const [events, setEvents] = useState<AgentContractEventRow[]>([])
   const [busy, setBusy] = useState(false)
   const [clientRequestId, setClientRequestId] = useState(() => newRequestId())
+  const [runIdempotencyKey, setRunIdempotencyKey] = useState(() => newRequestId())
+  const [serverRun, setServerRun] = useState<AiRunRow | null>(null)
+  const [runEvents, setRunEvents] = useState<AiRunEventRow[]>([])
+  const [usageRows, setUsageRows] = useState<AiUsageLedgerRow[]>([])
 
   useEffect(() => {
     let mounted = true
@@ -100,9 +116,30 @@ export default function SpecialistRequestMockPage() {
         } else {
           setEvents([])
         }
+        const runs = await listProjectAiRuns(projectId)
+        if (!mounted) return
+        const latestRun = runs[0] ?? null
+        setServerRun(latestRun)
+        if (latestRun) {
+          const [re, usage] = await Promise.all([
+            listAiRunEvents(latestRun.id),
+            listAiUsageForRun(latestRun.id),
+          ])
+          if (mounted) {
+            setRunEvents(re)
+            setUsageRows(usage)
+          }
+        } else {
+          setRunEvents([])
+          setUsageRows([])
+        }
       })
       .catch(() => {
-        if (mounted) setEvents([])
+        if (mounted) {
+          setEvents([])
+          setRunEvents([])
+          setUsageRows([])
+        }
       })
     return () => {
       mounted = false
@@ -131,7 +168,57 @@ export default function SpecialistRequestMockPage() {
       if (e.code === 'CONTRACT_EXPIRED') return '계약이 만료되어 승인할 수 없습니다.'
       return e.message
     }
+    if (e instanceof AiRunConflictError) {
+      if (e.code === 'CONTRACT_NOT_ACTIVE') return '승인된 계약이 없어 실행할 수 없습니다.'
+      return e.message
+    }
     return e instanceof Error ? e.message : '요청을 처리하지 못했습니다.'
+  }
+
+  const refreshRun = async (run: AiRunRow) => {
+    setServerRun(run)
+    setRunEvents(await listAiRunEvents(run.id))
+    setUsageRows(await listAiUsageForRun(run.id))
+  }
+
+  const runMockWorker = async () => {
+    if (!owner || !serverContract || serverContract.status !== 'active') {
+      setError('승인된 서버 계약으로만 Mock worker를 실행할 수 있습니다.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      const run = await enqueueAndProcessMockRun(serverContract.id, runIdempotencyKey)
+      await refreshRun(run)
+      if (run.status === 'succeeded') {
+        setRunIdempotencyKey(newRequestId())
+      } else if (run.status === 'failed') {
+        setError(run.error_message ?? run.error_code ?? 'Mock 실행이 실패했습니다.')
+      }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const retryMockWorker = async () => {
+    if (!owner || !serverRun || serverRun.status !== 'failed') return
+    setBusy(true)
+    setError('')
+    try {
+      const queued = await retryFailedAiRun(serverRun.id, serverRun.version)
+      const processed = await processMockAiRun(queued.id)
+      await refreshRun(processed)
+      if (processed.status === 'failed') {
+        setError(processed.error_message ?? processed.error_code ?? 'Mock 재시도가 실패했습니다.')
+      }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
   }
 
   const submit = () => {
@@ -379,11 +466,20 @@ export default function SpecialistRequestMockPage() {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={continueToMockReview}
+                    onClick={() => void runMockWorker()}
                     className="rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                    data-testid="mock-worker-run"
+                  >
+                    Mock worker 서버 실행
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={continueToMockReview}
+                    className="rounded-md border px-4 py-2 text-sm disabled:opacity-50"
                     data-testid="specialist-continue-ai-review"
                   >
-                    승인된 계약으로 Mock 검수 이어가기
+                    (레거시) 세션 검수 화면으로 이어가기
                   </button>
                   <button
                     type="button"
@@ -395,6 +491,66 @@ export default function SpecialistRequestMockPage() {
                     계약 철회
                   </button>
                 </div>
+              )}
+            </section>
+          )}
+
+          {serverRun && (
+            <section
+              role="status"
+              aria-label="서버 실행 상태"
+              className="mb-6 rounded-xl border border-violet-300 bg-violet-50 p-5"
+              data-testid="server-run-panel"
+            >
+              <h2 className="text-lg font-bold">서버 실행 (F-B)</h2>
+              <p className="mt-2 text-sm" data-testid="server-run-status">
+                상태: {serverRun.status} · attempt {serverRun.attempt} · version {serverRun.version}
+              </p>
+              <p className="mt-1 text-xs" data-testid="server-run-id">
+                ID: {serverRun.id}
+              </p>
+              {serverRun.error_code && (
+                <p className="mt-2 text-sm text-red-700" role="alert">
+                  {serverRun.error_code}: {serverRun.error_message}
+                </p>
+              )}
+              {serverRun.status === 'succeeded' && serverRun.result_json && (
+                <pre
+                  className="mt-3 max-h-48 overflow-auto rounded border bg-white p-3 text-xs"
+                  data-testid="server-run-result"
+                >
+                  {JSON.stringify(serverRun.result_json, null, 2)}
+                </pre>
+              )}
+              {runEvents.length > 0 && (
+                <ol className="mt-3 space-y-1 text-xs" data-testid="server-run-events">
+                  {runEvents.map((ev) => (
+                    <li key={ev.id}>
+                      {ev.event_type}
+                      {ev.detail ? ` · ${ev.detail}` : ''}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {usageRows.length > 0 && (
+                <ul className="mt-3 space-y-1 text-xs" data-testid="server-run-usage">
+                  {usageRows.map((u) => (
+                    <li key={u.id}>
+                      {u.billing_kind}/{u.entry_type} · amount_minor={u.amount_minor} · {u.provider_ref}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {serverRun.status === 'failed' && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void retryMockWorker()}
+                  className="mt-4 rounded-md bg-violet-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  data-testid="mock-worker-retry"
+                >
+                  실패 실행 재시도
+                </button>
               )}
             </section>
           )}
