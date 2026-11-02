@@ -5,11 +5,11 @@
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
 
 ## 현재 작업에서 먼저 확인할 문서
-1. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
-2. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
-3. [서비스 기획서](product/SERVICE_PLAN_V1_2026-10-20.md) / [PRD](product/PRD.md) — 범위·고객가치
-4. [운영정책](product/SERVICE_OPERATIONS_POLICY_V1_2026-10-20.md) — 역할·비용·계약
-5. [MVP 구현 상세명세](engineering/MVP_BUILD_READY_SPEC_2026-10-20.md) — 상세 기술 계약
+1. [진행 스냅샷 2026-11-02](plans/PROGRESS_SNAPSHOT_2026-11-02.md) — **오늘 기준** 완료·남은 일·진행률
+2. [남은 개발 체크리스트](plans/REMAINING_DEV_CHECKLIST_2026-10-25.md) — Mock 가능 / 승인 후 / 맨 마지막
+3. [전체 진행 현황](PROGRESS_STATUS.md) — 역사 포함 관리 문서
+4. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
+5. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
 
 ## 폴더별 문서 정책
 - `product/`: 현재 제품 정의/요구사항
@@ -38,7 +38,7 @@
 
 | 목적 | 문서 | 내용 |
 |---|---|---|
-| **지금 어디까지 진행됐나?** | [전체 진행 현황](PROGRESS_STATUS.md) | 완료/진행 중/미완료/보류, 증빙, 다음 작업 |
+| **지금 어디까지 진행됐나?** | [진행 스냅샷 2026-11-02](plans/PROGRESS_SNAPSHOT_2026-11-02.md) · [전체 진행 현황](PROGRESS_STATUS.md) | 완료/남은 일/진행률 · 역사 포함 |
 | **남은 개발 할 일?** | [남은 개발 체크리스트](plans/REMAINING_DEV_CHECKLIST_2026-10-25.md) | Mock 가능 / 승인 후 / 맨 마지막 구분 |
 | **앞으로 무엇을 언제 개발하나?** | [개발 실행계획](roadmap/IMPLEMENTATION_PLAN.md) | 8단계 일정, 선행 조건, 완료 기준, 핵심 기술 결정 |
 | **현재 코드에서 무엇이 확인됐나?** | [기술 감사](engineering/BASELINE_AUDIT.md) | 검증된 코드 현황, 위험 및 미검증 항목 |
