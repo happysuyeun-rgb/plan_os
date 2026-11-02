@@ -34,20 +34,20 @@ export type AiArtifactEventRow = {
   created_at: string
 }
 
-function throwArtifactError(error: { code?: string; message?: string } | null): never {
+function mapArtifactRpcFailure(error: { code?: string; message?: string } | null): never {
   const code = error?.code ?? ''
   const message = error?.message ?? ''
-  if (
-    message.includes('ARTIFACT_VERSION_CONFLICT') ||
-    message.includes('ARTIFACT_ALREADY_DECIDED') ||
-    message.includes('RUN_NOT_SUCCEEDED') ||
-    message.includes('INVALID_ARTIFACT_TRANSITION') ||
-    code === 'P4001'
-  ) {
-    throw new AiRunConflictError(
-      message.includes('ARTIFACT_ALREADY_DECIDED') ? 'ARTIFACT_ALREADY_DECIDED' : 'ARTIFACT_CONFLICT',
-      message || 'ARTIFACT_CONFLICT',
-    )
+  const conflictHints = [
+    'ARTIFACT_VERSION_CONFLICT',
+    'ARTIFACT_ALREADY_DECIDED',
+    'RUN_NOT_SUCCEEDED',
+    'INVALID_ARTIFACT_TRANSITION',
+  ]
+  if (conflictHints.some((h) => message.includes(h)) || code === 'P4001') {
+    const kind = message.includes('ARTIFACT_ALREADY_DECIDED')
+      ? 'ARTIFACT_ALREADY_DECIDED'
+      : 'ARTIFACT_CONFLICT'
+    throw new AiRunConflictError(kind, message || kind)
   }
   if (code === '42501' || message.includes('NOT_ALLOWED')) {
     throw new AgentContractAccessError('보고서에 접근할 권한이 없습니다.')
@@ -58,7 +58,7 @@ function throwArtifactError(error: { code?: string; message?: string } | null): 
   throw error ?? new Error('보고서 요청에 실패했습니다.')
 }
 
-function parseArtifact(data: unknown): AiArtifactRow {
+function asArtifactRow(data: unknown): AiArtifactRow {
   if (!data || typeof data !== 'object') throw new Error('보고서 결과가 올바르지 않습니다.')
   const row = data as AiArtifactRow
   if (!row.id || !row.status) throw new Error('보고서 결과가 올바르지 않습니다.')
@@ -67,8 +67,8 @@ function parseArtifact(data: unknown): AiArtifactRow {
 
 export async function publishAiArtifactFromRun(runId: string): Promise<AiArtifactRow> {
   const { data, error } = await supabase.rpc('publish_ai_artifact_from_run', { p_run_id: runId })
-  if (error) throwArtifactError(error)
-  return parseArtifact(data)
+  if (error) mapArtifactRpcFailure(error)
+  return asArtifactRow(data)
 }
 
 export async function decideAiArtifact(
@@ -83,26 +83,26 @@ export async function decideAiArtifact(
     p_decision: decision,
     p_comment: comment ?? null,
   })
-  if (error) throwArtifactError(error)
-  return parseArtifact(data)
+  if (error) mapArtifactRpcFailure(error)
+  return asArtifactRow(data)
 }
 
 export async function listProjectAiArtifacts(projectId: string): Promise<AiArtifactRow[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('ai_artifacts')
     .select('*')
     .eq('project_id', projectId)
     .order('updated_at', { ascending: false })
-  if (error) throwArtifactError(error)
-  return (data as AiArtifactRow[]) ?? []
+  if (result.error) mapArtifactRpcFailure(result.error)
+  return (result.data as AiArtifactRow[]) ?? []
 }
 
 export async function listAiArtifactEvents(artifactId: string): Promise<AiArtifactEventRow[]> {
-  const { data, error } = await supabase
+  const result = await supabase
     .from('ai_artifact_events')
     .select('*')
     .eq('artifact_id', artifactId)
     .order('created_at', { ascending: true })
-  if (error) throwArtifactError(error)
-  return (data as AiArtifactEventRow[]) ?? []
+  if (result.error) mapArtifactRpcFailure(result.error)
+  return (result.data as AiArtifactEventRow[]) ?? []
 }
