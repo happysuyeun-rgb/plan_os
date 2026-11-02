@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/029_agent_contracts_mvp.sql'
       - 'supabase/migrations/030_ai_runs_mock_worker.sql'
       - 'tests/e2e/browser_ai_run_mock.mjs'
+      - 'tests/e2e/disposableSpecialistContractFixture.mjs'
       - 'tests/e2e/local_browser_env.mjs'
       - 'tests/rls/test_local_supabase_ai_runs.mjs'
       - '.github/workflows/fb-ai-runs-local-e2e.yml'

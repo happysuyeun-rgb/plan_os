@@ -11,6 +11,7 @@ on:
       - 'supabase/migrations/030_ai_runs_mock_worker.sql'
       - 'supabase/migrations/031_ai_artifacts_accept_s1.sql'
       - 'tests/e2e/browser_ai_artifact_accept.mjs'
+      - 'tests/e2e/disposableSpecialistContractFixture.mjs'
       - 'tests/e2e/local_browser_env.mjs'
       - 'tests/rls/test_local_supabase_ai_artifacts.mjs'
       - '.github/workflows/fc-artifacts-local-e2e.yml'
