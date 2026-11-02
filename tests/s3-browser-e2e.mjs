@@ -61,7 +61,7 @@ try {
   await context.close()
 
   ;({ page, context } = await open('/projects/fixture-viewer/specialists/request'))
-  await page.getByText('프로젝트 소유자만 작성할 수 있습니다.', { exact: false }).waitFor()
+  await page.getByText('프로젝트 소유자만 수행할 수 있습니다.', { exact: false }).waitFor()
   assert.equal(await page.getByRole('button', { name: '요청 초안 미리보기' }).count(), 0)
   await context.close()
 
