@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
@@ -25,6 +25,8 @@ import {
   consumeSpecialistReviewHandoff,
   type SpecialistReviewHandoff,
 } from '../lib/specialistReviewHandoff'
+import { AuditManifestStaleError } from '../lib/api/auditManifests'
+import { loadProjectManifest } from '../lib/s2ManifestSession'
 
 const DOC_OPTIONS = [
   { type: 'prd', label: 'PRD' },
@@ -41,6 +43,7 @@ const DOC_OPTIONS = [
  */
 export default function ProjectAiReviewPage() {
   const { projectId } = useParams()
+  const [searchParams] = useSearchParams()
   const user = useAuthStore((s) => s.user)
   const userId = user?.id
   const { currentProject, setCurrentProject } = useProjectStore()
@@ -57,6 +60,9 @@ export default function ProjectAiReviewPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [changeReason, setChangeReason] = useState('')
+  const [manifestTrackId, setManifestTrackId] = useState<string | undefined>(undefined)
+  const [hiredFromManifest, setHiredFromManifest] = useState(false)
+  const [manifestBanner, setManifestBanner] = useState('')
 
   if (projectId !== handoffTrackId) {
     setHandoffTrackId(projectId)
@@ -81,7 +87,26 @@ export default function ProjectAiReviewPage() {
   const canRun = canAiReview(role, 'run')
   const canAccept = canAiReview(role, 'accept')
   const selectionInsufficient = selectedTypes.length < MIN_REVIEW_DOCUMENTS
-  const canExecuteRun = hired && canRun && !busy && !selectionInsufficient
+  const effectivelyHired = hired || hiredFromManifest
+  const canExecuteRun = effectivelyHired && canRun && !busy && !selectionInsufficient
+
+  // Derive S2 gate id during render (query wins over session) — no effect setState.
+  const auditManifestId = (() => {
+    if (!projectId) return null
+    return searchParams.get('manifest') || loadProjectManifest(projectId)?.manifestId || null
+  })()
+
+  if (projectId !== manifestTrackId) {
+    setManifestTrackId(projectId)
+    const fromQuery = searchParams.get('manifest')
+    if (fromQuery) {
+      setHiredFromManifest(true)
+      setManifestBanner(`S2 manifest ${fromQuery.slice(0, 8)}… 연결 · 실행 직전 서버 digest 재검증`)
+    } else {
+      setHiredFromManifest(false)
+      setManifestBanner('')
+    }
+  }
 
   useEffect(() => {
     if (!projectId) return
@@ -133,22 +158,26 @@ export default function ProjectAiReviewPage() {
     setError('')
     setMessage('')
     try {
-      const result = await startMockPlanningReview(
-        projectId,
-        defaultReviewStore,
-        selectedTypes,
+      const result = await startMockPlanningReview(projectId, defaultReviewStore, {
+        documentTypes: selectedTypes,
         role,
-        activeBrief,
-      )
+        staffBrief: activeBrief,
+        auditManifestId,
+      })
       setJob(result.job)
       const insuff = result.job.insufficientInput
         ? ' · 입력 부족(insufficient_input) — 품질 보증 아님'
         : ''
+      const gated = auditManifestId ? ' · S2 digest 재검증 PASS' : ''
       setMessage(
-        `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode} · 유료 LLM 없음)${insuff}`,
+        `Mock 검수 완료: 문서 ${result.documentCount}건 → 발견 ${result.findingCount}건 (mode=${result.mode} · 유료 LLM 없음)${insuff}${gated}`,
       )
     } catch (e) {
-      setError(e instanceof Error ? e.message : '검수 실행 실패')
+      if (e instanceof AuditManifestStaleError) {
+        setError(`${e.message} (HTTP ${e.status})`)
+      } else {
+        setError(e instanceof Error ? e.message : '검수 실행 실패')
+      }
     } finally {
       setBusy(false)
     }
@@ -212,18 +241,21 @@ export default function ProjectAiReviewPage() {
     setBusy(true)
     setError('')
     try {
-      const result = await startMockPlanningReview(
-        projectId,
-        defaultReviewStore,
-        selectedTypes,
+      const result = await startMockPlanningReview(projectId, defaultReviewStore, {
+        documentTypes: selectedTypes,
         role,
-        activeBrief,
-      )
+        staffBrief: activeBrief,
+        auditManifestId,
+      })
       setJob(result.job)
       setReReviewJobId(null)
       setMessage(`재검수(Mock) 완료 · job=${result.job.id} · 유료 LLM 없음`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '재검수 실패')
+      if (e instanceof AuditManifestStaleError) {
+        setError(`${e.message} (HTTP ${e.status})`)
+      } else {
+        setError(e instanceof Error ? e.message : '재검수 실패')
+      }
     } finally {
       setBusy(false)
     }
@@ -257,6 +289,19 @@ export default function ProjectAiReviewPage() {
       </header>
 
       <DualEntryLaneNotice projectId={projectId} lane="ai-review" />
+
+      {projectId && (
+        <p className="text-sm text-gray-600">
+          S2 문서 digest 고정이 필요하면{' '}
+          <Link className="text-indigo-700 underline" to={`/projects/${projectId}/audits/new`}>
+            검수 문서 선택
+          </Link>
+          에서 manifest를 저장하세요.
+          {auditManifestId ? (
+            <span className="ml-2 text-xs text-green-800">연결됨: {auditManifestId.slice(0, 8)}…</span>
+          ) : null}
+        </p>
+      )}
 
       {!canView && (
         <p role="alert" className="rounded bg-amber-50 p-3 text-amber-900">
@@ -293,12 +338,12 @@ export default function ProjectAiReviewPage() {
             <p className="text-sm text-gray-700">역할: 기획 문서 누락·충돌 휴리스틱 검수</p>
             <button
               type="button"
-              disabled={!canRun || hired || busy}
+              disabled={!canRun || effectivelyHired || busy}
               onClick={onHire}
               className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-40"
               data-testid="ai-review-hire"
             >
-              {hired ? '투입됨 (Mock)' : 'Mock 기획 검수 직원 투입'}
+              {effectivelyHired ? '투입됨 (Mock)' : 'Mock 기획 검수 직원 투입'}
             </button>
           </section>
 
@@ -314,14 +359,14 @@ export default function ProjectAiReviewPage() {
                     type="checkbox"
                     checked={selectedTypes.includes(opt.type)}
                     onChange={() => toggleType(opt.type)}
-                    disabled={!hired || busy || !canRun}
+                    disabled={!effectivelyHired || busy || !canRun}
                     data-testid={`ai-review-doc-${opt.type}`}
                   />
                   {opt.label}
                 </label>
               ))}
             </div>
-            {selectionInsufficient && hired && canRun && (
+            {selectionInsufficient && effectivelyHired && canRun && (
               <p
                 role="alert"
                 className="rounded bg-amber-50 p-2 text-sm text-amber-900"
@@ -350,6 +395,11 @@ export default function ProjectAiReviewPage() {
       )}
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
+      {manifestBanner && !message && (
+        <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900" data-testid="ai-review-s2-manifest">
+          {manifestBanner}
+        </p>
+      )}
       {message && <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900" data-testid="ai-review-message">{message}</p>}
 
       {canView && job && (
