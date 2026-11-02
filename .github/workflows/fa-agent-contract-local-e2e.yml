@@ -12,6 +12,7 @@ on:
       - 'supabase/migrations/028_audit_manifest_execution_gate.sql'
       - 'supabase/migrations/029_agent_contracts_mvp.sql'
       - 'tests/e2e/browser_agent_contract.mjs'
+      - 'tests/e2e/disposableSpecialistContractFixture.mjs'
       - 'tests/e2e/local_browser_env.mjs'
       - 'tests/rls/test_local_supabase_agent_contracts.mjs'
       - 'tests/agent-contract-terms.test.mjs'

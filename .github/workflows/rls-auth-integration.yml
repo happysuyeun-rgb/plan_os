@@ -103,6 +103,8 @@ jobs:
         run: node tests/rls/test_local_supabase_agent_contracts.mjs
       - name: Test F-B ai_runs Mock worker
         run: node tests/rls/test_local_supabase_ai_runs.mjs
+      - name: Test F-C ai_artifacts accept S1
+        run: node tests/rls/test_local_supabase_ai_artifacts.mjs
       - name: Stop local stack and remove disposable containers
         if: always()
         run: |

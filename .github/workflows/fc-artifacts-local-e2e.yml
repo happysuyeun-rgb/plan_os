@@ -1,0 +1,53 @@
+name: F-C artifacts accept S1 local E2E disposable
+
+on:
+  pull_request:
+    paths:
+      - 'src/pages/SpecialistRequestMockPage.tsx'
+      - 'src/lib/api/aiArtifacts.ts'
+      - 'src/lib/api/aiRuns.ts'
+      - 'src/lib/api/agentContracts.ts'
+      - 'supabase/migrations/029_agent_contracts_mvp.sql'
+      - 'supabase/migrations/030_ai_runs_mock_worker.sql'
+      - 'supabase/migrations/031_ai_artifacts_accept_s1.sql'
+      - 'tests/e2e/browser_ai_artifact_accept.mjs'
+      - 'tests/e2e/disposableSpecialistContractFixture.mjs'
+      - 'tests/e2e/local_browser_env.mjs'
+      - 'tests/rls/test_local_supabase_ai_artifacts.mjs'
+      - 'tests/rls/seedOwnerContractRun.mjs'
+      - 'scripts/ci-disposable-specialist-e2e.sh'
+      - '.github/workflows/fc-artifacts-local-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: planos-fc-artifacts-local-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-fc-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-fc-artifacts-supabase
+      VITE_S1_SERVER_TASKS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359
+        with:
+          version: 2.84.2
+      - name: Run disposable F-C stack + Playwright
+        run: bash scripts/ci-disposable-specialist-e2e.sh fc
+      - name: Upload F-C screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fc-artifact-e2e
+          path: artifacts/fc-artifact-e2e/
+          if-no-files-found: warn
