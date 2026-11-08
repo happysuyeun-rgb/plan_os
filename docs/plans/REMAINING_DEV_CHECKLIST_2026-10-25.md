@@ -96,5 +96,6 @@
 ## 추천 다음 1개 (작음)
 
 1. **F-402 사람 PM 승인 루프** — [#60](https://github.com/happysuyeun-rgb/plan_os/pull/60)  
-2. 또는 **placeholder 환경 프로젝트 생성 로컬 가드** — 로컬 E2E 단절 해소  
-3. 또는 전체 `npm run lint` 잔여 오류 정리  
+2. 또는 전체 `npm run lint` 잔여 오류 정리  
+3. 또는 번들 분할(청크 과대)  
+
