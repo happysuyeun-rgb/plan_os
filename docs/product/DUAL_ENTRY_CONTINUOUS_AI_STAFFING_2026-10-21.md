@@ -16,10 +16,10 @@
 |---|---|---|
 | E-01 | 메인에서 두 시작 경로 제시 | **부분 구현(2026-11-08):** `/projects/new`에 「직접 기획 \| 기본 PM」 선택 UI. 값은 `interview_answers._planning_entry_path`(DDL 없음·모드 잠금 아님). 완료 후 direct→PRD / with_pm→`/plans` |
 | E-02 | 단일 `project_id` | **충족** |
-| E-03 | 진행 중 AI 직원 요청 | **부분:** MidProjectAiStaffingNotice + `/specialists*` Mock |
+| E-03 | 진행 중 AI 직원 요청 | **부분 구현(2026-11-08):** MidProjectAiStaffingNotice를 대시보드·생성·문서 화면에 노출 + `/specialists*` Mock. 실계약·유료 LLM 없음 |
 | E-04 | PM 선택 후에도 동일 대시보드 | **부분:** 사람 PM `/plans` · 기본 AI PM 직원 UI 없음 |
 | E-05 | 계약·예산·수락 게이트 | **미충족(실계약)** · Mock은 유료 동의 아님을 고지 |
-| E-06 | 투입 시 digest 고정 | **미구현** (S2/F-302 잔여) |
+| E-06 | 투입 시 digest 고정 | **부분 구현(2026-11-08 Mock 고지):** StaffingDigestGateNotice를 `/ai-review`·specialist 요청에 노출. S2 manifest 링크·stale 재선택 안내. 서버 digest 강제 게이트(F-302/027)는 잔여 |
 | E-07 | AI 없이 직접 기획 완주 | **충족 가능** (이중진입 유지) |
 | E-08 | 비용/무료/사람계획 구분 표시 | **부분:** unpaid 배너 · 사람 PM 표시 · 유료 단정 금지 |
 

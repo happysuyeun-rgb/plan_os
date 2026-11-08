@@ -8,6 +8,7 @@ import { ConfirmModal } from '../components/common/ConfirmModal'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { EmptyState } from '../components/common/EmptyState'
+import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
 import { Button } from '../components/common/Button'
 import { MemberPanel } from '../components/project/MemberPanel'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
@@ -619,6 +620,11 @@ export default function DocumentPage() {
 
   return (
     <>
+      {projectId && (
+        <div className="mx-5 mt-3">
+          <MidProjectAiStaffingNotice projectId={projectId} />
+        </div>
+      )}
       {saveStatus === 'conflict' && activeDocumentId && (
         <section role="alert" className="mx-5 my-3 rounded-lg border border-red-400 bg-red-50 p-4 text-sm text-gray-900">
           <h2 className="font-semibold">저장 충돌이 발생했습니다</h2>

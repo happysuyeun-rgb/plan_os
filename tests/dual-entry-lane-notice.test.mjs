@@ -13,6 +13,7 @@ test('dual-entry notice asserts parallel lanes and unpaid AI review', () => {
   assert.match(notice, /data-testid="dual-entry-lane-notice"/)
   assert.match(notice, /한쪽이 다른 쪽을 대체하지 않습니다/)
   assert.match(notice, /유료 LLM·계약·결제가 없습니다/)
+  assert.match(notice, /AI 직원을 추가 투입할 수 있습니다\(E-03\)/)
   assert.match(notice, /lane === 'human-pm'/)
   assert.match(notice, /\/plans/)
   assert.match(notice, /\/ai-review/)

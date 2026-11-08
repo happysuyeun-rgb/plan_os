@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { StaffingDigestGateNotice } from '../components/common/StaffingDigestGateNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import {
@@ -413,9 +414,15 @@ export default function SpecialistRequestMockPage() {
         <h1 className="mt-2 text-3xl font-bold">전문가에게 업무 요청하기</h1>
         <p className="mt-3 text-sm text-gray-600">
           계약 초안·명시적 동의는 서버에 저장됩니다. 유료 LLM·실공급사 과금은 없습니다. Mock worker 실행은 승인된 계약만
-          허용됩니다.
+          허용됩니다. 프로젝트 진행 중에도 카탈로그에서 추가 요청할 수 있습니다(E-03).
         </p>
       </div>
+
+      {projectId && (
+        <div className="mb-6">
+          <StaffingDigestGateNotice projectId={projectId} hasManifest={Boolean(manifestId)} />
+        </div>
+      )}
 
       {loading && projectId && userId && verifiedProjectId !== projectId ? (
         <p role="status">프로젝트 권한을 확인하고 있습니다.</p>

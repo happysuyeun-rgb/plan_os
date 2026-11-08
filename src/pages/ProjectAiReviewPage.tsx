@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
+import { StaffingDigestGateNotice } from '../components/common/StaffingDigestGateNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { useMemberStore } from '../store/memberStore'
@@ -291,16 +292,7 @@ export default function ProjectAiReviewPage() {
       <DualEntryLaneNotice projectId={projectId} lane="ai-review" />
 
       {projectId && (
-        <p className="text-sm text-gray-600">
-          S2 문서 digest 고정이 필요하면{' '}
-          <Link className="text-indigo-700 underline" to={`/projects/${projectId}/audits/new`}>
-            검수 문서 선택
-          </Link>
-          에서 manifest를 저장하세요.
-          {auditManifestId ? (
-            <span className="ml-2 text-xs text-green-800">연결됨: {auditManifestId.slice(0, 8)}…</span>
-          ) : null}
-        </p>
+        <StaffingDigestGateNotice projectId={projectId} hasManifest={Boolean(auditManifestId)} />
       )}
 
       {!canView && (
