@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FolderKanban } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Bot } from 'lucide-react'
 import { NotificationBell } from './NotificationBell'
 import { useAuthStore } from '../../store/authStore'
 import { cn } from '../../lib/utils'
@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils'
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/projects', label: 'Projects', icon: FolderKanban },
+  { to: '/ai-staff', label: 'AI 직원', icon: Bot },
 ]
 
 export function GlobalNavBar() {

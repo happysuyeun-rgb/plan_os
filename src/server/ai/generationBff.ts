@@ -1,7 +1,8 @@
 /**
- * Generation BFF entry (Phase C). Browser callers should POST here instead of
- * holding provider secrets. Until a paid provider is approved, only the
- * placeholder provider runs and responses are marked `mode: 'placeholder'`.
+ * Generation BFF entry. Browser callers POST here instead of holding secrets.
+ * - GEMINI_API_KEY present → Gemini (free-credit path for local MVP)
+ * - otherwise → placeholder template
+ * - PLANOS_LLM_API_KEY paid path stays blocked until spend approval
  */
 
 import type { DocumentType } from '../../types'
@@ -9,12 +10,12 @@ import { resolveGenerationProvider } from '../../lib/ai/providerRegistry'
 import type { GenerationVars } from '../../lib/ai/GenerationProvider'
 import { assertPaidCallAllowed, readBudgetCaps, type BudgetSnapshot } from './budget'
 import { appendGenerationAttempt } from './generationAttemptLog'
-import { hasPaidProviderCredentials } from './secrets'
+import { hasGeminiCredentials, hasPaidProviderCredentials, readAiSecret } from './secrets'
 
 export type GenerationBffRequest = {
   documentType: DocumentType
   vars: GenerationVars
-  /** Explicit opt-in; default false — never call paid APIs without approval. */
+  /** Explicit opt-in for legacy paid LLM slot — default false. */
   allowPaidCalls?: boolean
   usage?: BudgetSnapshot
   signal?: AbortSignal
@@ -23,7 +24,7 @@ export type GenerationBffRequest = {
 }
 
 export type GenerationBffResponse = {
-  mode: 'placeholder' | 'paid'
+  mode: 'placeholder' | 'gemini' | 'paid'
   providerId: string
   content: string
   budget: ReturnType<typeof readBudgetCaps>
@@ -66,6 +67,54 @@ export async function handleGenerationRequest(
     const abortErr = new Error('Generation aborted')
     abortErr.name = 'AbortError'
     throw abortErr
+  }
+
+  // Gemini free-credit path (user-supplied GEMINI_API_KEY). Not the paid PLANOS_LLM slot.
+  if (hasGeminiCredentials()) {
+    const geminiKey = readAiSecret('GEMINI_API_KEY')!
+    const geminiModel = readAiSecret('GEMINI_MODEL')
+    const provider = resolveGenerationProvider(
+      { preferredId: 'gemini' },
+      { geminiApiKey: geminiKey, geminiModel },
+    )
+    try {
+      const content = await provider.generateDocument(req.documentType, req.vars, {
+        signal: req.signal,
+        attemptId,
+        retryIndex,
+      })
+      appendGenerationAttempt({
+        attemptId,
+        providerId: provider.id,
+        mode: 'gemini',
+        documentType: req.documentType,
+        status: 'ok',
+        retryIndex,
+        startedAt,
+        finishedAt: stamp(),
+      })
+      return {
+        mode: 'gemini',
+        providerId: provider.id,
+        content,
+        budget: caps,
+        attemptId,
+      }
+    } catch (err) {
+      const aborted = err instanceof Error && err.name === 'AbortError'
+      appendGenerationAttempt({
+        attemptId,
+        providerId: provider.id,
+        mode: 'gemini',
+        documentType: req.documentType,
+        status: aborted ? 'aborted' : 'failed',
+        retryIndex,
+        errorMessage: err instanceof Error ? err.message : 'generation failed',
+        startedAt,
+        finishedAt: stamp(),
+      })
+      throw err
+    }
   }
 
   if (allowPaid && hasPaidProviderCredentials()) {

@@ -4,6 +4,8 @@
  */
 
 export type AiSecretName =
+  | 'GEMINI_API_KEY'
+  | 'GEMINI_MODEL'
   | 'PLANOS_LLM_API_KEY'
   | 'PLANOS_LLM_BASE_URL'
   | 'PLANOS_AI_MONTHLY_TOKEN_CAP'
@@ -19,7 +21,12 @@ export function readAiSecret(name: AiSecretName): string | undefined {
   return value && value.trim() ? value.trim() : undefined
 }
 
-/** True only when a real provider key is present — still requires spend approval to call. */
+/** Gemini free-credit / AI Studio key (preferred for current local MVP). */
+export function hasGeminiCredentials(): boolean {
+  return Boolean(readAiSecret('GEMINI_API_KEY'))
+}
+
+/** Legacy paid LLM key slot — still requires explicit spend approval to call. */
 export function hasPaidProviderCredentials(): boolean {
   return Boolean(readAiSecret('PLANOS_LLM_API_KEY'))
 }

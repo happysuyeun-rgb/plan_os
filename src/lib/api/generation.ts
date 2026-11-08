@@ -1,4 +1,5 @@
 import type { DocumentType } from '../../types'
+import { generateDocumentViaBff } from '../ai/generationBffClient'
 import { DOCUMENT_TYPE_ORDER } from '../documentTypes'
 import { buildGeneratedContent } from '../generation/placeholderContent'
 import { fetchDocument, insertDocument, saveDocumentContentCas } from './documents'
@@ -33,10 +34,24 @@ export async function* runGenerationPipeline(
   input: GenerationInput,
 ): AsyncGenerator<GenerationProgress> {
   for (const step of PIPELINE_STEPS) {
-    const content = buildGeneratedContent(step, {
+    const vars = {
       title: input.title,
       targetUser: input.targetUser,
-    })
+      description: input.description,
+      serviceType: input.service_type,
+      interviewAnswers: input.interviewAnswers,
+    }
+    let content: string
+    try {
+      const result = await generateDocumentViaBff(step, vars)
+      content = result.content
+    } catch {
+      // Local fallback if BFF/Gemini is unavailable — still produce a document.
+      content = buildGeneratedContent(step, {
+        title: input.title,
+        targetUser: input.targetUser,
+      })
+    }
 
     let accumulated = ''
     for (const char of content.split('')) {
@@ -97,7 +112,12 @@ export async function regenerateDocument(
   title: string,
   targetUser: string,
 ): Promise<string> {
-  const content = buildGeneratedContent(type, { title, targetUser })
+  let content: string
+  try {
+    content = (await generateDocumentViaBff(type, { title, targetUser })).content
+  } catch {
+    content = buildGeneratedContent(type, { title, targetUser })
+  }
   await writeGeneratedDocument(projectId, type, content)
   return content
 }

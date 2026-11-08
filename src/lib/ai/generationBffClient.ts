@@ -7,7 +7,7 @@ import type { DocumentType } from '../../types'
 import type { GenerationVars } from './GenerationProvider'
 
 export type BffGenerateResult = {
-  mode: 'placeholder' | 'paid'
+  mode: 'placeholder' | 'gemini' | 'paid'
   providerId: string
   content: string
 }
@@ -29,7 +29,7 @@ export async function generateDocumentViaBff(
   if (!res.ok) {
     throw new Error(data.error ?? `BFF generation failed (${res.status})`)
   }
-  if (data.mode !== 'placeholder' && data.mode !== 'paid') {
+  if (data.mode !== 'placeholder' && data.mode !== 'gemini' && data.mode !== 'paid') {
     throw new Error('Unexpected BFF response mode')
   }
   return data

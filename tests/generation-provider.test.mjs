@@ -12,7 +12,8 @@ test('GenerationProvider interface and PlaceholderProvider are wired as Phase C 
   assert.match(placeholder, /buildGeneratedContent/)
   assert.match(registry, /preferredId \?\? placeholder\.id/)
   assert.match(registry, /Unknown generation provider/)
-  assert.doesNotMatch(registry, /api[_-]?key|sk-[a-zA-Z0-9]/i)
+  assert.match(registry, /geminiApiKey/)
+  assert.doesNotMatch(registry, /sk-[a-zA-Z0-9]{10,}|AIza[0-9A-Za-z_-]{10,}/)
 })
 
 test('placeholder content template still interpolates title and target user', () => {

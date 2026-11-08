@@ -9,7 +9,13 @@ import { handleGenerationRequest, type GenerationBffResponse } from './generatio
 
 export type GenerateHttpBody = {
   documentType?: string
-  vars?: { title?: string; targetUser?: string }
+  vars?: {
+    title?: string
+    targetUser?: string
+    description?: string
+    serviceType?: string
+    interviewAnswers?: Record<string, string>
+  }
   allowPaidCalls?: boolean
   attemptId?: string
   retryIndex?: number
@@ -38,6 +44,9 @@ export async function handleGenerateHttp(
       vars: {
         title: body.vars.title,
         targetUser: body.vars.targetUser,
+        description: body.vars.description,
+        serviceType: body.vars.serviceType,
+        interviewAnswers: body.vars.interviewAnswers,
       },
       allowPaidCalls: false,
       attemptId: body.attemptId,

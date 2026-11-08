@@ -1,8 +1,16 @@
 import type { Document, DocumentType } from '../../types'
+import { isLocalDevAuth } from '../localDevAuth'
+import { localFetchDocuments, localInsertDocument } from '../localDevData'
+
+function localFetchDocument(projectId: string, type: DocumentType): Document | null {
+  return localFetchDocuments(projectId).find((d) => d.type === type) ?? null
+}
 import { supabase } from '../supabase'
 import { throwIfError, unwrap } from '../supabaseHelpers'
 
 export async function fetchDocuments(projectId: string): Promise<Document[]> {
+  if (isLocalDevAuth()) return localFetchDocuments(projectId)
+
   const { data, error } = await supabase
     .from('documents')
     .select('*')
@@ -16,6 +24,8 @@ export async function fetchDocument(
   projectId: string,
   type: DocumentType,
 ): Promise<Document | null> {
+  if (isLocalDevAuth()) return localFetchDocument(projectId, type)
+
   const { data, error } = await supabase
     .from('documents')
     .select('*')
@@ -102,6 +112,15 @@ export async function insertDocument(
   doc: Omit<Document, 'id' | 'created_at' | 'updated_at' | 'content_revision'> &
     Partial<Pick<Document, 'id' | 'created_at' | 'updated_at'>>,
 ): Promise<Document> {
+  if (isLocalDevAuth()) {
+    return localInsertDocument({
+      id: doc.id,
+      project_id: doc.project_id,
+      type: doc.type,
+      content: doc.content,
+    })
+  }
+
   const row: Record<string, string> = {
     project_id: doc.project_id,
     type: doc.type,
