@@ -20,6 +20,7 @@ import ProjectTaskDetailPage from './pages/ProjectTaskDetailPage'
 import ProjectAiReviewPage from './pages/ProjectAiReviewPage'
 import SpecialistRequestMockPage from './pages/SpecialistRequestMockPage'
 import AiStaffCatalogMockPage from './pages/AiStaffCatalogMockPage'
+import AiStaffHubPage from './pages/AiStaffHubPage'
 import AuditSourceSelectionPage from './pages/AuditSourceSelectionPage'
 import PmPlanListPage from './pages/PmPlanListPage'
 import PmPlanNewPage from './pages/PmPlanNewPage'
@@ -59,6 +60,7 @@ function App() {
             <Route path="/projects" element={<ProjectListPage />} />
             <Route path="/projects/new" element={<ProjectCreatePage />} />
             <Route path="/projects/trash" element={<TrashPage />} />
+            <Route path="/ai-staff" element={<AiStaffHubPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="/projects/:projectId/tasks" element={<ProjectTasksPage />} />

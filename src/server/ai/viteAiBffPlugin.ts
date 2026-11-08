@@ -23,7 +23,13 @@ export function viteAiBffPlugin(): Plugin {
             try {
               const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as {
                 documentType?: string
-                vars?: { title?: string; targetUser?: string }
+                vars?: {
+                  title?: string
+                  targetUser?: string
+                  description?: string
+                  serviceType?: string
+                  interviewAnswers?: Record<string, string>
+                }
                 allowPaidCalls?: boolean
                 attemptId?: string
                 retryIndex?: number

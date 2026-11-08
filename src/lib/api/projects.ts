@@ -1,6 +1,12 @@
 import type { Project, TrashedProject } from '../../types'
 import { deriveChatTitle } from '../chatTitle'
-import { assertCanCreateProjectAgainstEnv } from '../localDevAuth'
+import { isLocalDevAuth } from '../localDevAuth'
+import {
+  localCreateProject,
+  localGetProject,
+  localListProjects,
+  localUpdateProject,
+} from '../localDevData'
 import { toTrashedProject } from '../projectTrash'
 import { supabase } from '../supabase'
 import { throwIfError, unwrap } from '../supabaseHelpers'
@@ -17,6 +23,8 @@ export interface CreateProjectInput {
 }
 
 export async function fetchProjects(userId: string): Promise<Project[]> {
+  if (isLocalDevAuth()) return localListProjects(userId)
+
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -39,15 +47,14 @@ export async function fetchTrashedProjects(userId: string): Promise<TrashedProje
 }
 
 export async function fetchProject(id: string): Promise<Project | null> {
+  if (isLocalDevAuth()) return localGetProject(id)
+
   const { data, error } = await supabase.from('projects').select('*').eq('id', id).maybeSingle()
   throwIfError(error)
   return data
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
-  // Dev placeholder URL only — hosted/real local Supabase unaffected.
-  assertCanCreateProjectAgainstEnv()
-
   const chatTitle =
     input.chat_title?.trim() ||
     deriveChatTitle({
@@ -55,6 +62,20 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
       description: input.description,
       interviewAnswers: input.interview_answers,
     })
+
+  // Placeholder URL: sessionStorage localDev (not remote Supabase insert).
+  if (isLocalDevAuth()) {
+    return localCreateProject({
+      user_id: input.user_id,
+      title: input.title,
+      description: input.description,
+      service_type: input.service_type,
+      target_user: input.target_user,
+      memory_summary: input.memory_summary ?? '',
+      interview_answers: input.interview_answers ?? {},
+      chat_title: chatTitle,
+    })
+  }
 
   const { data: project, error } = await supabase
     .from('projects')
@@ -92,6 +113,8 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
 }
 
 export async function updateProject(id: string, data: Partial<Project>): Promise<Project> {
+  if (isLocalDevAuth()) return localUpdateProject(id, data)
+
   const patch = { ...data }
   delete patch.id
   delete patch.created_at

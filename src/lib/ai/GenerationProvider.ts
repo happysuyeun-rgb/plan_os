@@ -4,6 +4,9 @@ import type { DocumentType } from '../../types'
 export type GenerationVars = {
   title: string
   targetUser: string
+  description?: string
+  serviceType?: string
+  interviewAnswers?: Record<string, string>
 }
 
 /** Per-call options: abort, correlation for retry/history. */
@@ -38,7 +41,7 @@ export type ProviderSelection = {
 export type GenerationAttemptRecord = {
   attemptId: string
   providerId: string
-  mode: 'placeholder' | 'paid'
+  mode: 'placeholder' | 'gemini' | 'paid'
   documentType: DocumentType
   status: 'ok' | 'failed' | 'aborted' | 'budget_blocked'
   retryIndex: number

@@ -1,4 +1,5 @@
 import type { ActivityAction, ProjectActivity } from '../../types'
+import { isLocalDevAuth } from '../localDevAuth'
 import { supabase } from '../supabase'
 import { throwIfError, unwrap } from '../supabaseHelpers'
 
@@ -29,6 +30,18 @@ export async function fetchProjectActivities(
 }
 
 export async function logProjectActivity(input: LogActivityInput): Promise<ProjectActivity> {
+  if (isLocalDevAuth()) {
+    return {
+      id: `local-activity-${crypto.randomUUID()}`,
+      project_id: input.project_id,
+      document_id: input.document_id ?? null,
+      user_id: 'local-dev-user',
+      action: input.action,
+      meta: input.meta ?? {},
+      created_at: new Date().toISOString(),
+    }
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession()

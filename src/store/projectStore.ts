@@ -49,7 +49,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProjects: async () => {
     set({ isLoading: true })
     const userId = useAuthStore.getState().user?.id
-    if (!userId || isLocalDevAuth()) {
+    if (!userId) {
       set({ projects: [], isLoading: false })
       return
     }
@@ -79,10 +79,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createProject: async (data) => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) throw new Error('로그인이 필요합니다')
-    // Fail fast on placeholder URL — avoids hung local E2E against fake host.
-    assertCanCreateProjectAgainstEnv()
+    // Placeholder uses localDevData; only block accidental remote path.
+    if (!isLocalDevAuth()) {
+      assertCanCreateProjectAgainstEnv()
+    }
     const project = await apiCreateProject({ ...data, user_id: userId })
-    set((s) => ({ projects: [project, ...s.projects] }))
+    set((s) => ({
+      projects: [project, ...s.projects],
+      currentProject: isLocalDevAuth() ? project : s.currentProject,
+    }))
     return project
   },
 

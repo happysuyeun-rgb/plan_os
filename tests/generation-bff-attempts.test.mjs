@@ -43,6 +43,7 @@ test('BFF and provider honor abort, attempt log, unpaid placeholder', () => {
   assert.match(bff, /appendGenerationAttempt/)
   assert.match(bff, /mode:\s*'placeholder'/)
   assert.match(bff, /Paid generation provider is not registered/)
+  assert.match(bff, /hasGeminiCredentials|mode: 'gemini'/)
   assert.match(bff, /AbortError/)
   assert.match(provider, /AbortError/)
   assert.match(iface, /GenerationCallOptions/)

@@ -15,6 +15,7 @@ import { usePlanStore } from '../store/planStore'
 import { useUIStore } from '../store/uiStore'
 import {
   assertCanCreateProjectAgainstEnv,
+  isLocalDevAuth,
   PLACEHOLDER_PROJECT_CREATE_BLOCKED,
 } from '../lib/localDevAuth'
 
@@ -77,14 +78,17 @@ export default function ProjectCreatePage() {
     try {
       let projectId = createdProjectId
       if (!projectId) {
-        try {
-          assertCanCreateProjectAgainstEnv()
-        } catch (guardErr) {
-          const message =
-            guardErr instanceof Error ? guardErr.message : PLACEHOLDER_PROJECT_CREATE_BLOCKED
-          showToast('error', message)
-          setStep(2)
-          return
+        // Placeholder → localDevData; remote Supabase only on real URL.
+        if (!isLocalDevAuth()) {
+          try {
+            assertCanCreateProjectAgainstEnv()
+          } catch (guardErr) {
+            const message =
+              guardErr instanceof Error ? guardErr.message : PLACEHOLDER_PROJECT_CREATE_BLOCKED
+            showToast('error', message)
+            setStep(2)
+            return
+          }
         }
         const project = await createProject({
           title: form.title,

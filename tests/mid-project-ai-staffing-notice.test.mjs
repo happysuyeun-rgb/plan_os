@@ -8,17 +8,22 @@ const notice = readFileSync(
 )
 const dashboard = readFileSync(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8')
 const createPage = readFileSync(new URL('../src/pages/ProjectCreatePage.tsx', import.meta.url), 'utf8')
+const nav = readFileSync(new URL('../src/components/layout/GlobalNavBar.tsx', import.meta.url), 'utf8')
 
-test('notice asserts dual-entry and unpaid mock staffing', () => {
-  assert.match(notice, /직접 기획·사람 PM 경로를 대체하지 않습니다/)
-  assert.match(notice, /실제 계약·과금·유료 LLM 실행은 없습니다/)
+test('notice points to single AI staffing entry and unpaid mock', () => {
+  assert.match(notice, /상단 메뉴 「AI 직원」에서 채용합니다/)
+  assert.match(notice, /실제 계약·과금·유료 LLM은 없습니다/)
   assert.match(notice, /data-testid="mid-project-ai-staffing-notice"/)
-  assert.match(notice, /specialists\/request/)
-  assert.match(notice, /ai-review/)
-  assert.match(notice, /plans/)
+  assert.match(notice, /\/ai-staff/)
+  assert.match(notice, /specialists/)
 })
 
 test('dashboard and project create surface the mid-project AI staffing notice', () => {
   assert.match(dashboard, /MidProjectAiStaffingNotice/)
   assert.match(createPage, /MidProjectAiStaffingNotice/)
+})
+
+test('global nav exposes AI staff entry', () => {
+  assert.match(nav, /\/ai-staff/)
+  assert.match(nav, /AI 직원/)
 })

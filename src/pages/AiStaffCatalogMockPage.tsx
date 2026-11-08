@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
 import { MOCK_SPECIALIST } from '../lib/mockSpecialistRequest'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
@@ -40,14 +39,11 @@ export default function AiStaffCatalogMockPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-5 py-10 text-gray-900">
       <nav className="flex flex-wrap gap-4 text-sm">
+        <Link to="/ai-staff" className="text-gray-500 hover:underline">
+          ← AI 직원 채용
+        </Link>
         <Link to={projectId ? `/projects/${projectId}` : '/projects'} className="text-gray-500 hover:underline">
-          ← 프로젝트 문서
-        </Link>
-        <Link to={projectId ? `/projects/${projectId}/tasks` : '/projects'} className="text-indigo-700 hover:underline">
-          업무 관리
-        </Link>
-        <Link to={projectId ? `/projects/${projectId}/plans` : '/projects'} className="text-indigo-700 hover:underline">
-          사람 PM 계획
+          프로젝트 문서
         </Link>
       </nav>
 
@@ -55,11 +51,9 @@ export default function AiStaffCatalogMockPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">AI 인력 · CATALOG MOCK</p>
         <h1 className="text-3xl font-bold">AI 직원 카탈로그 (Mock)</h1>
         <p className="text-sm text-gray-600">
-          현재 1개 역할만 표시합니다. 결제·채용 확정·실제 AI 실행은 없습니다.
+          역할 카드를 고른 뒤 「업무 요청」으로 이어집니다. 결제·유료 LLM은 없습니다.
         </p>
       </header>
-
-      <MidProjectAiStaffingNotice projectId={projectId} />
 
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {!ready && projectId && userId ? (

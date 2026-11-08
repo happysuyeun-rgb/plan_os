@@ -646,16 +646,26 @@ export default function DocumentPage() {
         onProjectTitleSave={handleProjectTitleSave}
         onBack={() => navigate('/dashboard')}
         headerActions={
-          can('member.view') ? (
-            <Button
-              variant="ghost"
-              className="px-3 py-1.5 text-xs"
-              onClick={() => setShowMemberPanel(true)}
-            >
-              <Users className="h-4 w-4" />
-              멤버 {members.length > 0 && `(${members.length})`}
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {projectId && (
+              <Button
+                className="px-3 py-1.5 text-xs"
+                onClick={() => navigate(`/projects/${projectId}/specialists`)}
+              >
+                AI 직원 채용
+              </Button>
+            )}
+            {can('member.view') && (
+              <Button
+                variant="ghost"
+                className="px-3 py-1.5 text-xs"
+                onClick={() => setShowMemberPanel(true)}
+              >
+                <Users className="h-4 w-4" />
+                멤버 {members.length > 0 && `(${members.length})`}
+              </Button>
+            )}
+          </div>
         }
         docTabs={
           <DocumentTypeTabs
