@@ -1,5 +1,6 @@
 import type { Project, TrashedProject } from '../../types'
 import { deriveChatTitle } from '../chatTitle'
+import { assertCanCreateProjectAgainstEnv } from '../localDevAuth'
 import { toTrashedProject } from '../projectTrash'
 import { supabase } from '../supabase'
 import { throwIfError, unwrap } from '../supabaseHelpers'
@@ -44,6 +45,9 @@ export async function fetchProject(id: string): Promise<Project | null> {
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
+  // Dev placeholder URL only — hosted/real local Supabase unaffected.
+  assertCanCreateProjectAgainstEnv()
+
   const chatTitle =
     input.chat_title?.trim() ||
     deriveChatTitle({

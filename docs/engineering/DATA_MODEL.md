@@ -1,11 +1,22 @@
-# PlanOS 3.0 — 데이터 모델 명세 (TARGET)
+# PlanOS 3.0 — 데이터 모델 명세 (TARGET + CURRENT 주석)
 
 **최초 작성일:** 2026-10-16  
-**최종 수정일:** 2026-10-16  
-**문서 버전:** v0.2  
-**진행 상태:** 설계 정합성 1차 보완 / SQL 작성·적용·실 DB 검증 전  
-**기준:** [PRD](../product/PRD.md) · [권한 정책](../product/PERMISSIONS_POLICY.md) · [AI 아키텍처](ARCHITECTURE.md)  
-**증빙:** GitHub `main`의 `supabase/migrations/001~008` 정적 확인. 실제 운영 DB 적용 상태는 미확인.
+**최종 수정일:** 2026-10-25  
+**문서 버전:** v0.3  
+**진행 상태:** CURRENT(011 tasks·022 pm_plans 등)와 TARGET(ai_runs·contracts) 구분 / 운영 mig 금지  
+**기준:** [PRD](../product/PRD.md) · [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md) · [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md)  
+**증빙:** migrations 정적 확인. 운영 DB 적용 상태는 미확인.
+
+### CURRENT 추가 (011+ · 2026-10-25 · R2 보강)
+| 테이블/저장 | 비고 |
+|---|---|
+| `project_tasks` + `project_task_events` | 컬럼: title, objective, acceptance_criteria, assignee_user_id, status, blocked_reason, deleted_at, version, (+022 `source_plan_id`/`source_plan_step_id`). **`due`/`due_at`·artifact FK·`assignee_kind` 없음** |
+| `pm_plans` + `pm_plan_approval_events` | 단일 행+append 이벤트(`plan_version`). **별도 승인 snapshot 테이블 없음**. TARGET 이름 `project_plans`와 혼동 금지 |
+| `audit_source_manifests` (012) | RPC `create_audit_source_manifest`. **정본명.** 구칭 `audit_drafts`/`project_audit_drafts`는 폐기 별칭 |
+| F-105 Mock LS | `planos:s1-ai-assignee-mock:v2:{userId}:{projectId}` — 사람 `assignee_user_id`와 AI roleId **분리** |
+| ReviewJob store | Mock · `ai_runs`/`ai_artifacts`/`ai_acceptances` DDL **없음** |
+| `ai_usage_ledger` 등 | **DDL 없음.** TARGET `entry_type` 후보: `estimate`\|`reserve`\|`observe`\|`settle`\|`release`\|`adjust`\|`pending_recon` (reservation.status와 혼용 금지) |
+| `agent_contracts` | **DDL 없음** (TARGET §3) |
 
 ## 1. 설계 결정
 - **KEEP:** 기존 `users`, `projects`, `documents`, `document_versions`, `project_members`, `chat_messages`, `project_activities`, `generation_runs`, `project_comments`, `comment_reactions`, `comment_participant_status`, `user_notifications`.
@@ -40,7 +51,7 @@
 | `agent_contracts` | id, project_id, agent_id, created_by, terms_version, scope_json, allowed_tools, budget_cap_minor, currency, status, expires_at, accepted_by, accepted_at | owner 동의 전 active 금지, 계약 조건 불변 스냅샷 |
 | `agent_assignments` | id, project_id, contract_id, agent_id, status, assigned_at | 계약과 프로젝트 일치, 활성 계약만 실행 |
 | `project_plans` | id, project_id, version, objective, status, created_by, approved_by, approved_at | 계획 버전 고정, 승인 후 수정은 새 버전 |
-| `project_tasks` | id, project_id, plan_id(nullable), title, objective, assignee_kind, assignee_id, status, acceptance_criteria_json, created_by | 사람/AI 공통, 프로젝트 내 FK 검증 |
+| `project_tasks` (TARGET 확장) | … + `assignee_kind` | CURRENT 011은 `assignee_user_id`만. kind는 F-105 Mock LS |
 | `task_dependencies` | project_id, task_id, depends_on_task_id | 동일 프로젝트, 자기 의존/순환 금지 |
 | `ai_runs` | id, project_id, task_id, contract_id, plan_id, status, idempotency_key, lease_owner, lease_expires_at, attempt, cancel_requested_at, created_at, finished_at | 브라우저와 무관한 영속 상태, 상태 버전/CAS |
 | `ai_run_events` | id, project_id, run_id, event_type, actor_kind, actor_id, payload_redacted_json, trace_id, created_at | append-only, 로그 민감정보 마스킹 |
@@ -77,9 +88,10 @@
 | AI 실행/도구 호출 | 읽기·승인/취소 | 허용 조회 | 요약 조회 | 특정 run 이벤트 기록 |
 | 승인 | 결정 | 명시적 위임 없으면 결정 불가 | 읽기 제한 | 승인 상태 검증만 |
 | 비용 원장 | 읽기·설정 | 최소 필요 요약 | 거부 | append-only 기록 |
-| 검증/수락 | 수락·반려 | 명시적 위임 시 수락 | 읽기 | 검증 이벤트만 |
+| 검증/수락 | 수락·반려 | 명시적 위임 시 수락(**위임 DDL 없음**) | TARGET: 비공개 artifact **거부** / CURRENT Mock `/ai-review` view는 **허용** | 검증 이벤트만 |
 
-**테넌트 차단:** API 조회와 RLS 모두 `project_id` 및 역할을 확인. 내부 service_role 요청은 별도 정책 계층에서 검증.
+**테넌트 차단:** API 조회와 RLS 모두 `project_id` 및 역할을 확인. 내부 service_role 요청은 별도 정책 계층에서 검증.  
+**산출물 수락 TARGET:** `ai_acceptances`는 artifact `version`+`content_digest` 바인딩. CURRENT Mock 수락은 ReviewJob finding→task이며 digest CAS **없음**.
 
 ## 6. 단계별 데이터 변경 전략
 1. **Phase 0:** 현재 마이그레이션 순서/정책/실 DB 적용 버전 확인, 개발 DB에서 owner/editor/viewer/outsider RLS 재현. **운영 DB 수정 금지**.

@@ -69,9 +69,12 @@
 | editor | hire hydrate TOCTOU 대비 후 run 가능 |
 | 타 프로젝트 | 외국 job 비노출 |
 
-**참고:** S3 Chromium과 disposable AI-review는 **CI job이 분리**되어 있다.  
-한 프로세스에서 request→handoff→accept→S1까지 한 번에 도는 단일 Playwright는 아직 없다.  
-아래 수동 시나리오(§5)로 이어 붙인다.
+**통합 Playwright (2026-10-26):** `tests/mock-integrated-journey-e2e.mjs`  
+- `PLANOS_LOCAL_SUPABASE_DIR` 있으면 disposable seed로 **단일 브라우저** 여정:  
+  프로젝트 진입 → `/plans` DualEntry → 카탈로그 → 요청 → 세션 핸드오프(reload 소멸) → hire/run → finding 수락 → S1 taskId → F-105 agent 지정(LS) → 목록 → reload 유지 · viewer hire 차단.  
+- 사람 PM **승인 CAS 루프**는 본 스크립트에서 **BLOCKED** (정본: `tests/e2e/browser_pm_plan_loop.mjs`).  
+- fixture-only 모드(S3)는 카탈로그~핸드오프만; 문서 없는 run은 BLOCKED(가짜 문서 삽입 금지).  
+CI: `.github/workflows/ai-review-local-e2e.yml` 스텝 `Playwright Mock integrated journey E2E`.
 
 ---
 
@@ -115,11 +118,33 @@ node --test ./tests/ai-staff-catalog-mock.test.mjs ./tests/specialist-review-han
 - F-302 실계약 · F-303 예산 원장 · 유료 LLM  
 - Preview 호스티드 027 적용 후 전수 E2E (Gate A-027)  
 - Production  
-- AI PM이 사람 PM(`/plans`)을 대체하는 UX
+- AI PM이 사람 PM(`/plans`)을 대체하는 UX  
+- **F-105 AI 담당 Mock**(`assignee kind=agent`) — 업무 메타데이터일 뿐이며 채용·검수 **실행과 동일시하지 않음**. 통합 E2E는 accept로 생긴 **실 taskId**에 kind만 연결한다.
 
 ---
 
-## 7. 관련 PR
+## 7. 2026-10-26 통합 E2E 검증 결과 (PR #59)
+
+실행: `npm run test:e2e:mock-integrated` (requires `PLANOS_LOCAL_SUPABASE_DIR` + Vite :5173 + 027 local_only)  
+CI: `ai-review-local-e2e.yml` → artifact `mock-integrated-e2e` / `results.json`.
+
+| 단계 | 판정 | 비고 |
+|---|---|---|
+| A1 프로젝트 진입 | PASS* | `seed_ai_review.sql` projectId (*CI disposable) |
+| A2 PM DualEntry | PASS* | `/plans` |
+| A2 PM 승인 루프 | BLOCKED | `browser_pm_plan_loop.mjs` (본 journey 비범위) |
+| A3~A4 카탈로그·핸드오프 | PASS* | 세션 handoff ≠ SERVER job |
+| A5~A6 run·수락→S1 | PASS* | findingId·taskId 로그 연결 |
+| A7~A9 F-105·목록·reload | PASS* | LS `v2:{userId}:{projectId}` |
+| B viewer | PASS* | hire disabled |
+| placeholder 생성 가드 | PASS | 단위 `placeholder-project-create-guard.test.mjs` |
+| fixture-only (문서 없음) | BLOCKED A5+ | 가짜 문서 삽입 금지 |
+
+\* disposable CI 성공 시 `results.json` status=PASS로 확정.
+
+---
+
+## 8. 관련 PR
 
 | PR | 내용 |
 |---|---|

@@ -1,8 +1,9 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `70ca7c5` (#64 병합, 2026-11-02)  
+**기준 tip:** `main` @ `70ca7c5` (#64) + F-105·설계 정합화(R2) · PR #59
 **정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**  
-**최신 스냅샷:** [PROGRESS_SNAPSHOT_2026-11-02.md](./PROGRESS_SNAPSHOT_2026-11-02.md)
+**최신 스냅샷:** [PROGRESS_SNAPSHOT_2026-11-02.md](./PROGRESS_SNAPSHOT_2026-11-02.md)  
+**정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) (R2 표 포함)
 
 ---
 
@@ -18,6 +19,7 @@
 - [x] AI 직원 1종 카탈로그 카드 Mock (#54)
 - [x] 사람 PM(`/plans`) ↔ AI 검수(`/ai-review`) 병행 고지 (#55)
 - [x] 채용→검수→S1 E2E fixture 문서 (#56)
+- [x] S1 감사 이력 주체·로드 오류 고지 (#57)
 - [x] S2 manifest digest 재검증 게이트 (#61)
 - [x] F-A 서버 계약·명시 동의 Mock (`requirements_auditor_v1`, #62)
 - [x] F-B Mock worker 큐·실행 이력·mock usage (#63)
@@ -37,16 +39,16 @@
 ### 1-B. S1/S2 품질 (기존 코드 다듬기)
 
 - [x] S1 삭제·복원: UI를 DB(owner 전용)에 맞추기 (#52)
-- [x] S1 감사 이력 API → 화면에 연결 (주체 표시·로드 실패 고지)
+- [x] S1 감사 이력 API → 화면에 연결 (#57 · 주체 표시·로드 실패 고지)
 - [x] S2 manifest ↔ 검수 실행 전 재검증 (#61)
-- [ ] S1 AI 담당 지정 UI (F-105 Mock) — OPEN [#58](https://github.com/happysuyeun-rgb/plan_os/pull/58)
-- [ ] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소)
+- [x] S1 AI 담당 지정 UI (F-105 Mock) (브라우저 메타 · F105-01/02 정합 · 실행/DB mig 없음)
+- [x] placeholder 환경에서 프로젝트 생성 로컬 가드 (로컬 E2E 단절 해소 · `assertCanCreateProjectAgainstEnv`)
 
 ### 1-C. 품질·회귀
 
 - [ ] 전체 `npm run lint` 잔여 오류 정리
 - [ ] 번들 분할(청크 과대)
-- [x] PROGRESS / DUAL_ENTRY 문서의 “#25 보류” 등 구식 표기 → #49~#51 반영
+- [x] PROGRESS / DUAL_ENTRY 문서의 “#25 보류” 등 구식 표기 → #49~#51 반영 (본 PR)
 
 ---
 
@@ -93,6 +95,7 @@
 
 ## 추천 다음 1개 (작음)
 
-1. **S1 AI 담당 지정 UI (F-105 Mock)** — [#58](https://github.com/happysuyeun-rgb/plan_os/pull/58)  
-2. 또는 **F-402 사람 PM 승인 루프** — [#60](https://github.com/happysuyeun-rgb/plan_os/pull/60)  
-3. 또는 **placeholder 환경 프로젝트 생성 로컬 가드** — 로컬 E2E 단절 해소  
+1. **F-402 사람 PM 승인 루프** — [#60](https://github.com/happysuyeun-rgb/plan_os/pull/60)  
+2. 또는 전체 `npm run lint` 잔여 오류 정리  
+3. 또는 번들 분할(청크 과대)  
+

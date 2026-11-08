@@ -11,6 +11,7 @@
     "test:unit": "node --experimental-strip-types --test tests/*.test.mjs",
     "test:e2e:ai-review": "node tests/e2e/browser_ai_review.mjs",
     "test:e2e:s2-manifest": "node tests/e2e/browser_s2_manifest.mjs",
+    "test:e2e:mock-integrated": "node tests/mock-integrated-journey-e2e.mjs",
     "db:027-local": "node scripts/apply-027-local-only.mjs",
     "preview": "vite preview",
     "db:push": "node scripts/db-push.mjs",
