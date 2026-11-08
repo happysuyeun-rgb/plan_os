@@ -88,6 +88,7 @@ CI: `.github/workflows/ai-review-local-e2e.yml` 스텝 `Playwright Mock integrat
 | staffBrief → finding | `tests/mock-staff-brief-review.test.mjs` |
 | 병행 고지 UX | `tests/dual-entry-lane-notice.test.mjs` |
 | 진행 중 AI 투입 안내 | `tests/mid-project-ai-staffing-notice.test.mjs` |
+| digest 고정 고지 (E-06 Mock) | `tests/staffing-digest-gate-notice.test.mjs` |
 
 로컬 스모크:
 

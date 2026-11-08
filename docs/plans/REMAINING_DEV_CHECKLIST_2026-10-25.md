@@ -54,7 +54,7 @@
 ## 1-D. 승인 없이 바로 가능 (게이트 보류 중 · 2026-11-08)
 
 - [x] **이중진입 E-01** — `/projects/new` 「직접 기획 | 기본 PM」 경로 선택 UI (interview_answers 메타 · 모드 잠금 아님)
-- [ ] E-03/E-06 Mock 고지·digest 안내 보강
+- [x] **E-03/E-06 Mock 고지** — MidProjectAiStaffingNotice(문서 화면 포함) + StaffingDigestGateNotice(`/ai-review`·specialist 요청). 서버 digest 강제·유료 게이트는 잔여
 - [ ] AI 직원 카탈로그 Mock 확장(표시만, #37·#38 자리 · 결제 없음)
 
 ---
@@ -105,7 +105,6 @@
 
 ## 추천 다음 1개 (작음) · 2026-11-08
 
-1. **E-03/E-06** Mock 고지·digest 안내 보강  
-2. 또는 AI 직원 카탈로그 Mock 확장(표시만)  
-3. 게이트(C-LLM/027/F-303/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 착수 금지  
+1. **AI 직원 카탈로그 Mock 확장**(표시만, #37·#38 자리 · 결제 없음)  
+2. 게이트(C-LLM/027/F-303/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 착수 금지  
 

@@ -33,6 +33,7 @@ export function DualEntryLaneNotice({ projectId, lane, className = '' }: Props) 
       </p>
       <p className="mt-1 text-slate-700">
         한쪽이 다른 쪽을 대체하지 않습니다. AI 검수는 Mock·무과금이며 유료 LLM·계약·결제가 없습니다.
+        문서 작업 중에도 AI 직원을 추가 투입할 수 있습니다(E-03).
       </p>
       <p className="mt-2">
         {onHumanPm ? (
