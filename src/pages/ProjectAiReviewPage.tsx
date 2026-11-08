@@ -282,7 +282,8 @@ export default function ProjectAiReviewPage() {
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
           data-testid="ai-review-unpaid-preview"
         >
-          무과금 미리보기 · 예상 비용 $0 · 유료 LLM·계약·결제 UI 없음 (Mock 휴리스틱만)
+          무과금 미리보기 · 예상 비용 $0 · 유료 LLM·계약·결제 UI 없음 (Mock 휴리스틱만). 문서 2종+에서 들어온
+          교차검수 진입도 자동 PASS·검증 성능 주장이 아닙니다.
         </p>
         <p className="text-xs text-gray-500" data-testid="ai-review-store-mode">
           저장 모드: {REVIEW_STORE_MODE} · 역할: {role ?? 'none'}
