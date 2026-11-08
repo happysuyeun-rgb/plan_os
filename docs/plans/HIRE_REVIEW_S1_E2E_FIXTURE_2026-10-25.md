@@ -12,7 +12,7 @@
 ## 1. 한 줄 경로
 
 ```
-/specialists (카탈로그 1종)
+/specialists (카탈로그 채용 1종 + #37/#38 준비 중 자리)
   → /specialists/request (초안·모의 계약 검토)
   → /ai-review (세션 핸드오프 + staffBrief)
   → Mock 검수 run → finding 수락

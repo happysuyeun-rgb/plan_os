@@ -55,7 +55,7 @@
 
 - [x] **이중진입 E-01** — `/projects/new` 「직접 기획 | 기본 PM」 경로 선택 UI (interview_answers 메타 · 모드 잠금 아님)
 - [x] **E-03/E-06 Mock 고지** — MidProjectAiStaffingNotice(문서 화면 포함) + StaffingDigestGateNotice(`/ai-review`·specialist 요청). 서버 digest 강제·유료 게이트는 잔여
-- [ ] AI 직원 카탈로그 Mock 확장(표시만, #37·#38 자리 · 결제 없음)
+- [x] **AI 직원 카탈로그 Mock 확장** — hub/catalog에 #37 영업·#38 마케터 준비 중 자리(표시만 · 채용/결제/발송 없음). 실직무 구현은 P2/FUTURE 잔여
 
 ---
 
@@ -98,13 +98,13 @@
 - [ ] 서버 리뷰 스토어 프로덕션 경로
 - [ ] N29 복수 프로젝트 PM 대시보드
 - [ ] F-801 면담·추천·평판 (MVP 후)
-- [ ] AI 마케터·영업 FUTURE (#37·#38)
+- [ ] AI 마케터·영업 **실직무** FUTURE (#37·#38) — 카탈로그 자리 표시는 완료, 실행/게시/발송은 미착수
 - [ ] 사업 검증 트랙 (#34)
 
 ---
 
 ## 추천 다음 1개 (작음) · 2026-11-08
 
-1. **AI 직원 카탈로그 Mock 확장**(표시만, #37·#38 자리 · 결제 없음)  
+1. **#34 사업 검증**(개발 코드 외 병렬) 또는 체크리스트 P2 소항목  
 2. 게이트(C-LLM/027/F-303/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 착수 금지  
 
