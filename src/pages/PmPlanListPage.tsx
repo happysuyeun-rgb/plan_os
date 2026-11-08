@@ -4,7 +4,8 @@ import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { useMemberStore } from '../store/memberStore'
-import { listPmPlans, type PmPlan } from '../lib/api/pmPlans'
+import { buildAiSuggestedPlanDraft } from '../lib/aiSuggestedPmPlanDraft'
+import { createPmPlan, listPmPlans, type PmPlan } from '../lib/api/pmPlans'
 import { PM_PLAN_STATUS_LABELS } from '../lib/pmPlanLabels'
 
 /** F-401/F-402: server-backed PM plan list for one project (N08 entry). */
@@ -18,6 +19,7 @@ export default function PmPlanListPage() {
   const [plans, setPlans] = useState<PmPlan[]>([])
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
+  const [suggesting, setSuggesting] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -45,22 +47,59 @@ export default function PmPlanListPage() {
     currentProject?.user_id === userId || membership?.role === 'owner' || membership?.role === 'editor'
   )
 
+  const createAiSuggestedMock = async () => {
+    if (!projectId || !canEdit || suggesting || !currentProject) return
+    setSuggesting(true)
+    setError('')
+    try {
+      const draft = buildAiSuggestedPlanDraft({
+        title: currentProject.title,
+        description: currentProject.description,
+        targetUser: currentProject.target_user,
+      })
+      const plan = await createPmPlan(
+        projectId,
+        draft.objective,
+        draft.steps,
+        crypto.randomUUID(),
+        'ai_suggested',
+      )
+      navigate(`/projects/${projectId}/plans/${plan.id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'AI 제안 초안(Mock) 생성에 실패했습니다.')
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <Link className="text-sm text-indigo-700 underline" to={projectId ? `/projects/${projectId}/tasks` : '/projects'}>← 프로젝트 업무 보드</Link>
           <h1 className="mt-2 text-2xl font-bold">PM 계획</h1>
-          <p className="mt-1 text-sm text-gray-500">사람이 작성한 프로젝트 계획을 서버에 저장하고, 소유자 승인 후 업무로 연결합니다.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            사람 작성 또는 AI 제안 Mock 초안을 서버에 저장하고, 소유자 승인 후 업무로 연결합니다. AI 제안은 실행·결제가 아닙니다.
+          </p>
         </div>
         {canEdit && (
-          <button
-            type="button"
-            className="rounded bg-indigo-700 px-4 py-2 font-semibold text-white"
-            onClick={() => navigate(`/projects/${projectId}/plans/new`)}
-          >
-            새 계획 작성
-          </button>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              className="rounded border border-indigo-300 px-4 py-2 font-semibold text-indigo-800"
+              disabled={suggesting}
+              onClick={() => void createAiSuggestedMock()}
+            >
+              {suggesting ? '제안 생성 중…' : 'AI 제안 초안(Mock)'}
+            </button>
+            <button
+              type="button"
+              className="rounded bg-indigo-700 px-4 py-2 font-semibold text-white"
+              onClick={() => navigate(`/projects/${projectId}/plans/new`)}
+            >
+              새 계획 작성
+            </button>
+          </div>
         )}
       </div>
 

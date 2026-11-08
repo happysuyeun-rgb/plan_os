@@ -160,6 +160,11 @@ export default function PmPlanDetailPage() {
               </span>
               <span className="text-xs text-gray-500" aria-label={`계획 버전 ${plan.version}`}>버전 {plan.version}</span>
             </div>
+            {plan.source === 'ai_suggested' && (
+              <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                이 초안은 <strong>AI 제안 Mock</strong>입니다. 검증된 AI PM 실행 결과가 아니며, 저장·승인만으로 유료 모델 호출이나 결제가 시작되지 않습니다.
+              </p>
+            )}
             {plan.status === 'approved' && (
               <p className="text-sm text-gray-600">승인은 계획 승인을 기록한 것입니다. AI 실행이나 결제가 시작되지 않았습니다.</p>
             )}
