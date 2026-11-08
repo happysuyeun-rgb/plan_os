@@ -322,6 +322,8 @@ export default function DocumentPage() {
       setReadOnly(false)
       setContent(activeDoc.content)
     }
+    // Intentionally content-only: full activeDoc/versions would reset on every store tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setContent/setReadOnly are stable store actions
   }, [activeVersionId, activeDoc?.content])
 
   const handleTabSelect = (type: DocumentType) => {

@@ -63,7 +63,10 @@ export function localUpdateProject(id: string, data: Partial<Project>): Project 
   const all = readJson<Project[]>(PROJECTS_KEY, [])
   const index = all.findIndex((p) => p.id === id)
   if (index < 0) throw new Error('프로젝트를 찾을 수 없습니다')
-  const { id: _id, created_at: _c, user_id: _u, ...patch } = data
+  const patch = { ...data }
+  delete patch.id
+  delete patch.created_at
+  delete patch.user_id
   const updated: Project = { ...all[index], ...patch, updated_at: nowIso() }
   all[index] = updated
   writeJson(PROJECTS_KEY, all)
