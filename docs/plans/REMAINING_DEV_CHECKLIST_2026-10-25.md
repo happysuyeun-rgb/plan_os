@@ -1,8 +1,9 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `81ba632` (#67 병합, 2026-11-08)  
+**기준 tip:** `main` @ `b7647b4` (#71 병합, 2026-11-08)  
 **정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**  
 **최신 스냅샷:** [PROGRESS_SNAPSHOT_2026-11-08.md](./PROGRESS_SNAPSHOT_2026-11-08.md)  
+**승인 게이트 보류(급하지 않음):** [DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
 **정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) (R2 표 포함)
 
 ---
@@ -28,6 +29,8 @@
 - [x] F-402 사람 PM 승인·반려·재수정 루프 E2E (#60)
 - [x] Gemini BFF + AI 직원 허브 `/ai-staff` + localDevData (#66)
 - [x] Draft 설계 문서 고유분 main 입고 (#67; #26·#28·#40 닫음)
+- [x] `ai_suggested` PM Mock (#70)
+- [x] 라우트 번들 분할 (#71)
 
 ---
 
@@ -48,13 +51,21 @@
 
 ---
 
-## 2. 정책·설계 승인 후 (지금은 착수 금지에 가깝음)
+## 1-D. 승인 없이 바로 가능 (게이트 보류 중 · 2026-11-08)
+
+- [ ] **이중진입 E-01** — 프로젝트 생성/메인에서 「직접 기획 | 기본 PM」 경로 선택 UI (DB/과금/027 불필요)
+- [ ] E-03/E-06 Mock 고지·digest 안내 보강
+- [ ] AI 직원 카탈로그 Mock 확장(표시만, #37·#38 자리 · 결제 없음)
+
+---
+
+## 2. 정책·설계 승인 후 — **보류(급하지 않음)** · 상세 [DEFERRED_GATES…](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)
 
 ### 2-A. 계약·예산
 
 - [x] F-302 **Mock 서버 계약** (동의·철회·만료·서버 digest) — #62  
   - [ ] 유료/실공급사 연동·실청구 계약은 별도 승인 후
-- [ ] F-303 예산 상한·원장·청구 (₩0 날조 금지 유지)
+- [ ] F-303 예산 상한·원장·청구 (₩0 날조 금지 유지) — **보류**
 
 ### 2-B. AI 실행 파이프라인
 
@@ -62,17 +73,17 @@
   - [ ] 실 worker·유료 사용량·본격 취소/재시도 고도화는 별도
 - [x] F-601~603 **Mock** 보고서·사람 수락·S1 연결 — #64  
   - [ ] 브리핑/실공급사 산출물 고도화는 별도
-- [ ] 유료 LLM **공식 게이트**(Gate C-LLM) · Preview/운영 경로  
+- [ ] 유료 LLM **공식 게이트**(Gate C-LLM) · Preview/운영 경로 — **보류**  
   - 참고: 로컬 Vite BFF + Gemini(#66)는 개발 검증용. 과금·호스티드 키·Production ≠ 완료
 
 ### 2-C. 사람 PM 고도화
 
 - [x] F-402 승인·반려·재수정 상태머신 (서버 CAS) — #60  
-- [x] `ai_suggested` PM 계획 소스 Mock (032 + 목록 CTA · 실 AI PM/유료 아님)
+- [x] `ai_suggested` PM 계획 소스 Mock (032 + 목록 CTA · 실 AI PM/유료 아님) — #70
 
 ---
 
-## 3. 맨 마지막 (명시 승인)
+## 3. 맨 마지막 (명시 승인) — **보류(급하지 않음)**
 
 - [ ] Preview 호스티드에 027 적용 (Gate A-027)
 - [ ] Preview E2E 전수
@@ -92,8 +103,9 @@
 
 ---
 
-## 추천 다음 1개 (작음)
+## 추천 다음 1개 (작음) · 2026-11-08
 
-1. (승인 후) **Gate C-LLM** 또는 **Preview 027**  
-2. 또는 F-303 예산 원장(승인 후)  
-3. 또는 #34 사업 검증 트랙(개발 병렬)  
+1. **이중진입 E-01** 경로 선택 UI (승인 불필요)  
+2. 또는 E-03/E-06 Mock 고지 보강  
+3. 게이트(C-LLM/027/F-303/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 착수 금지  
+
