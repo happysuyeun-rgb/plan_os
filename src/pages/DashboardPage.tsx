@@ -244,7 +244,11 @@ export default function DashboardPage() {
                 <button
                   key={row.projectId}
                   type="button"
-                  onClick={() => navigate(`/projects/${row.projectId}/tasks`)}
+                  onClick={() => navigate(
+                    row.summary.pendingApprovals > 0
+                      ? `/projects/${row.projectId}/plans`
+                      : `/projects/${row.projectId}/tasks`,
+                  )}
                   className="rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-300 hover:shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
