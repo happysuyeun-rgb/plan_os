@@ -14,7 +14,7 @@
 
 | ID | 기준 | CURRENT |
 |---|---|---|
-| E-01 | 메인에서 두 시작 경로 제시 | **미구현** (생성 화면에 경로 선택 UI 없음). 직접 기획 동선은 보존 |
+| E-01 | 메인에서 두 시작 경로 제시 | **부분 구현(2026-11-08):** `/projects/new`에 「직접 기획 \| 기본 PM」 선택 UI. 값은 `interview_answers._planning_entry_path`(DDL 없음·모드 잠금 아님). 완료 후 direct→PRD / with_pm→`/plans` |
 | E-02 | 단일 `project_id` | **충족** |
 | E-03 | 진행 중 AI 직원 요청 | **부분:** MidProjectAiStaffingNotice + `/specialists*` Mock |
 | E-04 | PM 선택 후에도 동일 대시보드 | **부분:** 사람 PM `/plans` · 기본 AI PM 직원 UI 없음 |
