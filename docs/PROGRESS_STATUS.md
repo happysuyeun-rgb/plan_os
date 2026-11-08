@@ -12,8 +12,9 @@
 - **남은 일:** [`plans/REMAINING_DEV_CHECKLIST_2026-10-25.md`](./plans/REMAINING_DEV_CHECKLIST_2026-10-25.md) (11/08 보정)
 - **진행률(추정):** 첫 전문가 Mock 수직 **~85–90%** · 전체→Production **~45–50%**
 - **반영 병합:** #59 F-105 · #60 F-402 · #66 Gemini/AI 허브 · #67 설계 문서 입고 (#58·#26·#28·#40 닫음)
-- **다음 추천:** (승인 후) Gate C-LLM / Preview 027 · 또는 `ai_suggested` PM 소스
+- **다음 추천:** 이중진입 **E-01** 경로 선택 UI (승인 불필요). C-LLM/027/F-303/Production은 **보류** — [DEFERRED_GATES_REMAINING_IMPL_2026-11-08](./plans/DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)
 - **P0 이슈 재검증(2026-11-08):** #6·#10·#12·#7·#16·#4·#29 코드측 해소·클로즈 (운영 적용은 출시 게이트)
+- **추가 병합(같은 날):** #70 `ai_suggested` Mock · #71 라우트 번들 분할
 
 > 아래 2026-11-02 / 10-25 섹션은 당시 정본으로 보존한다. **현시점 우선은 위 2026-11-08 스냅샷**이다.
 
