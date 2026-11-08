@@ -9,6 +9,7 @@ import { UpgradeModal } from '../components/common/UpgradeModal'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { EmptyState } from '../components/common/EmptyState'
 import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
+import { CrossDocAuditEntryNotice } from '../components/common/CrossDocAuditEntryNotice'
 import { Button } from '../components/common/Button'
 import { MemberPanel } from '../components/project/MemberPanel'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
@@ -621,8 +622,9 @@ export default function DocumentPage() {
   return (
     <>
       {projectId && (
-        <div className="mx-5 mt-3">
+        <div className="mx-5 mt-3 space-y-3">
           <MidProjectAiStaffingNotice projectId={projectId} />
+          <CrossDocAuditEntryNotice projectId={projectId} docTypeCount={availableTypes.length} />
         </div>
       )}
       {saveStatus === 'conflict' && activeDocumentId && (
@@ -655,6 +657,16 @@ export default function DocumentPage() {
         onBack={() => navigate('/dashboard')}
         headerActions={
           <div className="flex items-center gap-2">
+            {projectId && availableTypes.length >= 2 && (
+              <Button
+                variant="ghost"
+                className="px-3 py-1.5 text-xs"
+                data-testid="cross-doc-audit-header-cta"
+                onClick={() => navigate(`/projects/${projectId}/ai-review`)}
+              >
+                교차검수 Mock
+              </Button>
+            )}
             {projectId && (
               <Button
                 className="px-3 py-1.5 text-xs"
