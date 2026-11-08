@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { ServiceType } from '../types'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { InterviewPanel } from '../components/project/InterviewPanel'
+import { PlanningEntryPathPicker } from '../components/project/PlanningEntryPathPicker'
 import { ProjectForm, type ProjectFormData } from '../components/project/ProjectForm'
 import { StepProgress } from '../components/project/StepProgress'
 import { GenerationStep } from '../components/project/GenerationStep'
@@ -18,6 +19,11 @@ import {
   isLocalDevAuth,
   PLACEHOLDER_PROJECT_CREATE_BLOCKED,
 } from '../lib/localDevAuth'
+import {
+  postCreateDestination,
+  withPlanningEntryPath,
+  type PlanningEntryPath,
+} from '../lib/planningEntryPath'
 
 type Step = 1 | 2 | 3
 
@@ -43,6 +49,7 @@ export default function ProjectCreatePage() {
   const [step, setStep] = useState<Step>(1)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
+  const [entryPath, setEntryPath] = useState<PlanningEntryPath | null>(null)
   const [form, setForm] = useState<ProjectFormData>({
     title: '',
     description: '',
@@ -53,6 +60,7 @@ export default function ProjectCreatePage() {
 
   const validateStep1 = () => {
     const e: Record<string, string> = {}
+    if (!entryPath) e.entryPath = '기획 시작 경로를 선택해주세요'
     if (form.title.length < 2) e.title = '2자 이상 입력해주세요'
     if (form.description.length < 10) e.description = '10자 이상 입력해주세요'
     if (!form.service_type) e.service_type = '서비스 유형을 선택해주세요'
@@ -90,24 +98,27 @@ export default function ProjectCreatePage() {
             return
           }
         }
+        const path = entryPath ?? 'direct'
+        const interviewWithEntry = withPlanningEntryPath(answers, path)
         const project = await createProject({
           title: form.title,
           description: form.description,
           service_type: form.service_type,
           target_user: form.target_user,
-          interview_answers: answers,
+          interview_answers: interviewWithEntry,
         })
         projectId = project.id
         setCreatedProjectId(projectId)
       }
 
+      const path = entryPath ?? 'direct'
       const result = await startPipeline({
         projectId,
         title: form.title,
         description: form.description,
         service_type: form.service_type,
         targetUser: form.target_user,
-        interviewAnswers: answers,
+        interviewAnswers: withPlanningEntryPath(answers, path),
       })
 
       resetInterview()
@@ -116,7 +127,7 @@ export default function ProjectCreatePage() {
         resetGeneration()
         showToast('info', `${result.completedCount}개 산출물까지 저장되었습니다`)
         if (result.completedCount > 0) {
-          navigate(`/projects/${projectId}/prd`)
+          navigate(postCreateDestination(projectId, path))
         } else {
           navigate('/dashboard')
         }
@@ -133,8 +144,14 @@ export default function ProjectCreatePage() {
 
       await new Promise((resolve) => setTimeout(resolve, 900))
       resetGeneration()
-      showToast('success', '산출물 생성이 완료되었습니다', { animation: 'completion' })
-      navigate(`/projects/${projectId}/prd`)
+      showToast(
+        'success',
+        path === 'with_pm'
+          ? '산출물 생성 완료 · PM 계획으로 이동합니다'
+          : '산출물 생성이 완료되었습니다',
+        { animation: 'completion' },
+      )
+      navigate(postCreateDestination(projectId, path))
     } catch (error) {
       const message = error instanceof Error ? error.message : '생성에 실패했습니다'
       showToast('error', message)
@@ -162,13 +179,27 @@ export default function ProjectCreatePage() {
       <MidProjectAiStaffingNotice />
 
       {step === 1 && (
-        <ProjectForm
-          form={form}
-          errors={errors}
-          onChange={setForm}
-          onCancel={() => navigate('/dashboard')}
-          onNext={handleStep1Next}
-        />
+        <div className="space-y-6">
+          <PlanningEntryPathPicker
+            value={entryPath}
+            onChange={(path) => {
+              setEntryPath(path)
+              setErrors((prev) => {
+                const next = { ...prev }
+                delete next.entryPath
+                return next
+              })
+            }}
+            error={errors.entryPath}
+          />
+          <ProjectForm
+            form={form}
+            errors={errors}
+            onChange={setForm}
+            onCancel={() => navigate('/dashboard')}
+            onNext={handleStep1Next}
+          />
+        </div>
       )}
 
       {step === 2 && (
