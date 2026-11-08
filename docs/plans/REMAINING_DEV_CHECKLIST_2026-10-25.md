@@ -29,6 +29,8 @@
 - [x] F-402 사람 PM 승인·반려·재수정 루프 E2E (#60)
 - [x] Gemini BFF + AI 직원 허브 `/ai-staff` + localDevData (#66)
 - [x] Draft 설계 문서 고유분 main 입고 (#67; #26·#28·#40 닫음)
+- [x] `ai_suggested` PM Mock (#70)
+- [x] 라우트 번들 분할 (#71)
 
 ---
 
