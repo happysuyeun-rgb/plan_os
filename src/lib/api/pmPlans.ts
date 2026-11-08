@@ -93,17 +93,18 @@ export async function fetchPmPlan(planId: string): Promise<{ plan: PmPlan; steps
 }
 
 /**
- * Creates a human-authored plan draft (F-401 server persistence) in one
- * database transaction. `requestId` makes retries after a lost response
- * return the already-created plan instead of duplicating it; the caller
- * keeps one request id per editing session and rotates it only after a
- * confirmed creation.
+ * Creates a plan draft (F-401 server persistence) in one database
+ * transaction. `source` is display-only (`human` | `ai_suggested`);
+ * `ai_suggested` does not start AI execution or billing.
+ * `requestId` makes retries after a lost response return the already-created
+ * plan instead of duplicating it.
  */
 export async function createPmPlan(
   projectId: string,
   objective: string,
   steps: PlanStep[],
   requestId: string,
+  source: PmPlanSource = 'human',
 ): Promise<PmPlan> {
   const payload = steps.map((step, index) => ({
     title: step.title.trim(),
@@ -119,6 +120,7 @@ export async function createPmPlan(
       p_objective: objective.trim(),
       p_steps: payload,
       p_client_request_id: requestId,
+      p_source: source,
     })
     .single()
   if (error) throwPlanError(error)
