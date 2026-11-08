@@ -38,7 +38,8 @@ export default function AiStaffHubPage() {
         <p className="text-sm font-medium text-brand-700">AI 직원</p>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">AI 직원 채용</h1>
         <p className="max-w-xl text-sm leading-relaxed text-gray-500">
-          지금 채용 가능한 역할과 준비 중 역할을 한눈에 봅니다. (Mock · 결제/유료 LLM 없음)
+          지금 채용 가능한 역할과 준비 중 역할(마케터 #38·영업 #37 자리 포함)을 한눈에 봅니다. (Mock · 결제/유료
+          LLM·실발송 없음)
         </p>
       </header>
 
@@ -73,6 +74,11 @@ export default function AiStaffHubPage() {
                   </div>
                   <p className="mt-2 text-sm text-gray-600">{role.description}</p>
                   <p className="mt-2 text-xs text-gray-500">{role.capability}</p>
+                  {role.futureRef && (
+                    <p className="mt-1 text-[11px] font-medium text-slate-500">
+                      이슈 {role.futureRef} · 표시만
+                    </p>
+                  )}
                 </button>
               </li>
             )
