@@ -41,6 +41,16 @@ export default function AiStaffHubPage() {
           지금 채용 가능한 역할과 준비 중 역할(마케터 #38·영업 #37 자리 포함)을 한눈에 봅니다. (Mock · 결제/유료
           LLM·실발송 없음)
         </p>
+        <p className="text-sm">
+          <Link
+            to="/ai-staff/pm-ops"
+            className="font-semibold text-brand-700 underline underline-offset-2"
+            data-testid="ai-staff-hub-n29-link"
+          >
+            정식 PM 운영실 Mock (N29)
+          </Link>
+          <span className="text-gray-500"> · 배정·scheduler·유료 없음</span>
+        </p>
       </header>
 
       <section className="space-y-3" aria-label="AI 직원 목록">
