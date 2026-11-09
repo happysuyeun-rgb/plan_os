@@ -26,6 +26,7 @@ const SpecialistRequestMockPage = lazy(() => import('./pages/SpecialistRequestMo
 const AiStaffCatalogMockPage = lazy(() => import('./pages/AiStaffCatalogMockPage'))
 const AiStaffHubPage = lazy(() => import('./pages/AiStaffHubPage'))
 const PmOpsRoomMockPage = lazy(() => import('./pages/PmOpsRoomMockPage'))
+const StaffInterviewReputationMockPage = lazy(() => import('./pages/StaffInterviewReputationMockPage'))
 const AuditSourceSelectionPage = lazy(() => import('./pages/AuditSourceSelectionPage'))
 const PmPlanListPage = lazy(() => import('./pages/PmPlanListPage'))
 const PmPlanNewPage = lazy(() => import('./pages/PmPlanNewPage'))
@@ -85,6 +86,10 @@ function App() {
             <Route path="/projects/trash" element={<LazyPage><TrashPage /></LazyPage>} />
             <Route path="/ai-staff" element={<LazyPage><AiStaffHubPage /></LazyPage>} />
             <Route path="/ai-staff/pm-ops" element={<LazyPage><PmOpsRoomMockPage /></LazyPage>} />
+            <Route
+              path="/ai-staff/reputation"
+              element={<LazyPage><StaffInterviewReputationMockPage /></LazyPage>}
+            />
             <Route path="/settings" element={<LazyPage><SettingsPage /></LazyPage>} />
           </Route>
           <Route path="/projects/:projectId/tasks" element={<LazyPage><ProjectTasksPage /></LazyPage>} />
