@@ -25,7 +25,61 @@ function newId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`
 }
 
+/** localDev 체험용 — AI 직원 채용/계약 없는 가상 프로젝트 1건 */
+export const LOCAL_DEMO_NO_STAFF_MARKER = 'no_ai_staff'
+
+export function ensureLocalDemoProjectWithoutStaff(userId: string): Project {
+  const all = readJson<Project[]>(PROJECTS_KEY, [])
+  const existing = all.find(
+    (p) =>
+      p.user_id === userId &&
+      !p.deleted_at &&
+      p.interview_answers?.local_demo === LOCAL_DEMO_NO_STAFF_MARKER,
+  )
+  if (existing) return existing
+
+  const project = localCreateProject({
+    user_id: userId,
+    title: '카페 예약 앱 (체험)',
+    description:
+      '동네 카페 웨이팅·예약을 정리하는 체험용 가상 프로젝트입니다. AI 직원은 채용하지 않은 상태입니다.',
+    service_type: '앱',
+    target_user: '카페를 자주 가는 직장인',
+    memory_summary: '체험용 가상 프로젝트 · AI 직원 미채용',
+    interview_answers: { local_demo: LOCAL_DEMO_NO_STAFF_MARKER },
+  })
+
+  try {
+    localInsertDocument({
+      project_id: project.id,
+      type: 'prd',
+      content: [
+        '# PRD (체험)',
+        '',
+        '## 개요',
+        '카페 예약 앱 체험용 초안입니다.',
+        '',
+        '## 목표 사용자',
+        '카페를 자주 가는 직장인',
+        '',
+        '## 핵심 기능',
+        '- 웨이팅 등록',
+        '- 예약 확인 알림',
+        '',
+        '## 참고',
+        'AI 직원 채용 전 상태의 가상 프로젝트입니다. 실제 계약·과금·유료 LLM은 없습니다.',
+        '',
+      ].join('\n'),
+    })
+  } catch {
+    // 문서가 이미 있으면 프로젝트만으로 충분
+  }
+
+  return project
+}
+
 export function localListProjects(userId: string): Project[] {
+  ensureLocalDemoProjectWithoutStaff(userId)
   return readJson<Project[]>(PROJECTS_KEY, [])
     .filter((p) => p.user_id === userId && !p.deleted_at)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
