@@ -1,11 +1,15 @@
 import type { DocumentType, Project } from '../../types'
 import { ContextMenu } from '../common/ContextMenu'
 import { ProjectCard } from './ProjectCard'
+import type { MemberAvatarPerson } from '../../lib/memberAvatars'
+import type { ProjectProgress } from '../../lib/projectProgress'
 
 interface ProjectCardItemProps {
   project: Project
   hasDocuments?: DocumentType[]
   notificationCounts?: { comment: number; chat: number }
+  members?: MemberAvatarPerson[]
+  progress?: ProjectProgress
   isMenuOpen: boolean
   onOpenMenu: () => void
   onCloseMenu: () => void
@@ -17,6 +21,8 @@ export function ProjectCardItem({
   project,
   hasDocuments = [],
   notificationCounts,
+  members,
+  progress,
   isMenuOpen,
   onOpenMenu,
   onCloseMenu,
@@ -29,6 +35,8 @@ export function ProjectCardItem({
         project={project}
         hasDocuments={hasDocuments}
         notificationCounts={notificationCounts}
+        members={members}
+        progress={progress}
         onContextMenu={(e) => {
           e.preventDefault()
           onOpenMenu()

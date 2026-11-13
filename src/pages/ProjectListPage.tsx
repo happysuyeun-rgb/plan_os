@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { Plus, Trash2 } from 'lucide-react'
@@ -11,14 +11,25 @@ import { ServiceTypeFilter } from '../components/project/ServiceTypeFilter'
 import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
 import { ProjectActionModals } from '../components/project/ProjectActionModals'
+import { toAvatarPeople, type MemberAvatarPerson } from '../lib/memberAvatars'
 import { useProjectActions } from '../hooks/useProjectActions'
 import { useProjectStore } from '../store/projectStore'
 import { usePlanStore } from '../store/planStore'
+import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useDebounce } from '../hooks/useDebounce'
 import { DOCUMENT_TYPE_UI_ORDER } from '../lib/documentTypes'
+import { fetchProjectMembers } from '../lib/api/members'
+import { fetchWorkSummaries } from '../lib/api/dashboard'
+import { isLocalDevAuth } from '../lib/localDevAuth'
+import {
+  resolveCardProgress,
+  type ProjectProgress,
+} from '../lib/projectProgress'
+import type { ProjectWorkSummary } from '../lib/dashboardSummary'
 
 const ALL_DOC_TYPES: DocumentType[] = DOCUMENT_TYPE_UI_ORDER
+const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 
 export default function ProjectListPage() {
   const navigate = useNavigate()
@@ -35,12 +46,17 @@ export default function ProjectListPage() {
     trashedProjects,
   } = useProjectStore()
   const canCreateProject = usePlanStore((s) => s.canCreateProject)
+  const user = useAuthStore((s) => s.user)
   const summary = useNotificationStore((s) => s.summary)
   const refreshNotifications = useNotificationStore((s) => s.refresh)
 
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [localSearch, setLocalSearch] = useState(searchQuery)
   const debouncedSearch = useDebounce(localSearch, 300)
+  const [membersByProject, setMembersByProject] = useState<
+    Record<string, MemberAvatarPerson[]>
+  >({})
+  const [workSummaries, setWorkSummaries] = useState<ProjectWorkSummary[] | null>(null)
 
   const {
     contextMenu,
@@ -62,6 +78,75 @@ export default function ProjectListPage() {
   useEffect(() => {
     setSearchQuery(debouncedSearch)
   }, [debouncedSearch, setSearchQuery])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadMembers = async () => {
+      if (projects.length === 0) {
+        setMembersByProject({})
+        return
+      }
+      const entries = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const members = await fetchProjectMembers(project.id)
+            const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
+            const owner: MemberAvatarPerson = {
+              id: `owner-${project.user_id}`,
+              name: user?.id === project.user_id ? (user.name || '나') : 'Owner',
+              status: 'active',
+            }
+            return [project.id, [owner, ...people]] as const
+          } catch {
+            return [project.id, [] as MemberAvatarPerson[]] as const
+          }
+        }),
+      )
+      if (!cancelled) setMembersByProject(Object.fromEntries(entries))
+    }
+    void loadMembers()
+    return () => {
+      cancelled = true
+    }
+  }, [projects, user?.id, user?.name])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadWork = async () => {
+      if (!serverTasksEnabled || projects.length === 0) {
+        setWorkSummaries(null)
+        return
+      }
+      try {
+        const { summaries } = await fetchWorkSummaries(projects.map((p) => p.id))
+        if (!cancelled) setWorkSummaries(summaries)
+      } catch {
+        if (!cancelled) setWorkSummaries(null)
+      }
+    }
+    void loadWork()
+    return () => {
+      cancelled = true
+    }
+  }, [projects])
+
+  const progressByProject = useMemo(() => {
+    if (!user || projects.length === 0) return {} as Record<string, ProjectProgress>
+    const localDev = isLocalDevAuth()
+    const summaryById = new Map((workSummaries ?? []).map((s) => [s.projectId, s]))
+    const next: Record<string, ProjectProgress> = {}
+    for (const project of projects) {
+      const resolved = resolveCardProgress({
+        userId: user.id,
+        projectId: project.id,
+        serverTasksEnabled,
+        serverSummary: summaryById.get(project.id) ?? null,
+        localDev,
+      })
+      if (resolved) next[project.id] = resolved
+    }
+    return next
+  }, [projects, user, workSummaries])
 
   const filtered = getFilteredProjects()
 
@@ -117,6 +202,8 @@ export default function ProjectListPage() {
                 project={project}
                 hasDocuments={project.memory_summary ? ALL_DOC_TYPES : []}
                 notificationCounts={summary?.by_project[project.id]}
+                members={membersByProject[project.id]}
+                progress={progressByProject[project.id]}
                 isMenuOpen={contextMenu === project.id}
                 onOpenMenu={() => setContextMenu(project.id)}
                 onCloseMenu={() => setContextMenu(null)}

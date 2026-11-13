@@ -21,3 +21,73 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Landing: white base + brand purple accent */
+.landing-root {
+  --landing-paper: #ffffff;
+  --landing-ink: #111827;
+  --landing-muted: #6b7280;
+  --landing-line: #e5e7eb;
+  --landing-soft: #f5f3ff;
+  --landing-accent: #7c3aed;
+  --landing-accent-deep: #6d28d9;
+  --landing-accent-glow: rgba(124, 58, 237, 0.14);
+  color: var(--landing-ink);
+  background:
+    radial-gradient(900px 420px at 85% 0%, var(--landing-accent-glow), transparent 55%),
+    radial-gradient(700px 380px at 8% 12%, rgba(139, 92, 246, 0.08), transparent 50%),
+    linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  min-height: 100vh;
+}
+
+.landing-display {
+  font-family: 'Sora', 'Pretendard', system-ui, sans-serif;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.landing-rise {
+  animation: landing-rise 0.7s ease-out both;
+}
+
+.landing-rise-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.landing-rise-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.landing-rise-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.landing-drift {
+  animation: landing-drift 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-rise,
+  .landing-drift {
+    animation: none;
+  }
+}

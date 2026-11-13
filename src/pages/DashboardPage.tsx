@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Clock, Inbox, Plus, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Clock, Inbox, Plus, RefreshCw, UserPlus } from 'lucide-react'
 import type { DocumentType, Project } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
@@ -9,23 +9,33 @@ import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
 import { ProjectActionModals } from '../components/project/ProjectActionModals'
+import { InviteMemberModal } from '../components/project/InviteMemberModal'
+import { toAvatarPeople, type MemberAvatarPerson } from '../lib/memberAvatars'
 import { NewProjectCard } from '../components/project/NewProjectCard'
 import { useProjectActions } from '../hooks/useProjectActions'
 import { useAuthStore } from '../store/authStore'
 import { NotificationFeed } from '../components/dashboard/NotificationFeed'
 import { useProjectStore } from '../store/projectStore'
+import { useMemberStore } from '../store/memberStore'
 import { DOCUMENT_TYPE_UI_ORDER } from '../lib/documentTypes'
 import { usePlanStore } from '../store/planStore'
 import { useNotificationStore } from '../store/notificationStore'
+import { useUIStore } from '../store/uiStore'
 import { fetchDashboardProjects, fetchWorkSummaries } from '../lib/api/dashboard'
-
-const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
+import { fetchProjectMembers } from '../lib/api/members'
+import { isLocalDevAuth } from '../lib/localDevAuth'
+import {
+  resolveCardProgress,
+  type ProjectProgress,
+} from '../lib/projectProgress'
 import {
   formatCompletionRate,
   sortDashboardRows,
   summarizeTotals,
   type DashboardProjectRow,
 } from '../lib/dashboardSummary'
+
+const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 
 function formatUpdatedAt(updatedAt: string): string {
   return new Date(updatedAt).toLocaleString('ko-KR', {
@@ -49,7 +59,13 @@ export default function DashboardPage() {
   const canCreateProject = usePlanStore((s) => s.canCreateProject)
   const summary = useNotificationStore((s) => s.summary)
   const refreshNotifications = useNotificationStore((s) => s.refresh)
+  const inviteMember = useMemberStore((s) => s.inviteMember)
+  const showToast = useUIStore((s) => s.showToast)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [membersByProject, setMembersByProject] = useState<
+    Record<string, MemberAvatarPerson[]>
+  >({})
   const [accessibleProjects, setAccessibleProjects] = useState<Project[] | null>(null)
   const [workRows, setWorkRows] = useState<DashboardProjectRow[] | null>(null)
   const [approvalsAvailable, setApprovalsAvailable] = useState(true)
@@ -149,6 +165,55 @@ export default function DashboardPage() {
     refreshNotifications({ limit: 30 })
   }, [fetchProjects, refreshNotifications])
 
+  useEffect(() => {
+    let cancelled = false
+    const loadMembers = async () => {
+      if (projects.length === 0) {
+        setMembersByProject({})
+        return
+      }
+      const entries = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const members = await fetchProjectMembers(project.id)
+            const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
+            const owner: MemberAvatarPerson = {
+              id: `owner-${project.user_id}`,
+              name: user?.id === project.user_id ? (user.name || '나') : 'Owner',
+              status: 'active',
+            }
+            return [project.id, [owner, ...people]] as const
+          } catch {
+            return [project.id, [] as MemberAvatarPerson[]] as const
+          }
+        }),
+      )
+      if (!cancelled) setMembersByProject(Object.fromEntries(entries))
+    }
+    void loadMembers()
+    return () => {
+      cancelled = true
+    }
+  }, [projects, user?.id, user?.name])
+
+  const progressByProject = useMemo(() => {
+    if (!user || projects.length === 0) return {} as Record<string, ProjectProgress>
+    const localDev = isLocalDevAuth()
+    const summaryById = new Map((workRows ?? []).map((row) => [row.projectId, row.summary]))
+    const next: Record<string, ProjectProgress> = {}
+    for (const project of projects) {
+      const resolved = resolveCardProgress({
+        userId: user.id,
+        projectId: project.id,
+        serverTasksEnabled,
+        serverSummary: summaryById.get(project.id) ?? null,
+        localDev,
+      })
+      if (resolved) next[project.id] = resolved
+    }
+    return next
+  }, [projects, user, workRows])
+
   const handleNewProject = () => {
     if (!canCreateProject(projects.length)) {
       setShowUpgrade(true)
@@ -157,16 +222,54 @@ export default function DashboardPage() {
     navigate('/projects/new')
   }
 
+  const handleDashboardInvite = async (
+    projectId: string,
+    email: string,
+    role: 'editor' | 'viewer',
+  ) => {
+    await inviteMember(projectId, email, role)
+    showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
+    try {
+      const members = await fetchProjectMembers(projectId)
+      const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
+      const project = projects.find((p) => p.id === projectId)
+      const owner: MemberAvatarPerson | null = project
+        ? {
+            id: `owner-${project.user_id}`,
+            name: user?.id === project.user_id ? (user.name || '나') : 'Owner',
+            status: 'active',
+          }
+        : null
+      setMembersByProject((prev) => ({
+        ...prev,
+        [projectId]: owner ? [owner, ...people] : people,
+      }))
+    } catch {
+      // 초대는 성공했고 아바타 갱신만 실패한 경우
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           안녕하세요, {user?.name ?? '사용자'}님
         </h1>
-        <Button onClick={handleNewProject}>
-          <Plus className="h-4 w-4" />
-          새 프로젝트
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => setShowInviteModal(true)}
+            disabled={projects.length === 0}
+            data-testid="dashboard-invite-open"
+          >
+            <UserPlus className="h-4 w-4" />
+            멤버 초대
+          </Button>
+          <Button onClick={handleNewProject}>
+            <Plus className="h-4 w-4" />
+            새 프로젝트
+          </Button>
+        </div>
       </div>
 
       <MidProjectAiStaffingNotice className="mt-6" />
@@ -342,6 +445,8 @@ export default function DashboardPage() {
                 project={project}
                 hasDocuments={getDocTypes(project)}
                 notificationCounts={summary?.by_project[project.id]}
+                members={membersByProject[project.id]}
+                progress={progressByProject[project.id]}
                 isMenuOpen={contextMenu === project.id}
                 onOpenMenu={() => setContextMenu(project.id)}
                 onCloseMenu={() => setContextMenu(null)}
@@ -386,6 +491,12 @@ export default function DashboardPage() {
         onCloseTrash={() => setTrashTarget(null)}
         onConfirmRename={handleRename}
         onConfirmTrash={handleTrash}
+      />
+      <InviteMemberModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        projects={projects.map((p) => ({ id: p.id, title: p.title }))}
+        onInvite={handleDashboardInvite}
       />
       <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>

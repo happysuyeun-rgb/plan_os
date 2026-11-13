@@ -13,6 +13,8 @@ import { CrossDocAuditEntryNotice } from '../components/common/CrossDocAuditEntr
 import { Button } from '../components/common/Button'
 import { MemberPanel } from '../components/project/MemberPanel'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
+import { MemberAvatarStack } from '../components/project/MemberAvatarStack'
+import { toAvatarPeople } from '../lib/memberAvatars'
 import { DocumentTypeTabs } from '../components/document/DocumentTypeTabs'
 import { DocumentLayout } from '../components/document/DocumentLayout'
 import { DocumentLeftPanel } from '../components/document/DocumentLeftPanel'
@@ -493,9 +495,12 @@ export default function DocumentPage() {
     setShowInviteModal(true)
   }
 
-  const handleInvite = async (email: string, inviteRole: 'editor' | 'viewer') => {
-    if (!projectId) return
-    await inviteMember(projectId, email, inviteRole)
+  const handleInvite = async (
+    inviteProjectId: string,
+    email: string,
+    inviteRole: 'editor' | 'viewer',
+  ) => {
+    await inviteMember(inviteProjectId, email, inviteRole)
     showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
   }
 
@@ -676,14 +681,39 @@ export default function DocumentPage() {
               </Button>
             )}
             {can('member.view') && (
-              <Button
-                variant="ghost"
-                className="px-3 py-1.5 text-xs"
-                onClick={() => setShowMemberPanel(true)}
-              >
-                <Users className="h-4 w-4" />
-                멤버 {members.length > 0 && `(${members.length})`}
-              </Button>
+              <div className="flex items-center gap-2">
+                <MemberAvatarStack
+                  members={[
+                    ...(currentProject && currentUser
+                      ? [
+                          {
+                            id: `owner-${currentProject.user_id}`,
+                            name:
+                              currentUser.id === currentProject.user_id
+                                ? currentUser.name || '나'
+                                : 'Owner',
+                            status: 'active' as const,
+                          },
+                        ]
+                      : []),
+                    ...toAvatarPeople(members.filter((m) => m.role !== 'owner')),
+                  ]}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowMemberPanel(true)
+                  }}
+                  className="cursor-pointer"
+                />
+                <Button
+                  variant="ghost"
+                  className="px-3 py-1.5 text-xs"
+                  onClick={() => setShowMemberPanel(true)}
+                  data-testid="document-members-open"
+                >
+                  <Users className="h-4 w-4" />
+                  멤버 {members.length > 0 && `(${members.length})`}
+                </Button>
+              </div>
             )}
           </div>
         }
@@ -922,6 +952,7 @@ export default function DocumentPage() {
       <InviteMemberModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+        projectId={projectId}
         onInvite={handleInvite}
       />
 

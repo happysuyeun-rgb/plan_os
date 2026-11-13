@@ -7,6 +7,18 @@ import {
   markNotificationRead,
 } from '../lib/api/notifications'
 import { isLocalDevAuth } from '../lib/localDevAuth'
+import {
+  isNotificationTypeEnabled,
+  readNotificationPreferences,
+} from '../lib/notifications/preferences'
+import { useAuthStore } from './authStore'
+
+function filterByPreferences(items: UserNotification[]): UserNotification[] {
+  const userId = useAuthStore.getState().user?.id
+  if (!userId) return items
+  const prefs = readNotificationPreferences(userId)
+  return items.filter((n) => isNotificationTypeEnabled(prefs, n.type))
+}
 
 interface NotificationState {
   items: UserNotification[]
@@ -28,7 +40,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   fetchNotifications: async (opts) => {
     set({ isLoading: true })
-    const items = await fetchNotifications(opts)
+    const items = filterByPreferences(await fetchNotifications(opts))
     set({ items, isLoading: false })
   },
 
@@ -47,7 +59,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         fetchNotifications(opts),
         fetchNotificationSummary(),
       ])
-      set({ items, summary, isLoading: false })
+      set({ items: filterByPreferences(items), summary, isLoading: false })
     } catch {
       set({ items: [], summary: null, isLoading: false })
     }
