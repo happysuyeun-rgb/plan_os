@@ -6,7 +6,8 @@ import { DOCUMENT_TYPE_UI_ORDER } from '../../lib/documentTypes'
 import { getLastDocPath } from '../../lib/sessionStorage'
 import { Badge } from '../common/Badge'
 import { Card } from '../common/Card'
-import { MemberAvatarStack, type MemberAvatarPerson } from './MemberAvatarStack'
+import type { MemberAvatarPerson } from '../../lib/memberAvatars'
+import { MemberAvatarStack } from './MemberAvatarStack'
 import { ProjectNotificationBadges } from './ProjectNotificationBadges'
 
 const DOC_TYPES: DocumentType[] = DOCUMENT_TYPE_UI_ORDER

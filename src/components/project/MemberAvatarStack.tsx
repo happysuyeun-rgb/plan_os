@@ -1,11 +1,7 @@
-import type { MemberStatus, ProjectMember } from '../../types'
+import type { MemberAvatarPerson } from '../../lib/memberAvatars'
 import { cn } from '../../lib/utils'
 
-export type MemberAvatarPerson = {
-  id: string
-  name: string
-  status: MemberStatus
-}
+export type { MemberAvatarPerson }
 
 interface MemberAvatarStackProps {
   members: MemberAvatarPerson[]
@@ -17,14 +13,6 @@ interface MemberAvatarStackProps {
 
 function initialOf(name: string): string {
   return (name.trim().charAt(0) || '?').toUpperCase()
-}
-
-export function toAvatarPeople(members: ProjectMember[]): MemberAvatarPerson[] {
-  return members.map((m) => ({
-    id: m.id,
-    name: m.name || m.email,
-    status: m.status,
-  }))
 }
 
 export function MemberAvatarStack({

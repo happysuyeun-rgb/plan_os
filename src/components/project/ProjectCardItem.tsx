@@ -1,7 +1,7 @@
 import type { DocumentType, Project } from '../../types'
 import { ContextMenu } from '../common/ContextMenu'
 import { ProjectCard } from './ProjectCard'
-import type { MemberAvatarPerson } from './MemberAvatarStack'
+import type { MemberAvatarPerson } from '../../lib/memberAvatars'
 
 interface ProjectCardItemProps {
   project: Project
