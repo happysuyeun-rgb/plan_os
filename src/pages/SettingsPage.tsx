@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
@@ -7,13 +7,20 @@ import { ConfirmModal } from '../components/common/ConfirmModal'
 import { useAuthStore } from '../store/authStore'
 import { usePlanStore } from '../store/planStore'
 import { useUIStore } from '../store/uiStore'
-import { deleteAccount as apiDeleteAccount, getAuthErrorMessage } from '../lib/api/auth'
+import {
+  AVATAR_ALLOWED_MIME,
+  deleteAccount as apiDeleteAccount,
+  getAuthErrorMessage,
+  isDisplayableAvatarUrl,
+  validateAvatarFile,
+} from '../lib/api/auth'
 import { cn } from '../lib/utils'
 
 type Tab = 'profile' | 'plan'
 
 export default function SettingsPage() {
   const navigate = useNavigate()
+  const avatarInputId = useId()
   const user = useAuthStore((s) => s.user)!
   const signOut = useAuthStore((s) => s.signOut)
   const updateProfile = useAuthStore((s) => s.updateProfile)
@@ -24,15 +31,20 @@ export default function SettingsPage() {
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [name, setName] = useState(user.name)
-  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [previewOverride, setPreviewOverride] = useState<string | null>(null)
+  const [clearAvatar, setClearAvatar] = useState(false)
   const [nameError, setNameError] = useState<string | undefined>()
   const [avatarError, setAvatarError] = useState<string | undefined>()
   const [isSaving, setIsSaving] = useState(false)
 
   const remaining = getRemainingGenerations()
   const previewInitial = (name.trim() || user.name || '?').charAt(0)
-  const previewUrl = avatarUrl.trim()
-  const isDirty = name.trim() !== user.name || avatarUrl.trim() !== user.avatar_url
+  const previewUrl = clearAvatar
+    ? ''
+    : (previewOverride ?? (isDisplayableAvatarUrl(user.avatar_url) ? user.avatar_url : ''))
+  const isDirty =
+    name.trim() !== user.name || avatarFile !== null || clearAvatar
 
   const handleSignOut = async () => {
     await signOut()
@@ -53,25 +65,57 @@ export default function SettingsPage() {
     }
   }
 
+  const handleAvatarPick = (file: File | null) => {
+    setAvatarError(undefined)
+    if (!file) return
+
+    const error = validateAvatarFile(file)
+    if (error) {
+      setAvatarError(error)
+      return
+    }
+
+    if (previewOverride?.startsWith('blob:')) {
+      URL.revokeObjectURL(previewOverride)
+    }
+    setAvatarFile(file)
+    setClearAvatar(false)
+    setPreviewOverride(URL.createObjectURL(file))
+  }
+
+  const handleClearAvatar = () => {
+    if (previewOverride?.startsWith('blob:')) {
+      URL.revokeObjectURL(previewOverride)
+    }
+    setAvatarFile(null)
+    setPreviewOverride(null)
+    setClearAvatar(Boolean(user.avatar_url))
+    setAvatarError(undefined)
+  }
+
   const handleSaveProfile = async () => {
     setNameError(undefined)
     setAvatarError(undefined)
 
     const trimmedName = name.trim()
-    const trimmedAvatar = avatarUrl.trim()
-
     if (trimmedName.length < 1 || trimmedName.length > 50) {
       setNameError('이름은 1~50자로 입력해주세요')
-      return
-    }
-    if (trimmedAvatar !== '' && !trimmedAvatar.startsWith('https://')) {
-      setAvatarError('아바타 URL은 https:// 로 시작해야 합니다')
       return
     }
 
     setIsSaving(true)
     try {
-      await updateProfile({ name: trimmedName, avatar_url: trimmedAvatar })
+      await updateProfile({
+        name: trimmedName,
+        avatarFile,
+        clearAvatar,
+      })
+      if (previewOverride?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewOverride)
+      }
+      setAvatarFile(null)
+      setPreviewOverride(null)
+      setClearAvatar(false)
       showToast('success', '프로필이 저장되었습니다')
     } catch (error) {
       showToast('error', getAuthErrorMessage(error) || '프로필 저장에 실패했습니다')
@@ -106,7 +150,7 @@ export default function SettingsPage() {
         {tab === 'profile' && (
           <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
             <div className="flex items-center gap-4">
-              {previewUrl.startsWith('https://') ? (
+              {previewUrl ? (
                 <img
                   src={previewUrl}
                   alt=""
@@ -140,20 +184,46 @@ export default function SettingsPage() {
                 error={nameError}
                 data-testid="settings-name-input"
               />
-              <Input
-                label="아바타 URL"
-                value={avatarUrl}
-                onChange={(e) => {
-                  setAvatarUrl(e.target.value)
-                  setAvatarError(undefined)
-                }}
-                placeholder="https://..."
-                error={avatarError}
-                data-testid="settings-avatar-url-input"
-              />
-              <p className="text-xs text-gray-500">
-                https URL만 저장됩니다. 파일 업로드는 지원하지 않습니다.
-              </p>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-gray-700">프로필 사진</span>
+                <input
+                  id={avatarInputId}
+                  type="file"
+                  accept={AVATAR_ALLOWED_MIME.join(',')}
+                  className="sr-only"
+                  data-testid="settings-avatar-file-input"
+                  onChange={(e) => {
+                    handleAvatarPick(e.target.files?.[0] ?? null)
+                    e.target.value = ''
+                  }}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => document.getElementById(avatarInputId)?.click()}
+                    data-testid="settings-avatar-pick"
+                  >
+                    이미지 첨부
+                  </Button>
+                  {(previewUrl || user.avatar_url) && !clearAvatar && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleClearAvatar}
+                      data-testid="settings-avatar-clear"
+                    >
+                      사진 제거
+                    </Button>
+                  )}
+                </div>
+                {avatarError && <p className="text-xs text-red-500">{avatarError}</p>}
+                <p className="text-xs text-gray-500">
+                  JPEG·PNG·WebP·GIF, 최대 2MB. URL 입력은 지원하지 않습니다.
+                </p>
+              </div>
+
               <Button
                 onClick={handleSaveProfile}
                 disabled={!isDirty || isSaving}

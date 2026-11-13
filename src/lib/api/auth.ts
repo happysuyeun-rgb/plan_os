@@ -108,6 +108,14 @@ export type UserProfileUpdate = {
   avatar_url: string
 }
 
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+export const AVATAR_ALLOWED_MIME = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+] as const
+
 export function normalizeUserProfileUpdate(input: UserProfileUpdate): UserProfileUpdate {
   return {
     name: input.name.trim(),
@@ -115,16 +123,74 @@ export function normalizeUserProfileUpdate(input: UserProfileUpdate): UserProfil
   }
 }
 
-/** name: 1~50자, avatar_url: 빈 문자열 또는 https:// 만 허용 */
+export function isDisplayableAvatarUrl(url: string): boolean {
+  return (
+    url.startsWith('https://') ||
+    url.startsWith('http://') ||
+    url.startsWith('data:image/')
+  )
+}
+
+/** name: 1~50자, avatar_url: 빈 문자열 · http(s) · data:image/ (파일 업로드 결과) */
 export function validateUserProfileUpdate(input: UserProfileUpdate): string | null {
   const { name, avatar_url } = normalizeUserProfileUpdate(input)
   if (name.length < 1 || name.length > 50) {
     return '이름은 1~50자로 입력해주세요'
   }
-  if (avatar_url !== '' && !avatar_url.startsWith('https://')) {
-    return '아바타 URL은 https:// 로 시작해야 합니다'
+  if (avatar_url !== '' && !isDisplayableAvatarUrl(avatar_url)) {
+    return '아바타 이미지가 올바르지 않습니다'
   }
   return null
+}
+
+export function validateAvatarFile(file: File): string | null {
+  if (!(AVATAR_ALLOWED_MIME as readonly string[]).includes(file.type)) {
+    return 'JPEG, PNG, WebP, GIF만 첨부할 수 있습니다'
+  }
+  if (file.size > AVATAR_MAX_BYTES) {
+    return '이미지는 2MB 이하여야 합니다'
+  }
+  return null
+}
+
+function avatarExtension(mime: string): string {
+  switch (mime) {
+    case 'image/png':
+      return 'png'
+    case 'image/webp':
+      return 'webp'
+    case 'image/gif':
+      return 'gif'
+    default:
+      return 'jpg'
+  }
+}
+
+export function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('이미지 읽기에 실패했습니다'))
+    reader.readAsDataURL(file)
+  })
+}
+
+/** Supabase Storage `avatars/{userId}/avatar.*` 업로드 후 public URL 반환 */
+export async function uploadUserAvatar(userId: string, file: File): Promise<string> {
+  const fileError = validateAvatarFile(file)
+  if (fileError) throw new Error(fileError)
+
+  const ext = avatarExtension(file.type)
+  const path = `${userId}/avatar.${ext}`
+  const { error } = await supabase.storage.from('avatars').upload(path, file, {
+    upsert: true,
+    contentType: file.type,
+    cacheControl: '3600',
+  })
+  throwIfError(error)
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  return `${data.publicUrl}?t=${Date.now()}`
 }
 
 export async function updateUserProfile(

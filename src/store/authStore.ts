@@ -8,7 +8,10 @@ import {
   signOut as apiSignOut,
   incrementAiGenerations,
   normalizeUserProfileUpdate,
+  readFileAsDataUrl,
   updateUserProfile as apiUpdateUserProfile,
+  uploadUserAvatar,
+  validateAvatarFile,
   validateUserProfileUpdate,
   type UserProfileUpdate,
 } from '../lib/api/auth'
@@ -35,7 +38,11 @@ interface AuthState {
   signOut: () => Promise<void>
   completeOnboarding: () => Promise<void>
   incrementAiGeneration: () => Promise<void>
-  updateProfile: (input: UserProfileUpdate) => Promise<void>
+  updateProfile: (input: {
+    name: string
+    avatarFile?: File | null
+    clearAvatar?: boolean
+  }) => Promise<void>
 }
 
 function applyUser(user: User | null, isAuthenticated: boolean) {
@@ -196,8 +203,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get()
     if (!user) return
 
+    let avatar_url = user.avatar_url
+    if (input.clearAvatar) {
+      avatar_url = ''
+    } else if (input.avatarFile) {
+      const fileError = validateAvatarFile(input.avatarFile)
+      if (fileError) throw new Error(fileError)
+
+      if (isLocalDevAuth()) {
+        avatar_url = await readFileAsDataUrl(input.avatarFile)
+      } else {
+        avatar_url = await uploadUserAvatar(user.id, input.avatarFile)
+      }
+    }
+
+    const payload: UserProfileUpdate = { name: input.name, avatar_url }
+
     if (isLocalDevAuth()) {
-      const normalized = normalizeUserProfileUpdate(input)
+      const normalized = normalizeUserProfileUpdate(payload)
       const validationError = validateUserProfileUpdate(normalized)
       if (validationError) throw new Error(validationError)
       const next = { ...user, name: normalized.name, avatar_url: normalized.avatar_url }
@@ -206,7 +229,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return
     }
 
-    const updated = await apiUpdateUserProfile(user.id, input)
+    const updated = await apiUpdateUserProfile(user.id, payload)
     set({ user: updated })
   },
 }))
