@@ -305,17 +305,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center">
-            <Button
-              onClick={handleSaveProfile}
-              disabled={!isDirty || isSaving}
-              className="w-72"
-              data-testid="settings-profile-save"
-            >
-              {isSaving ? '저장 중…' : '프로필 저장'}
-            </Button>
-          </div>
-
           <div
             className="mt-6 border-t border-gray-100 pt-6"
             data-testid="settings-notification-section"
@@ -381,7 +370,15 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <div className="mt-6 flex justify-end border-t border-gray-100 pt-6">
+          <div className="mt-6 flex items-center justify-center gap-3 border-t border-gray-100 pt-6">
+            <Button
+              onClick={handleSaveProfile}
+              disabled={!isDirty || isSaving}
+              className="w-72"
+              data-testid="settings-profile-save"
+            >
+              {isSaving ? '저장 중…' : '프로필 저장'}
+            </Button>
             <Button variant="ghost" onClick={handleSignOut}>로그아웃</Button>
           </div>
         </div>

@@ -42,8 +42,12 @@ test('SettingsPage uses inline avatar/name editors, not form list fields', () =>
   assert.match(settingsPage, /<Camera /)
   assert.match(settingsPage, /<Pencil/)
   assert.match(settingsPage, /data-testid="settings-profile-save"/)
-  assert.match(settingsPage, /flex justify-center/)
+  assert.match(settingsPage, /justify-center gap-3/)
   assert.match(settingsPage, /className="w-72"/)
+  assert.match(
+    settingsPage,
+    /settings-profile-save[\s\S]*?로그아웃/,
+  )
   assert.match(settingsPage, /data-testid="settings-delete-account"/)
   assert.match(settingsPage, /text-gray-800/)
   assert.doesNotMatch(settingsPage, /<Input[\s\S]*label="표시 이름"/)
