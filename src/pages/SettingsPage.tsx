@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Camera, Pencil } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Camera, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ConfirmModal } from '../components/common/ConfirmModal'
@@ -162,6 +162,14 @@ export default function SettingsPage() {
               {t === 'profile' ? '마이프로필' : '플랜'}
             </button>
           ))}
+          <Link
+            to="/projects/trash"
+            className="flex w-full items-center gap-1.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50"
+            data-testid="settings-trash-link"
+          >
+            <Trash2 className="h-4 w-4" />
+            휴지통
+          </Link>
         </nav>
       </aside>
 

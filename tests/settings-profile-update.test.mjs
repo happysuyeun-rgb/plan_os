@@ -58,8 +58,19 @@ test('avatars storage migration scopes write to own folder', () => {
   assert.match(migration, /file_size_limit,\s*allowed_mime_types/)
 })
 
-test('GlobalNavBar avatar links to settings with my-profile label', () => {
-  assert.match(nav, /aria-label="설정 · 마이프로필"/)
-  assert.match(nav, /title="설정 · 마이프로필"/)
+test('GlobalNavBar profile menu has settings and logout, no top trash nav', () => {
+  assert.match(nav, /aria-label="프로필 메뉴"/)
+  assert.match(nav, /data-testid="nav-profile-menu"/)
+  assert.match(nav, /data-testid="nav-profile-menu-settings"/)
+  assert.match(nav, /data-testid="nav-profile-menu-logout"/)
   assert.match(nav, /navigate\('\/settings'\)/)
+  assert.match(nav, /signOut/)
+  assert.doesNotMatch(nav, /to: '\/projects\/trash'/)
+  assert.doesNotMatch(nav, /label: '휴지통'/)
+})
+
+test('Settings sidebar links to trash', () => {
+  assert.match(settingsPage, /data-testid="settings-trash-link"/)
+  assert.match(settingsPage, /to="\/projects\/trash"/)
+  assert.match(settingsPage, /휴지통/)
 })
