@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Camera, Pencil, Trash2 } from 'lucide-react'
+import { Camera, CreditCard, Pencil, Trash2, UserRound } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ConfirmModal } from '../components/common/ConfirmModal'
@@ -17,6 +17,16 @@ import {
 import { cn } from '../lib/utils'
 
 type Tab = 'profile' | 'plan'
+
+const settingsNavItems: {
+  key: Tab | 'trash'
+  label: string
+  icon: typeof UserRound
+}[] = [
+  { key: 'profile', label: '마이프로필', icon: UserRound },
+  { key: 'plan', label: '플랜', icon: CreditCard },
+  { key: 'trash', label: '휴지통', icon: Trash2 },
+]
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -148,28 +158,41 @@ export default function SettingsPage() {
   return (
     <div className="flex gap-8">
       <aside className="w-40 shrink-0">
-        <nav className="space-y-1">
-          {(['profile', 'plan'] as Tab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={cn(
-                'w-full rounded-lg px-3 py-2 text-left text-sm font-medium',
-                tab === t ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50',
-              )}
-            >
-              {t === 'profile' ? '마이프로필' : '플랜'}
-            </button>
-          ))}
-          <Link
-            to="/projects/trash"
-            className="flex w-full items-center gap-1.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50"
-            data-testid="settings-trash-link"
-          >
-            <Trash2 className="h-4 w-4" />
-            휴지통
-          </Link>
+        <nav className="space-y-1" data-testid="settings-side-nav">
+          {settingsNavItems.map(({ key, label, icon: Icon }) => {
+            const itemClass = cn(
+              'flex w-full items-center gap-1.5 rounded-lg px-3 py-2 text-left text-sm font-medium',
+              key !== 'trash' && tab === key
+                ? 'bg-brand-50 text-brand-700'
+                : 'text-gray-600 hover:bg-gray-50',
+            )
+
+            if (key === 'trash') {
+              return (
+                <Link
+                  key={key}
+                  to="/projects/trash"
+                  className={itemClass}
+                  data-testid="settings-trash-link"
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                  {label}
+                </Link>
+              )
+            }
+
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={itemClass}
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                {label}
+              </button>
+            )
+          })}
         </nav>
       </aside>
 
