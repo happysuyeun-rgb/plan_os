@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Camera } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
 import { UpgradeModal } from '../components/common/UpgradeModal'
@@ -149,25 +150,59 @@ export default function SettingsPage() {
 
         {tab === 'profile' && (
           <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
+            <input
+              id={avatarInputId}
+              type="file"
+              accept={AVATAR_ALLOWED_MIME.join(',')}
+              className="sr-only"
+              data-testid="settings-avatar-file-input"
+              onChange={(e) => {
+                handleAvatarPick(e.target.files?.[0] ?? null)
+                e.target.value = ''
+              }}
+            />
             <div className="flex items-center gap-4">
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt=""
-                  className="h-16 w-16 rounded-full object-cover"
-                  data-testid="settings-avatar-preview"
-                />
-              ) : (
-                <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-xl font-bold text-brand-700"
-                  data-testid="settings-avatar-preview"
-                >
-                  {previewInitial}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => document.getElementById(avatarInputId)?.click()}
+                className="relative h-16 w-16 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                aria-label="프로필 이미지 선택"
+                title="프로필 이미지 선택"
+                data-testid="settings-avatar-pick"
+              >
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt=""
+                    className="h-16 w-16 rounded-full object-cover"
+                    data-testid="settings-avatar-preview"
+                  />
+                ) : (
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-xl font-bold text-brand-700"
+                    data-testid="settings-avatar-preview"
+                  >
+                    {previewInitial}
+                  </div>
+                )}
+                <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-gray-900 text-white shadow-sm">
+                  <Camera className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              </button>
               <div>
                 <p className="font-medium text-gray-900">{name.trim() || user.name}</p>
                 <p className="text-sm text-gray-500">{user.email}</p>
+                {(previewUrl || user.avatar_url) && !clearAvatar && (
+                  <button
+                    type="button"
+                    onClick={handleClearAvatar}
+                    className="mt-1 text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
+                    data-testid="settings-avatar-clear"
+                  >
+                    사진 제거
+                  </button>
+                )}
+                {avatarError && <p className="mt-1 text-xs text-red-500">{avatarError}</p>}
               </div>
             </div>
 
@@ -185,52 +220,16 @@ export default function SettingsPage() {
                 data-testid="settings-name-input"
               />
 
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-gray-700">프로필 사진</span>
-                <input
-                  id={avatarInputId}
-                  type="file"
-                  accept={AVATAR_ALLOWED_MIME.join(',')}
-                  className="sr-only"
-                  data-testid="settings-avatar-file-input"
-                  onChange={(e) => {
-                    handleAvatarPick(e.target.files?.[0] ?? null)
-                    e.target.value = ''
-                  }}
-                />
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => document.getElementById(avatarInputId)?.click()}
-                    data-testid="settings-avatar-pick"
-                  >
-                    이미지 첨부
-                  </Button>
-                  {(previewUrl || user.avatar_url) && !clearAvatar && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleClearAvatar}
-                      data-testid="settings-avatar-clear"
-                    >
-                      사진 제거
-                    </Button>
-                  )}
-                </div>
-                {avatarError && <p className="text-xs text-red-500">{avatarError}</p>}
-                <p className="text-xs text-gray-500">
-                  JPEG·PNG·WebP·GIF, 최대 2MB. URL 입력은 지원하지 않습니다.
-                </p>
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={!isDirty || isSaving}
+                  className="w-72"
+                  data-testid="settings-profile-save"
+                >
+                  {isSaving ? '저장 중…' : '프로필 저장'}
+                </Button>
               </div>
-
-              <Button
-                onClick={handleSaveProfile}
-                disabled={!isDirty || isSaving}
-                data-testid="settings-profile-save"
-              >
-                {isSaving ? '저장 중…' : '프로필 저장'}
-              </Button>
             </div>
 
             <div className="mt-6 flex gap-3 border-t border-gray-100 pt-6">
