@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Bell, Camera, CreditCard, Pencil, Trash2, UserRound } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { Modal } from '../components/common/Modal'
-import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ConfirmModal } from '../components/common/ConfirmModal'
 import { useAuthStore } from '../store/authStore'
 import { usePlanStore } from '../store/planStore'
 import { useUIStore } from '../store/uiStore'
+import type { PlanType } from '../types'
 import {
   AVATAR_ALLOWED_MIME,
   deleteAccount as apiDeleteAccount,
@@ -31,6 +31,17 @@ const settingsNavItems: {
   { key: 'trash', label: '휴지통', icon: Trash2 },
 ]
 
+const SUBSCRIPTION_OPTIONS: {
+  id: PlanType
+  name: string
+  price: string
+  detail: string
+}[] = [
+  { id: 'free', name: 'Free', price: '무료', detail: '프로젝트 3 · AI 월 10회' },
+  { id: 'pro', name: 'Pro', price: '월 9,900원', detail: '프로젝트·AI 무제한' },
+  { id: 'team', name: 'Team', price: '월 29,000원~', detail: '팀·버전 무제한' },
+]
+
 export default function SettingsPage() {
   const navigate = useNavigate()
   const avatarInputId = useId()
@@ -41,9 +52,10 @@ export default function SettingsPage() {
   const getRemainingGenerations = usePlanStore((s) => s.getRemainingGenerations)
   const showToast = useUIStore((s) => s.showToast)
 
-  const [showUpgrade, setShowUpgrade] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showNotificationModal, setShowNotificationModal] = useState(false)
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+  const [draftPlan, setDraftPlan] = useState<PlanType>(user.plan)
   const [name, setName] = useState(user.name)
   const [isEditingName, setIsEditingName] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -89,6 +101,33 @@ export default function SettingsPage() {
   ]
     .filter(Boolean)
     .join(' · ') || '모두 끄기'
+
+  const subscriptionSummary = `${user.plan} · AI ${user.ai_generations_this_month}/${
+    remaining === 'unlimited' ? '무제한' : '10'
+  }회`
+
+  const openSubscriptionModal = () => {
+    setDraftPlan(user.plan)
+    setShowSubscriptionModal(true)
+  }
+
+  const closeSubscriptionModal = () => {
+    setShowSubscriptionModal(false)
+    setDraftPlan(user.plan)
+  }
+
+  const saveSubscriptionPrefs = () => {
+    setShowSubscriptionModal(false)
+    if (draftPlan === user.plan) {
+      showToast('success', '구독 설정을 저장했습니다')
+      return
+    }
+    showToast(
+      'info',
+      '구독 변경은 결제 연동 전입니다. 현재 구독이 유지됩니다',
+    )
+    setDraftPlan(user.plan)
+  }
 
   const remaining = getRemainingGenerations()
   const previewInitial = (name.trim() || user.name || '?').charAt(0)
@@ -354,30 +393,22 @@ export default function SettingsPage() {
             className="mt-6 border-t border-gray-100 pt-6"
             data-testid="settings-subscription-section"
           >
-            <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-gray-900">
-              <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
-              구독
-            </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium capitalize">
-                  {user.plan} 구독
-                </span>
-                <p className="mt-2 text-sm text-gray-500">
-                  AI 생성: {user.ai_generations_this_month}/
-                  {remaining === 'unlimited' ? '무제한' : '10'}회 (이번 달)
-                </p>
+                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                  <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
+                  구독
+                </div>
+                <p className="mt-1 text-sm capitalize text-gray-500">{subscriptionSummary}</p>
               </div>
-              <Button onClick={() => setShowUpgrade(true)}>업그레이드</Button>
+              <Button
+                variant="ghost"
+                onClick={openSubscriptionModal}
+                data-testid="settings-subscription-open"
+              >
+                설정
+              </Button>
             </div>
-            {remaining !== 'unlimited' && (
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className="h-full rounded-full bg-brand-600"
-                  style={{ width: `${(user.ai_generations_this_month / 10) * 100}%` }}
-                />
-              </div>
-            )}
           </div>
 
           <div className="mt-6 flex flex-col items-center gap-3 border-t border-gray-100 pt-6">
@@ -412,7 +443,65 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <Modal
+        isOpen={showSubscriptionModal}
+        onClose={closeSubscriptionModal}
+        title="구독"
+      >
+        <div className="space-y-4" data-testid="settings-subscription-modal">
+          <p className="text-sm text-gray-500">
+            이번 달 AI 생성 {user.ai_generations_this_month}/
+            {remaining === 'unlimited' ? '무제한' : '10'}회
+          </p>
+          {remaining !== 'unlimited' && (
+            <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full rounded-full bg-brand-600"
+                style={{ width: `${(user.ai_generations_this_month / 10) * 100}%` }}
+              />
+            </div>
+          )}
+          <div className="space-y-2">
+            {SUBSCRIPTION_OPTIONS.map((option) => (
+              <label
+                key={option.id}
+                className={cn(
+                  'flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5',
+                  draftPlan === option.id
+                    ? 'border-brand-500 bg-brand-50/40'
+                    : 'border-gray-200 hover:bg-gray-50',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="subscription-plan"
+                  value={option.id}
+                  checked={draftPlan === option.id}
+                  onChange={() => setDraftPlan(option.id)}
+                  className="mt-1"
+                  data-testid={`settings-subscription-option-${option.id}`}
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900">
+                    {option.name}
+                    <span className="ml-2 font-normal text-gray-500">{option.price}</span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-gray-500">{option.detail}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500">실제 결제·플랜 변경은 아직 연동되지 않았습니다.</p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={closeSubscriptionModal}>
+              취소
+            </Button>
+            <Button onClick={saveSubscriptionPrefs} data-testid="settings-subscription-save">
+              설정 저장
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <Modal
         isOpen={showNotificationModal}
         onClose={closeNotificationModal}
