@@ -32,6 +32,7 @@ const PmPlanListPage = lazy(() => import('./pages/PmPlanListPage'))
 const PmPlanNewPage = lazy(() => import('./pages/PmPlanNewPage'))
 const PmPlanDetailPage = lazy(() => import('./pages/PmPlanDetailPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const GuidePage = lazy(() => import('./pages/GuidePage'))
 const TrashPage = lazy(() => import('./pages/TrashPage'))
 
 function RouteFallback() {
@@ -91,6 +92,7 @@ function App() {
               element={<LazyPage><StaffInterviewReputationMockPage /></LazyPage>}
             />
             <Route path="/settings" element={<LazyPage><SettingsPage /></LazyPage>} />
+            <Route path="/guide" element={<LazyPage><GuidePage /></LazyPage>} />
           </Route>
           <Route path="/projects/:projectId/tasks" element={<LazyPage><ProjectTasksPage /></LazyPage>} />
           <Route path="/projects/:projectId/tasks/:taskId" element={<LazyPage><ProjectTaskDetailPage /></LazyPage>} />
