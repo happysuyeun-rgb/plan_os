@@ -95,6 +95,8 @@ export default function SettingsPage() {
     showToast('success', '알림 설정을 저장했습니다')
   }
 
+  const remaining = getRemainingGenerations()
+
   const notificationSummary = [
     notificationPrefs.comments ? '댓글' : null,
     notificationPrefs.chat ? '채팅·문서' : null,
@@ -129,7 +131,6 @@ export default function SettingsPage() {
     setDraftPlan(user.plan)
   }
 
-  const remaining = getRemainingGenerations()
   const previewInitial = (name.trim() || user.name || '?').charAt(0)
   const previewUrl = clearAvatar
     ? ''
