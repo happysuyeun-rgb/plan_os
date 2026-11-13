@@ -42,11 +42,12 @@ test('SettingsPage uses inline avatar/name editors, not form list fields', () =>
   assert.match(settingsPage, /<Camera /)
   assert.match(settingsPage, /<Pencil/)
   assert.match(settingsPage, /data-testid="settings-profile-save"/)
-  assert.match(settingsPage, /justify-center gap-3/)
+  assert.match(settingsPage, /flex flex-col items-center gap-3/)
   assert.match(settingsPage, /className="w-72"/)
+  assert.match(settingsPage, /data-testid="settings-sign-out"/)
   assert.match(
     settingsPage,
-    /settings-profile-save[\s\S]*?로그아웃/,
+    /settings-profile-save[\s\S]*?settings-sign-out/,
   )
   assert.match(settingsPage, /data-testid="settings-delete-account"/)
   assert.match(settingsPage, /text-gray-800/)

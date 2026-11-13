@@ -370,7 +370,7 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-3 border-t border-gray-100 pt-6">
+          <div className="mt-6 flex flex-col items-center gap-3 border-t border-gray-100 pt-6">
             <Button
               onClick={handleSaveProfile}
               disabled={!isDirty || isSaving}
@@ -379,7 +379,14 @@ export default function SettingsPage() {
             >
               {isSaving ? '저장 중…' : '프로필 저장'}
             </Button>
-            <Button variant="ghost" onClick={handleSignOut}>로그아웃</Button>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="text-sm font-medium text-gray-800 hover:text-gray-950"
+              data-testid="settings-sign-out"
+            >
+              로그아웃
+            </button>
           </div>
         </div>
 
