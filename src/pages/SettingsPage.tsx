@@ -281,7 +281,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              <div className="mt-6 border-t border-gray-100 pt-6">
+              <div className="mt-6 flex justify-end border-t border-gray-100 pt-6">
                 <Button variant="ghost" onClick={handleSignOut}>로그아웃</Button>
               </div>
             </div>
