@@ -30,19 +30,25 @@ test('authStore.updateProfile accepts avatarFile and localDev data URL', () => {
   assert.match(authStore, /writeLocalDevUser\(next\)/)
 })
 
-test('SettingsPage attaches via avatar camera control, not a list CTA', () => {
+test('SettingsPage uses inline avatar/name editors, not form list fields', () => {
   assert.match(settingsPage, /설정 · 마이프로필/)
+  assert.match(settingsPage, /data-testid="settings-name-display"/)
+  assert.match(settingsPage, /data-testid="settings-name-pencil"/)
+  assert.match(settingsPage, /onDoubleClick=\{enterNameEdit\}/)
   assert.match(settingsPage, /data-testid="settings-name-input"/)
   assert.match(settingsPage, /data-testid="settings-avatar-file-input"/)
   assert.match(settingsPage, /data-testid="settings-avatar-pick"/)
   assert.match(settingsPage, /aria-label="프로필 이미지 선택"/)
   assert.match(settingsPage, /<Camera /)
+  assert.match(settingsPage, /<Pencil/)
   assert.match(settingsPage, /data-testid="settings-profile-save"/)
   assert.match(settingsPage, /flex justify-center/)
   assert.match(settingsPage, /className="w-72"/)
+  assert.match(settingsPage, /data-testid="settings-delete-account"/)
+  assert.match(settingsPage, /text-gray-800/)
+  assert.doesNotMatch(settingsPage, /label="표시 이름"/)
   assert.doesNotMatch(settingsPage, /이미지 첨부/)
   assert.doesNotMatch(settingsPage, /settings-avatar-url-input/)
-  assert.doesNotMatch(settingsPage, /아바타 URL/)
   assert.match(settingsPage, /avatarFile,\s*clearAvatar/)
 })
 
