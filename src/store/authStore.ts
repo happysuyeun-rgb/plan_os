@@ -7,6 +7,10 @@ import {
   signInWithGoogle as apiSignInWithGoogle,
   signOut as apiSignOut,
   incrementAiGenerations,
+  normalizeUserProfileUpdate,
+  updateUserProfile as apiUpdateUserProfile,
+  validateUserProfileUpdate,
+  type UserProfileUpdate,
 } from '../lib/api/auth'
 import {
   clearLocalDevUser,
@@ -31,6 +35,7 @@ interface AuthState {
   signOut: () => Promise<void>
   completeOnboarding: () => Promise<void>
   incrementAiGeneration: () => Promise<void>
+  updateProfile: (input: UserProfileUpdate) => Promise<void>
 }
 
 function applyUser(user: User | null, isAuthenticated: boolean) {
@@ -184,6 +189,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     const updated = await incrementAiGenerations(user.id, user.ai_generations_this_month)
+    set({ user: updated })
+  },
+
+  updateProfile: async (input) => {
+    const { user } = get()
+    if (!user) return
+
+    if (isLocalDevAuth()) {
+      const normalized = normalizeUserProfileUpdate(input)
+      const validationError = validateUserProfileUpdate(normalized)
+      if (validationError) throw new Error(validationError)
+      const next = { ...user, name: normalized.name, avatar_url: normalized.avatar_url }
+      writeLocalDevUser(next)
+      set({ user: next })
+      return
+    }
+
+    const updated = await apiUpdateUserProfile(user.id, input)
     set({ user: updated })
   },
 }))

@@ -51,6 +51,8 @@ export function GlobalNavBar() {
           <button
             type="button"
             onClick={() => navigate('/settings')}
+            aria-label="설정 · 마이프로필"
+            title="설정 · 마이프로필"
             className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-50"
           >
           {user?.avatar_url ? (

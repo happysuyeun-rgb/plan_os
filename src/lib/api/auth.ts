@@ -102,3 +102,46 @@ export async function incrementAiGenerations(userId: string, current: number): P
     .single()
   return unwrap(data, error)
 }
+
+export type UserProfileUpdate = {
+  name: string
+  avatar_url: string
+}
+
+export function normalizeUserProfileUpdate(input: UserProfileUpdate): UserProfileUpdate {
+  return {
+    name: input.name.trim(),
+    avatar_url: input.avatar_url.trim(),
+  }
+}
+
+/** name: 1~50자, avatar_url: 빈 문자열 또는 https:// 만 허용 */
+export function validateUserProfileUpdate(input: UserProfileUpdate): string | null {
+  const { name, avatar_url } = normalizeUserProfileUpdate(input)
+  if (name.length < 1 || name.length > 50) {
+    return '이름은 1~50자로 입력해주세요'
+  }
+  if (avatar_url !== '' && !avatar_url.startsWith('https://')) {
+    return '아바타 URL은 https:// 로 시작해야 합니다'
+  }
+  return null
+}
+
+export async function updateUserProfile(
+  userId: string,
+  input: UserProfileUpdate,
+): Promise<User> {
+  const normalized = normalizeUserProfileUpdate(input)
+  const validationError = validateUserProfileUpdate(normalized)
+  if (validationError) {
+    throw new Error(validationError)
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .update({ name: normalized.name, avatar_url: normalized.avatar_url })
+    .eq('id', userId)
+    .select()
+    .single()
+  return unwrap(data, error)
+}
