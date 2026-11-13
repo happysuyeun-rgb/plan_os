@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Camera, CreditCard, Pencil, Trash2, UserRound } from 'lucide-react'
+import { Bell, Camera, CreditCard, Pencil, Trash2, UserRound } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ConfirmModal } from '../components/common/ConfirmModal'
@@ -14,6 +14,11 @@ import {
   isDisplayableAvatarUrl,
   validateAvatarFile,
 } from '../lib/api/auth'
+import {
+  readNotificationPreferences,
+  writeNotificationPreferences,
+  type NotificationPreferences,
+} from '../lib/notifications/preferences'
 import { cn } from '../lib/utils'
 
 const settingsNavItems: {
@@ -45,12 +50,22 @@ export default function SettingsPage() {
   const [nameError, setNameError] = useState<string | undefined>()
   const [avatarError, setAvatarError] = useState<string | undefined>()
   const [isSaving, setIsSaving] = useState(false)
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() =>
+    readNotificationPreferences(user.id),
+  )
 
   useEffect(() => {
     if (!isEditingName) return
     nameInputRef.current?.focus()
     nameInputRef.current?.select()
   }, [isEditingName])
+
+  const updateNotificationPref = (key: keyof NotificationPreferences, value: boolean) => {
+    const next = { ...notificationPrefs, [key]: value }
+    setNotificationPrefs(next)
+    writeNotificationPreferences(user.id, next)
+    showToast('success', '알림 설정을 저장했습니다')
+  }
 
   const remaining = getRemainingGenerations()
   const previewInitial = (name.trim() || user.name || '?').charAt(0)
@@ -299,6 +314,41 @@ export default function SettingsPage() {
             >
               {isSaving ? '저장 중…' : '프로필 저장'}
             </Button>
+          </div>
+
+          <div
+            className="mt-6 border-t border-gray-100 pt-6"
+            data-testid="settings-notification-section"
+          >
+            <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-gray-900">
+              <Bell className="h-4 w-4 shrink-0" aria-hidden />
+              알림 설정
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center justify-between gap-4 text-sm text-gray-700">
+                <span>댓글 알림</span>
+                <input
+                  type="checkbox"
+                  checked={notificationPrefs.comments}
+                  onChange={(e) => updateNotificationPref('comments', e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  data-testid="settings-notif-comments"
+                />
+              </label>
+              <label className="flex items-center justify-between gap-4 text-sm text-gray-700">
+                <span>AI 채팅·문서 변경 알림</span>
+                <input
+                  type="checkbox"
+                  checked={notificationPrefs.chat}
+                  onChange={(e) => updateNotificationPref('chat', e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  data-testid="settings-notif-chat"
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              이 기기에서 인박스에 표시할 알림 유형입니다. 이메일·푸시는 아직 없습니다.
+            </p>
           </div>
 
           <div
