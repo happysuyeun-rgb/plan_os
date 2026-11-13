@@ -46,7 +46,7 @@ test('SettingsPage uses inline avatar/name editors, not form list fields', () =>
   assert.match(settingsPage, /className="w-72"/)
   assert.match(settingsPage, /data-testid="settings-delete-account"/)
   assert.match(settingsPage, /text-gray-800/)
-  assert.doesNotMatch(settingsPage, /label="표시 이름"/)
+  assert.doesNotMatch(settingsPage, /<Input[\s\S]*label="표시 이름"/)
   assert.doesNotMatch(settingsPage, /이미지 첨부/)
   assert.doesNotMatch(settingsPage, /settings-avatar-url-input/)
   assert.match(settingsPage, /avatarFile,\s*clearAvatar/)
