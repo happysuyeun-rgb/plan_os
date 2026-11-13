@@ -69,12 +69,15 @@ test('GlobalNavBar profile menu has settings and logout, no top trash nav', () =
   assert.doesNotMatch(nav, /label: '휴지통'/)
 })
 
-test('Settings sidebar links to trash with consistent icons', () => {
+test('Settings sidebar has profile and trash; subscription lives in profile', () => {
   assert.match(settingsPage, /data-testid="settings-side-nav"/)
   assert.match(settingsPage, /data-testid="settings-trash-link"/)
   assert.match(settingsPage, /to="\/projects\/trash"/)
   assert.match(settingsPage, /UserRound/)
-  assert.match(settingsPage, /CreditCard/)
   assert.match(settingsPage, /Trash2/)
-  assert.match(settingsPage, /settingsNavItems/)
+  assert.match(settingsPage, /data-testid="settings-subscription-section"/)
+  assert.match(settingsPage, />\s*구독\s*</)
+  assert.match(settingsPage, /\{user\.plan\} 구독/)
+  assert.doesNotMatch(settingsPage, /key: 'plan'/)
+  assert.doesNotMatch(settingsPage, /label: '플랜'/)
 })
