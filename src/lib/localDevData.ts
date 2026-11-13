@@ -1,4 +1,5 @@
 import type { Document, DocumentType, MemberRole, Project, ProjectMember } from '../types'
+import { ensureLocalMockProgressTasks } from './projectProgress'
 
 const PROJECTS_KEY = 'planos-local-dev-projects'
 const DOCS_KEY = 'planos-local-dev-documents'
@@ -77,11 +78,27 @@ export function ensureLocalDemoProjectWithoutStaff(userId: string): Project {
     // 문서가 이미 있으면 프로젝트만으로 충분
   }
 
+  // 카드 완료율 체험용 prototype 업무 시드 (서버 업무와 별개)
+  ensureLocalMockProgressTasks(userId, project.id)
+
   return project
+}
+
+/** 이미 생성된 체험 프로젝트에도 완료율 샘플 업무가 없으면 시드한다. */
+export function ensureLocalDemoProgressSeed(userId: string): void {
+  const demo = readJson<Project[]>(PROJECTS_KEY, []).find(
+    (p) =>
+      p.user_id === userId &&
+      !p.deleted_at &&
+      p.interview_answers?.local_demo === LOCAL_DEMO_NO_STAFF_MARKER,
+  )
+  if (!demo) return
+  ensureLocalMockProgressTasks(userId, demo.id)
 }
 
 export function localListProjects(userId: string): Project[] {
   ensureLocalDemoProjectWithoutStaff(userId)
+  ensureLocalDemoProgressSeed(userId)
   return readJson<Project[]>(PROJECTS_KEY, [])
     .filter((p) => p.user_id === userId && !p.deleted_at)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))

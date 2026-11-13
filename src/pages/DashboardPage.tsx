@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Clock, Inbox, Plus, RefreshCw, UserPlus } from 'lucide-react'
 import type { DocumentType, Project } from '../types'
@@ -23,14 +23,19 @@ import { useNotificationStore } from '../store/notificationStore'
 import { useUIStore } from '../store/uiStore'
 import { fetchDashboardProjects, fetchWorkSummaries } from '../lib/api/dashboard'
 import { fetchProjectMembers } from '../lib/api/members'
-
-const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
+import { isLocalDevAuth } from '../lib/localDevAuth'
+import {
+  resolveCardProgress,
+  type ProjectProgress,
+} from '../lib/projectProgress'
 import {
   formatCompletionRate,
   sortDashboardRows,
   summarizeTotals,
   type DashboardProjectRow,
 } from '../lib/dashboardSummary'
+
+const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 
 function formatUpdatedAt(updatedAt: string): string {
   return new Date(updatedAt).toLocaleString('ko-KR', {
@@ -190,6 +195,24 @@ export default function DashboardPage() {
       cancelled = true
     }
   }, [projects, user?.id, user?.name])
+
+  const progressByProject = useMemo(() => {
+    if (!user || projects.length === 0) return {} as Record<string, ProjectProgress>
+    const localDev = isLocalDevAuth()
+    const summaryById = new Map((workRows ?? []).map((row) => [row.projectId, row.summary]))
+    const next: Record<string, ProjectProgress> = {}
+    for (const project of projects) {
+      const resolved = resolveCardProgress({
+        userId: user.id,
+        projectId: project.id,
+        serverTasksEnabled,
+        serverSummary: summaryById.get(project.id) ?? null,
+        localDev,
+      })
+      if (resolved) next[project.id] = resolved
+    }
+    return next
+  }, [projects, user, workRows])
 
   const handleNewProject = () => {
     if (!canCreateProject(projects.length)) {
@@ -423,6 +446,7 @@ export default function DashboardPage() {
                 hasDocuments={getDocTypes(project)}
                 notificationCounts={summary?.by_project[project.id]}
                 members={membersByProject[project.id]}
+                progress={progressByProject[project.id]}
                 isMenuOpen={contextMenu === project.id}
                 onOpenMenu={() => setContextMenu(project.id)}
                 onCloseMenu={() => setContextMenu(null)}
