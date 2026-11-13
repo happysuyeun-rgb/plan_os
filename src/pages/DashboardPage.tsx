@@ -10,6 +10,7 @@ import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
 import { ProjectActionModals } from '../components/project/ProjectActionModals'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
+import { toAvatarPeople, type MemberAvatarPerson } from '../components/project/MemberAvatarStack'
 import { NewProjectCard } from '../components/project/NewProjectCard'
 import { useProjectActions } from '../hooks/useProjectActions'
 import { useAuthStore } from '../store/authStore'
@@ -21,6 +22,7 @@ import { usePlanStore } from '../store/planStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useUIStore } from '../store/uiStore'
 import { fetchDashboardProjects, fetchWorkSummaries } from '../lib/api/dashboard'
+import { fetchProjectMembers } from '../lib/api/members'
 
 const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 import {
@@ -56,6 +58,9 @@ export default function DashboardPage() {
   const showToast = useUIStore((s) => s.showToast)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [membersByProject, setMembersByProject] = useState<
+    Record<string, MemberAvatarPerson[]>
+  >({})
   const [accessibleProjects, setAccessibleProjects] = useState<Project[] | null>(null)
   const [workRows, setWorkRows] = useState<DashboardProjectRow[] | null>(null)
   const [approvalsAvailable, setApprovalsAvailable] = useState(true)
@@ -155,6 +160,37 @@ export default function DashboardPage() {
     refreshNotifications({ limit: 30 })
   }, [fetchProjects, refreshNotifications])
 
+  useEffect(() => {
+    let cancelled = false
+    const loadMembers = async () => {
+      if (projects.length === 0) {
+        setMembersByProject({})
+        return
+      }
+      const entries = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const members = await fetchProjectMembers(project.id)
+            const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
+            const owner: MemberAvatarPerson = {
+              id: `owner-${project.user_id}`,
+              name: user?.id === project.user_id ? (user.name || '나') : 'Owner',
+              status: 'active',
+            }
+            return [project.id, [owner, ...people]] as const
+          } catch {
+            return [project.id, [] as MemberAvatarPerson[]] as const
+          }
+        }),
+      )
+      if (!cancelled) setMembersByProject(Object.fromEntries(entries))
+    }
+    void loadMembers()
+    return () => {
+      cancelled = true
+    }
+  }, [projects, user?.id, user?.name])
+
   const handleNewProject = () => {
     if (!canCreateProject(projects.length)) {
       setShowUpgrade(true)
@@ -170,6 +206,24 @@ export default function DashboardPage() {
   ) => {
     await inviteMember(projectId, email, role)
     showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
+    try {
+      const members = await fetchProjectMembers(projectId)
+      const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
+      const project = projects.find((p) => p.id === projectId)
+      const owner: MemberAvatarPerson | null = project
+        ? {
+            id: `owner-${project.user_id}`,
+            name: user?.id === project.user_id ? (user.name || '나') : 'Owner',
+            status: 'active',
+          }
+        : null
+      setMembersByProject((prev) => ({
+        ...prev,
+        [projectId]: owner ? [owner, ...people] : people,
+      }))
+    } catch {
+      // 초대는 성공했고 아바타 갱신만 실패한 경우
+    }
   }
 
   return (
@@ -368,6 +422,7 @@ export default function DashboardPage() {
                 project={project}
                 hasDocuments={getDocTypes(project)}
                 notificationCounts={summary?.by_project[project.id]}
+                members={membersByProject[project.id]}
                 isMenuOpen={contextMenu === project.id}
                 onOpenMenu={() => setContextMenu(project.id)}
                 onCloseMenu={() => setContextMenu(null)}

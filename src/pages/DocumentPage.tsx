@@ -13,6 +13,7 @@ import { CrossDocAuditEntryNotice } from '../components/common/CrossDocAuditEntr
 import { Button } from '../components/common/Button'
 import { MemberPanel } from '../components/project/MemberPanel'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
+import { MemberAvatarStack, toAvatarPeople } from '../components/project/MemberAvatarStack'
 import { DocumentTypeTabs } from '../components/document/DocumentTypeTabs'
 import { DocumentLayout } from '../components/document/DocumentLayout'
 import { DocumentLeftPanel } from '../components/document/DocumentLeftPanel'
@@ -679,14 +680,39 @@ export default function DocumentPage() {
               </Button>
             )}
             {can('member.view') && (
-              <Button
-                variant="ghost"
-                className="px-3 py-1.5 text-xs"
-                onClick={() => setShowMemberPanel(true)}
-              >
-                <Users className="h-4 w-4" />
-                멤버 {members.length > 0 && `(${members.length})`}
-              </Button>
+              <div className="flex items-center gap-2">
+                <MemberAvatarStack
+                  members={[
+                    ...(currentProject && currentUser
+                      ? [
+                          {
+                            id: `owner-${currentProject.user_id}`,
+                            name:
+                              currentUser.id === currentProject.user_id
+                                ? currentUser.name || '나'
+                                : 'Owner',
+                            status: 'active' as const,
+                          },
+                        ]
+                      : []),
+                    ...toAvatarPeople(members.filter((m) => m.role !== 'owner')),
+                  ]}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowMemberPanel(true)
+                  }}
+                  className="cursor-pointer"
+                />
+                <Button
+                  variant="ghost"
+                  className="px-3 py-1.5 text-xs"
+                  onClick={() => setShowMemberPanel(true)}
+                  data-testid="document-members-open"
+                >
+                  <Users className="h-4 w-4" />
+                  멤버 {members.length > 0 && `(${members.length})`}
+                </Button>
+              </div>
             )}
           </div>
         }

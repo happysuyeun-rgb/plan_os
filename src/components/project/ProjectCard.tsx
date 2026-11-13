@@ -6,6 +6,7 @@ import { DOCUMENT_TYPE_UI_ORDER } from '../../lib/documentTypes'
 import { getLastDocPath } from '../../lib/sessionStorage'
 import { Badge } from '../common/Badge'
 import { Card } from '../common/Card'
+import { MemberAvatarStack, type MemberAvatarPerson } from './MemberAvatarStack'
 import { ProjectNotificationBadges } from './ProjectNotificationBadges'
 
 const DOC_TYPES: DocumentType[] = DOCUMENT_TYPE_UI_ORDER
@@ -14,6 +15,7 @@ interface ProjectCardProps {
   project: Project
   hasDocuments?: DocumentType[]
   notificationCounts?: { comment: number; chat: number }
+  members?: MemberAvatarPerson[]
   onContextMenu?: (e: React.MouseEvent) => void
   onMenuClick?: (e: React.MouseEvent) => void
 }
@@ -22,6 +24,7 @@ export function ProjectCard({
   project,
   hasDocuments = [],
   notificationCounts,
+  members = [],
   onContextMenu,
   onMenuClick,
 }: ProjectCardProps) {
@@ -56,6 +59,11 @@ export function ProjectCard({
       </div>
       <h3 className="mt-3 font-semibold text-gray-900">{project.title}</h3>
       <p className="mt-1 line-clamp-2 text-sm text-gray-500">{project.description}</p>
+      {members.length > 0 && (
+        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+          <MemberAvatarStack members={members} />
+        </div>
+      )}
       <div className="mt-4 flex flex-wrap gap-1">
         {DOC_TYPES.map((type) => (
           <Badge

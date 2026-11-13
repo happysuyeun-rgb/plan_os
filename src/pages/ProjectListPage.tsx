@@ -11,12 +11,15 @@ import { ServiceTypeFilter } from '../components/project/ServiceTypeFilter'
 import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
 import { ProjectActionModals } from '../components/project/ProjectActionModals'
+import { toAvatarPeople, type MemberAvatarPerson } from '../components/project/MemberAvatarStack'
 import { useProjectActions } from '../hooks/useProjectActions'
 import { useProjectStore } from '../store/projectStore'
 import { usePlanStore } from '../store/planStore'
+import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useDebounce } from '../hooks/useDebounce'
 import { DOCUMENT_TYPE_UI_ORDER } from '../lib/documentTypes'
+import { fetchProjectMembers } from '../lib/api/members'
 
 const ALL_DOC_TYPES: DocumentType[] = DOCUMENT_TYPE_UI_ORDER
 
@@ -35,12 +38,16 @@ export default function ProjectListPage() {
     trashedProjects,
   } = useProjectStore()
   const canCreateProject = usePlanStore((s) => s.canCreateProject)
+  const user = useAuthStore((s) => s.user)
   const summary = useNotificationStore((s) => s.summary)
   const refreshNotifications = useNotificationStore((s) => s.refresh)
 
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [localSearch, setLocalSearch] = useState(searchQuery)
   const debouncedSearch = useDebounce(localSearch, 300)
+  const [membersByProject, setMembersByProject] = useState<
+    Record<string, MemberAvatarPerson[]>
+  >({})
 
   const {
     contextMenu,
@@ -62,6 +69,37 @@ export default function ProjectListPage() {
   useEffect(() => {
     setSearchQuery(debouncedSearch)
   }, [debouncedSearch, setSearchQuery])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadMembers = async () => {
+      if (projects.length === 0) {
+        setMembersByProject({})
+        return
+      }
+      const entries = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const members = await fetchProjectMembers(project.id)
+            const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
+            const owner: MemberAvatarPerson = {
+              id: `owner-${project.user_id}`,
+              name: user?.id === project.user_id ? (user.name || '나') : 'Owner',
+              status: 'active',
+            }
+            return [project.id, [owner, ...people]] as const
+          } catch {
+            return [project.id, [] as MemberAvatarPerson[]] as const
+          }
+        }),
+      )
+      if (!cancelled) setMembersByProject(Object.fromEntries(entries))
+    }
+    void loadMembers()
+    return () => {
+      cancelled = true
+    }
+  }, [projects, user?.id, user?.name])
 
   const filtered = getFilteredProjects()
 
@@ -117,6 +155,7 @@ export default function ProjectListPage() {
                 project={project}
                 hasDocuments={project.memory_summary ? ALL_DOC_TYPES : []}
                 notificationCounts={summary?.by_project[project.id]}
+                members={membersByProject[project.id]}
                 isMenuOpen={contextMenu === project.id}
                 onOpenMenu={() => setContextMenu(project.id)}
                 onCloseMenu={() => setContextMenu(null)}

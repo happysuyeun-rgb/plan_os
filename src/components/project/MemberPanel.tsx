@@ -65,15 +65,31 @@ export function MemberPanel({
               key={member.id}
               className="flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2.5"
             >
-              <div
-                className={cn(
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium',
-                  member.role === 'owner'
-                    ? 'bg-brand-100 text-brand-700'
-                    : 'bg-gray-100 text-gray-600',
-                )}
-              >
-                {member.name.charAt(0).toUpperCase()}
+              <div className="relative shrink-0">
+                <div
+                  className={cn(
+                    'flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium',
+                    member.status === 'pending'
+                      ? 'border border-dashed border-amber-400 bg-amber-50 text-amber-800'
+                      : member.role === 'owner'
+                        ? 'bg-brand-100 text-brand-700'
+                        : 'bg-brand-100 text-brand-700',
+                  )}
+                  data-testid={
+                    member.status === 'pending'
+                      ? 'member-panel-avatar-pending'
+                      : 'member-panel-avatar-active'
+                  }
+                >
+                  {member.name.charAt(0).toUpperCase()}
+                </div>
+                <span
+                  className={cn(
+                    'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-white',
+                    member.status === 'pending' ? 'bg-amber-400' : 'bg-emerald-500',
+                  )}
+                  aria-hidden
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
