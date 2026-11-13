@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bell, Camera, CreditCard, Pencil, Trash2, UserRound } from 'lucide-react'
 import { Button } from '../components/common/Button'
+import { Modal } from '../components/common/Modal'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ConfirmModal } from '../components/common/ConfirmModal'
 import { useAuthStore } from '../store/authStore'
@@ -42,6 +43,7 @@ export default function SettingsPage() {
 
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showNotificationModal, setShowNotificationModal] = useState(false)
   const [name, setName] = useState(user.name)
   const [isEditingName, setIsEditingName] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -53,6 +55,8 @@ export default function SettingsPage() {
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() =>
     readNotificationPreferences(user.id),
   )
+  const [draftNotificationPrefs, setDraftNotificationPrefs] =
+    useState<NotificationPreferences>(notificationPrefs)
 
   useEffect(() => {
     if (!isEditingName) return
@@ -60,12 +64,31 @@ export default function SettingsPage() {
     nameInputRef.current?.select()
   }, [isEditingName])
 
-  const updateNotificationPref = (key: keyof NotificationPreferences, value: boolean) => {
-    const next = { ...notificationPrefs, [key]: value }
-    setNotificationPrefs(next)
-    writeNotificationPreferences(user.id, next)
+  const openNotificationModal = () => {
+    const current = readNotificationPreferences(user.id)
+    setNotificationPrefs(current)
+    setDraftNotificationPrefs(current)
+    setShowNotificationModal(true)
+  }
+
+  const closeNotificationModal = () => {
+    setShowNotificationModal(false)
+    setDraftNotificationPrefs(notificationPrefs)
+  }
+
+  const saveNotificationPrefs = () => {
+    writeNotificationPreferences(user.id, draftNotificationPrefs)
+    setNotificationPrefs(draftNotificationPrefs)
+    setShowNotificationModal(false)
     showToast('success', '알림 설정을 저장했습니다')
   }
+
+  const notificationSummary = [
+    notificationPrefs.comments ? '댓글' : null,
+    notificationPrefs.chat ? '채팅·문서' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ') || '모두 끄기'
 
   const remaining = getRemainingGenerations()
   const previewInitial = (name.trim() || user.name || '?').charAt(0)
@@ -309,35 +332,22 @@ export default function SettingsPage() {
             className="mt-6 border-t border-gray-100 pt-6"
             data-testid="settings-notification-section"
           >
-            <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-gray-900">
-              <Bell className="h-4 w-4 shrink-0" aria-hidden />
-              알림 설정
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                  <Bell className="h-4 w-4 shrink-0" aria-hidden />
+                  알림 설정
+                </div>
+                <p className="mt-1 text-sm text-gray-500">{notificationSummary}</p>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={openNotificationModal}
+                data-testid="settings-notif-open"
+              >
+                설정
+              </Button>
             </div>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between gap-4 text-sm text-gray-700">
-                <span>댓글 알림</span>
-                <input
-                  type="checkbox"
-                  checked={notificationPrefs.comments}
-                  onChange={(e) => updateNotificationPref('comments', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                  data-testid="settings-notif-comments"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-4 text-sm text-gray-700">
-                <span>AI 채팅·문서 변경 알림</span>
-                <input
-                  type="checkbox"
-                  checked={notificationPrefs.chat}
-                  onChange={(e) => updateNotificationPref('chat', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                  data-testid="settings-notif-chat"
-                />
-              </label>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              이 기기에서 인박스에 표시할 알림 유형입니다. 이메일·푸시는 아직 없습니다.
-            </p>
           </div>
 
           <div
@@ -403,6 +413,55 @@ export default function SettingsPage() {
       </div>
 
       <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <Modal
+        isOpen={showNotificationModal}
+        onClose={closeNotificationModal}
+        title="알림 설정"
+      >
+        <div className="space-y-3" data-testid="settings-notification-modal">
+          <label className="flex items-center justify-between gap-4 text-sm text-gray-700">
+            <span>댓글 알림</span>
+            <input
+              type="checkbox"
+              checked={draftNotificationPrefs.comments}
+              onChange={(e) =>
+                setDraftNotificationPrefs((prev) => ({
+                  ...prev,
+                  comments: e.target.checked,
+                }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+              data-testid="settings-notif-comments"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-4 text-sm text-gray-700">
+            <span>AI 채팅·문서 변경 알림</span>
+            <input
+              type="checkbox"
+              checked={draftNotificationPrefs.chat}
+              onChange={(e) =>
+                setDraftNotificationPrefs((prev) => ({
+                  ...prev,
+                  chat: e.target.checked,
+                }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+              data-testid="settings-notif-chat"
+            />
+          </label>
+          <p className="text-xs text-gray-500">
+            이 기기에서 인박스에 표시할 알림 유형입니다. 이메일·푸시는 아직 없습니다.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={closeNotificationModal}>
+              취소
+            </Button>
+            <Button onClick={saveNotificationPrefs} data-testid="settings-notif-save">
+              설정 저장
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <ConfirmModal
         isOpen={showDeleteModal}
         title="계정 삭제"
