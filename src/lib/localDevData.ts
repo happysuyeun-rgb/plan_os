@@ -1,7 +1,8 @@
-import type { Document, DocumentType, Project } from '../types'
+import type { Document, DocumentType, MemberRole, Project, ProjectMember } from '../types'
 
 const PROJECTS_KEY = 'planos-local-dev-projects'
 const DOCS_KEY = 'planos-local-dev-documents'
+const MEMBERS_KEY = 'planos-local-dev-members'
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -46,6 +47,7 @@ export function ensureLocalDemoProjectWithoutStaff(userId: string): Project {
     service_type: '앱',
     target_user: '카페를 자주 가는 직장인',
     memory_summary: '체험용 가상 프로젝트 · AI 직원 미채용',
+    chat_title: '카페 예약 앱 (체험)',
     interview_answers: { local_demo: LOCAL_DEMO_NO_STAFF_MARKER },
   })
 
@@ -155,4 +157,54 @@ export function localInsertDocument(input: {
   }
   writeJson(DOCS_KEY, [created, ...all])
   return created
+}
+
+export function localFetchMembers(projectId: string): ProjectMember[] {
+  return readJson<ProjectMember[]>(MEMBERS_KEY, [])
+    .filter((m) => m.project_id === projectId)
+    .sort((a, b) => a.invited_at.localeCompare(b.invited_at))
+}
+
+export function localInviteMember(input: {
+  project_id: string
+  email: string
+  role: Exclude<MemberRole, 'owner'>
+}): ProjectMember {
+  const email = input.email.trim().toLowerCase()
+  const all = readJson<ProjectMember[]>(MEMBERS_KEY, [])
+  if (all.some((m) => m.project_id === input.project_id && m.email.toLowerCase() === email)) {
+    throw new Error('이미 초대된 이메일입니다')
+  }
+  const member: ProjectMember = {
+    id: newId('local-member'),
+    project_id: input.project_id,
+    user_id: null,
+    email,
+    name: email.split('@')[0] || email,
+    role: input.role,
+    status: 'pending',
+    invited_at: nowIso(),
+  }
+  writeJson(MEMBERS_KEY, [...all, member])
+  return member
+}
+
+export function localUpdateMemberRole(
+  memberId: string,
+  role: Exclude<MemberRole, 'owner'>,
+): ProjectMember {
+  const all = readJson<ProjectMember[]>(MEMBERS_KEY, [])
+  const index = all.findIndex((m) => m.id === memberId)
+  if (index < 0) throw new Error('멤버를 찾을 수 없습니다')
+  const updated = { ...all[index], role }
+  all[index] = updated
+  writeJson(MEMBERS_KEY, all)
+  return updated
+}
+
+export function localRemoveMember(memberId: string): void {
+  writeJson(
+    MEMBERS_KEY,
+    readJson<ProjectMember[]>(MEMBERS_KEY, []).filter((m) => m.id !== memberId),
+  )
 }

@@ -493,9 +493,12 @@ export default function DocumentPage() {
     setShowInviteModal(true)
   }
 
-  const handleInvite = async (email: string, inviteRole: 'editor' | 'viewer') => {
-    if (!projectId) return
-    await inviteMember(projectId, email, inviteRole)
+  const handleInvite = async (
+    inviteProjectId: string,
+    email: string,
+    inviteRole: 'editor' | 'viewer',
+  ) => {
+    await inviteMember(inviteProjectId, email, inviteRole)
     showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
   }
 
@@ -922,6 +925,7 @@ export default function DocumentPage() {
       <InviteMemberModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+        projectId={projectId}
         onInvite={handleInvite}
       />
 

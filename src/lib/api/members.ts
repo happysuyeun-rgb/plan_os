@@ -1,4 +1,11 @@
 import type { MemberRole, ProjectMember } from '../../types'
+import { isLocalDevAuth } from '../localDevAuth'
+import {
+  localFetchMembers,
+  localInviteMember,
+  localRemoveMember,
+  localUpdateMemberRole,
+} from '../localDevData'
 import { supabase } from '../supabase'
 import { throwIfError, unwrap } from '../supabaseHelpers'
 
@@ -9,6 +16,8 @@ export interface InviteMemberInput {
 }
 
 export async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  if (isLocalDevAuth()) return localFetchMembers(projectId)
+
   const { data, error } = await supabase
     .from('project_members')
     .select('*')
@@ -19,6 +28,8 @@ export async function fetchProjectMembers(projectId: string): Promise<ProjectMem
 }
 
 export async function inviteProjectMember(input: InviteMemberInput): Promise<ProjectMember> {
+  if (isLocalDevAuth()) return localInviteMember(input)
+
   const name = input.email.split('@')[0]
   const { data, error } = await supabase
     .from('project_members')
@@ -38,6 +49,8 @@ export async function updateProjectMemberRole(
   memberId: string,
   role: Exclude<MemberRole, 'owner'>,
 ): Promise<ProjectMember> {
+  if (isLocalDevAuth()) return localUpdateMemberRole(memberId, role)
+
   const { data, error } = await supabase
     .from('project_members')
     .update({ role })
@@ -48,6 +61,11 @@ export async function updateProjectMemberRole(
 }
 
 export async function removeProjectMember(memberId: string): Promise<void> {
+  if (isLocalDevAuth()) {
+    localRemoveMember(memberId)
+    return
+  }
+
   const { error } = await supabase.from('project_members').delete().eq('id', memberId)
   throwIfError(error)
 }

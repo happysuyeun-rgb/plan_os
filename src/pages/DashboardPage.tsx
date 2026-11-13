@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Clock, Inbox, Plus, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Clock, Inbox, Plus, RefreshCw, UserPlus } from 'lucide-react'
 import type { DocumentType, Project } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
@@ -9,14 +9,17 @@ import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
 import { ProjectActionModals } from '../components/project/ProjectActionModals'
+import { InviteMemberModal } from '../components/project/InviteMemberModal'
 import { NewProjectCard } from '../components/project/NewProjectCard'
 import { useProjectActions } from '../hooks/useProjectActions'
 import { useAuthStore } from '../store/authStore'
 import { NotificationFeed } from '../components/dashboard/NotificationFeed'
 import { useProjectStore } from '../store/projectStore'
+import { useMemberStore } from '../store/memberStore'
 import { DOCUMENT_TYPE_UI_ORDER } from '../lib/documentTypes'
 import { usePlanStore } from '../store/planStore'
 import { useNotificationStore } from '../store/notificationStore'
+import { useUIStore } from '../store/uiStore'
 import { fetchDashboardProjects, fetchWorkSummaries } from '../lib/api/dashboard'
 
 const serverTasksEnabled = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
@@ -49,7 +52,10 @@ export default function DashboardPage() {
   const canCreateProject = usePlanStore((s) => s.canCreateProject)
   const summary = useNotificationStore((s) => s.summary)
   const refreshNotifications = useNotificationStore((s) => s.refresh)
+  const inviteMember = useMemberStore((s) => s.inviteMember)
+  const showToast = useUIStore((s) => s.showToast)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const [accessibleProjects, setAccessibleProjects] = useState<Project[] | null>(null)
   const [workRows, setWorkRows] = useState<DashboardProjectRow[] | null>(null)
   const [approvalsAvailable, setApprovalsAvailable] = useState(true)
@@ -157,16 +163,36 @@ export default function DashboardPage() {
     navigate('/projects/new')
   }
 
+  const handleDashboardInvite = async (
+    projectId: string,
+    email: string,
+    role: 'editor' | 'viewer',
+  ) => {
+    await inviteMember(projectId, email, role)
+    showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           안녕하세요, {user?.name ?? '사용자'}님
         </h1>
-        <Button onClick={handleNewProject}>
-          <Plus className="h-4 w-4" />
-          새 프로젝트
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => setShowInviteModal(true)}
+            disabled={projects.length === 0}
+            data-testid="dashboard-invite-open"
+          >
+            <UserPlus className="h-4 w-4" />
+            멤버 초대
+          </Button>
+          <Button onClick={handleNewProject}>
+            <Plus className="h-4 w-4" />
+            새 프로젝트
+          </Button>
+        </div>
       </div>
 
       <MidProjectAiStaffingNotice className="mt-6" />
@@ -386,6 +412,12 @@ export default function DashboardPage() {
         onCloseTrash={() => setTrashTarget(null)}
         onConfirmRename={handleRename}
         onConfirmTrash={handleTrash}
+      />
+      <InviteMemberModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        projects={projects.map((p) => ({ id: p.id, title: p.title }))}
+        onInvite={handleDashboardInvite}
       />
       <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
