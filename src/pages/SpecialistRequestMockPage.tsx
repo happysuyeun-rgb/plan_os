@@ -33,6 +33,7 @@ import {
 import { AuditManifestStaleError } from '../lib/api/auditManifests'
 import {
   enqueueAndProcessMockRun,
+  enqueueForCrewAiWorker,
   listAiRunEvents,
   listAiUsageForRun,
   listProjectAiRuns,
@@ -234,6 +235,72 @@ export default function SpecialistRequestMockPage() {
       } else if (run.status === 'failed') {
         setError(run.error_message ?? run.error_code ?? 'Mock 실행이 실패했습니다.')
       }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Real path: enqueue only; Python CrewAI worker claims the run (not process_mock_ai_run). */
+  const enqueueCrewAiWorker = async () => {
+    if (!owner || !serverContract || serverContract.status !== 'active') {
+      setError('승인된 서버 계약으로만 CrewAI 실실행을 큐에 넣을 수 있습니다.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      const run = await enqueueForCrewAiWorker(serverContract.id, runIdempotencyKey)
+      await refreshRun(run)
+      setRunIdempotencyKey(newRequestId())
+      if (run.status === 'queued') {
+        setError('')
+      }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const refreshExecutionState = async () => {
+    if (!projectId) return
+    setBusy(true)
+    setError('')
+    try {
+      const runs = await listProjectAiRuns(projectId)
+      const latestRun = runs[0] ?? null
+      if (latestRun) await refreshRun(latestRun)
+      else {
+        setServerRun(null)
+        setRunEvents([])
+        setUsageRows([])
+      }
+      const arts = await listProjectAiArtifacts(projectId)
+      const latestArt = arts[0] ?? null
+      if (latestArt) await refreshArtifact(latestArt)
+      else {
+        setArtifact(null)
+        setArtifactEvents([])
+      }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const publishSucceededRun = async () => {
+    if (!owner || !serverRun || serverRun.status !== 'succeeded') {
+      setError('성공한 실행만 보고서로 발행할 수 있습니다.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      const published = await publishAiArtifactFromRun(serverRun.id)
+      await refreshArtifact(published)
     } catch (e) {
       setError(mapError(e))
     } finally {
@@ -542,6 +609,15 @@ export default function SpecialistRequestMockPage() {
                   <button
                     type="button"
                     disabled={busy}
+                    onClick={() => void enqueueCrewAiWorker()}
+                    className="rounded-md bg-emerald-800 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                    data-testid="crewai-worker-enqueue"
+                  >
+                    CrewAI 실실행 큐에 넣기
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
                     onClick={continueToMockReview}
                     className="rounded-md border px-4 py-2 text-sm disabled:opacity-50"
                     data-testid="specialist-continue-ai-review"
@@ -608,17 +684,51 @@ export default function SpecialistRequestMockPage() {
                   ))}
                 </ul>
               )}
-              {serverRun.status === 'failed' && (
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void retryMockWorker()}
-                  className="mt-4 rounded-md bg-violet-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                  data-testid="mock-worker-retry"
+                  onClick={() => void refreshExecutionState()}
+                  className="rounded-md border px-4 py-2 text-sm disabled:opacity-50"
+                  data-testid="execution-refresh"
                 >
-                  실패 실행 재시도
+                  실행·보고서 상태 새로고침
                 </button>
-              )}
+                {serverRun.status === 'succeeded' && !artifact && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void publishSucceededRun()}
+                    className="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    data-testid="artifact-publish-from-run"
+                  >
+                    성공 실행 → 보고서 발행
+                  </button>
+                )}
+                {serverRun.status === 'failed' &&
+                  serverRun.result_json?.engineFamily !== 'crewai' &&
+                  serverRun.result_json?.engine !== 'crewai' &&
+                  !String(serverRun.error_message || '').includes('crewai') && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void retryMockWorker()}
+                    className="rounded-md bg-violet-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    data-testid="mock-worker-retry"
+                  >
+                    Mock 실패 실행 재시도
+                  </button>
+                )}
+                {serverRun.status === 'failed' &&
+                  (serverRun.result_json?.engineFamily === 'crewai' ||
+                    serverRun.result_json?.engine === 'crewai' ||
+                    String(serverRun.error_code || '').startsWith('CREWAI') ||
+                    String(serverRun.error_message || '').toLowerCase().includes('crewai')) && (
+                  <p className="text-sm text-amber-900" data-testid="crewai-retry-hint" role="note">
+                    CrewAI 실패는 Mock 재시도로 덮지 않습니다. 워커를 확인한 뒤 새 실실행을 큐에 넣으세요.
+                  </p>
+                )}
+              </div>
             </section>
           )}
 

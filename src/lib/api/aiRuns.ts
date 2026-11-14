@@ -181,3 +181,15 @@ export async function enqueueAndProcessMockRun(
   if (queued.status === 'succeeded') return queued
   return processMockAiRun(queued.id)
 }
+
+/**
+ * Real CrewAI path: enqueue only. A separate Python worker claims via
+ * claim_crewai_ai_run / complete_crewai_ai_run (local_only 034).
+ * Never calls process_mock_ai_run.
+ */
+export async function enqueueForCrewAiWorker(
+  contractId: string,
+  idempotencyKey: string,
+): Promise<AiRunRow> {
+  return enqueueAiRun(contractId, idempotencyKey)
+}

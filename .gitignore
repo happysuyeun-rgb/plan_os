@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 .env.local
+workers/crewai/.env
+workers/crewai/.env.*
+!workers/crewai/.env.example
 
 # Editor directories and files
 .vscode/*

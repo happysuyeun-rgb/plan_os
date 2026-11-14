@@ -33,7 +33,7 @@ export function readLocalSupabaseEnv(localDir) {
       })
     }
   }
-  const variables = Object.fromEntries(raw.split('\n').flatMap((line) => {
+  const variables = Object.fromEntries(raw.split(/\r?\n/).flatMap((line) => {
     const match = line.match(/^([A-Z_]+)=(.*)$/)
     return match ? [[match[1], match[2].replace(/^["']|["']$/g, '')]] : []
   }))
