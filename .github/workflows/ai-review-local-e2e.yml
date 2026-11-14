@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   disposable-ai-review:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
       PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-ai-review-supabase

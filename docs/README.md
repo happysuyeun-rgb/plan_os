@@ -5,11 +5,11 @@
 **[저장소 구조·파일별 역할·문서 찾기 통합 가이드](REPOSITORY_GUIDE.md)** — 처음 방문하거나 개발 작업을 시작할 때 먼저 읽으세요.
 
 ## 현재 작업에서 먼저 확인할 문서
-1. [진행 스냅샷 2026-11-02](plans/PROGRESS_SNAPSHOT_2026-11-02.md) — **오늘 기준** 완료·남은 일·진행률
-2. [남은 개발 체크리스트](plans/REMAINING_DEV_CHECKLIST_2026-10-25.md) — Mock 가능 / 승인 후 / 맨 마지막
-3. [전체 진행 현황](PROGRESS_STATUS.md) — 역사 포함 관리 문서
+1. [Phase 0 AI 직원 기준선 2026-11-14](plans/PHASE0_AGENT_BASELINE_2026-11-14.md) — **현 main `671f6fd`** · Mock vs 실실행 · OSS 평가 · 다음 PR
+2. [전체 진행 현황](PROGRESS_STATUS.md) — 2026-11-14 스냅샷 + 역사
+3. [남은 개발 체크리스트](plans/REMAINING_DEV_CHECKLIST_2026-10-25.md) — Mock 가능 / 승인 후 / 맨 마지막
 4. [통합 실행계획서](plans/PLANOS_INTEGRATED_EXECUTION_PLAN_2026-10-21.md) — G0~G7 진행·누락/차단 항목
-5. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태
+5. [통합 기능정의서](product/FUNCTIONAL_SPEC_V1_2026-10-20.md) — F-ID와 실제 구현 상태 (코드와 대조 시 Phase 0 문서 우선)
 
 ## 폴더별 문서 정책
 - `product/`: 현재 제품 정의/요구사항

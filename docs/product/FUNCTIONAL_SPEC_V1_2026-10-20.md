@@ -1,7 +1,8 @@
 # PlanOS 3.0 × AI 인력사무소 — 통합 기능정의서 v1.0
-작성: 2026-10-20 · **최종 수정: 2026-10-25 (CURRENT/TARGET 정합화)** · 상태: **제품 기준선 / 실코드 대조 갱신 / 미승인** · 담당: 제품기획 및 개발 통합
+작성: 2026-10-20 · **최종 수정: 2026-11-14 (main `671f6fd` 대조 주석)** · 상태: **제품 기준선 / 실코드 대조 갱신 / 미승인** · 담당: 제품기획 및 개발 통합
 
 > 본 문서는 기능의 단일 추적 기준선이다. 기능 구현·테스트·출시를 구분하며, 코드 검증 없이 완료라고 표시하지 않는다.  
+> **2026-11-14:** AI 직원 실실행 워커는 미구현 · Mock만. 현행 요약 [PHASE0_AGENT_BASELINE_2026-11-14](../plans/PHASE0_AGENT_BASELINE_2026-11-14.md).  
 > 상태·권한·화면 추적: [STATUS_VOCABULARY](../plans/STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](../plans/PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](../plans/FEATURE_TRACEABILITY_2026-10-25.md) · [결함·결정 로그](../plans/DESIGN_DEFECT_DECISION_LOG_2026-10-25.md).
 
 ## 1. 근거·범위·우선권

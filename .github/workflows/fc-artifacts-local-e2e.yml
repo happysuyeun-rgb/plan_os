@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   disposable-fc-artifacts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-fc-artifacts-supabase

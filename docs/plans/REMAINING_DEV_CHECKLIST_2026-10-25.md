@@ -1,8 +1,8 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `b7647b4` (#71 병합, 2026-11-08)  
-**정책:** 이중진입 유지 · 호스티드 027 / 유료 LLM / Production = **명시 승인 전 금지**  
-**최신 스냅샷:** [PROGRESS_SNAPSHOT_2026-11-08.md](./PROGRESS_SNAPSHOT_2026-11-08.md)  
+**기준 tip:** `main` @ `671f6fd` (#80 병합, 2026-11-13)  
+**정책:** 이중진입 유지 · 호스티드 027/033 / 유료 LLM / Production = **명시 승인 전 금지**  
+**최신 스냅샷:** [PHASE0_AGENT_BASELINE_2026-11-14.md](./PHASE0_AGENT_BASELINE_2026-11-14.md) · [PROGRESS_STATUS.md](../PROGRESS_STATUS.md)  
 **승인 게이트 보류(급하지 않음):** [DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
 **정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) (R2 표 포함)
 
@@ -31,6 +31,15 @@
 - [x] Draft 설계 문서 고유분 main 입고 (#67; #26·#28·#40 닫음)
 - [x] `ai_suggested` PM Mock (#70)
 - [x] 라우트 번들 분할 (#71)
+- [x] C08 아바타 파일 업로드 · 랜딩 · 이용 가이드 · 카드 진행률 (#80)
+- [x] Phase 0 CI `ubuntu-24.04` + AI 직원 Mock/실실행 기준선 문서 (PR-A)
+
+### 0-B. 아직 Mock만 (실모델 워커 아님)
+
+- [ ] `requirements_auditor_v1` **실모델** 분석 워커 (현재 `process_mock_ai_run`만)
+- [ ] Agent Definition / Skill·Tool Registry (PR-B)
+- [ ] 호스티드 `033_avatars_storage` 적용 (승인 후)
+- [ ] 유료/승인 LLM 경로 (Gate C-LLM)
 
 ---
 
