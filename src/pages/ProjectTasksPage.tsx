@@ -162,6 +162,10 @@ export default function ProjectTasksPage() {
       <div className="flex flex-wrap items-center gap-4">
         <Link to={projectId ? `/projects/${projectId}` : '/projects'}
           className="text-sm text-gray-500 hover:underline">← 프로젝트 문서</Link>
+        <Link to={projectId ? `/projects/${projectId}/plans` : '/projects'}
+          className="text-sm text-indigo-700 hover:underline">PM 계획 →</Link>
+        <Link to={projectId ? `/projects/${projectId}/ai-review` : '/projects'}
+          className="text-sm text-violet-700 hover:underline">AI 기획 검수 (Mock) →</Link>
         <Link to={projectId ? `/projects/${projectId}/specialists` : '/ai-staff'}
           className="rounded-lg bg-indigo-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-800">
           AI 직원 채용

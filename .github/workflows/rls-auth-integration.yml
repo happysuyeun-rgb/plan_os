@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   auth-postgrest-integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     env:
       PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-disposable-supabase

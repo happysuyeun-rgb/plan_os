@@ -146,8 +146,14 @@ export function createLoginHelpers({ site, password }) {
       )
     }
     if (page.url().includes('/onboarding')) {
-      const next = page.getByRole('button').filter({ hasText: /시작|완료|다음|건너/ }).first()
-      if (await next.count()) await next.click()
+      // Wait for CTA render — URL can settle before hydration; skip-if-missing caused
+      // silent stuck-on-/onboarding timeouts for viewer/editor when seed omitted
+      // onboarding_completed.
+      const next = page.getByRole('button', {
+        name: /첫 프로젝트 시작하기|기획서 저장하고 시작하기|시작|완료|다음|건너/,
+      })
+      await next.waitFor({ state: 'visible', timeout: 15000 })
+      await next.click()
       await page.waitForURL(
         (url) => url.pathname === '/dashboard' || url.pathname.startsWith('/projects'),
         { timeout: 30000 },

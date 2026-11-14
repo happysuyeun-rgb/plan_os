@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/lib/ai/**'
       - 'src/pages/ProjectAiReviewPage.tsx'
+      - 'src/pages/SpecialistRequestMockPage.tsx'
+      - 'src/pages/ProjectTasksPage.tsx'
       - 'src/server/ai/**'
       - 'api/ai/**'
       - 'supabase/local_only/**'
@@ -29,7 +31,7 @@ concurrency:
 
 jobs:
   disposable-ai-review:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
       PLANOS_LOCAL_SUPABASE_DIR: /tmp/planos-ai-review-supabase

@@ -1,8 +1,22 @@
 -- Disposable LOCAL browser AI-review fixture only. Never apply to hosted DBs.
+-- Owner/editor/viewer/outsider are RBAC fixtures, not new-user onboarding subjects.
+-- Without onboarding_completed, login lands on /onboarding and the suite never
+-- reaches role assertions (viewer readonly / editor hire).
 update public.users set
-  name = 'AI Review E2E Owner',
+  name = case id
+    when :'owner_id'::uuid then 'AI Review E2E Owner'
+    when :'editor_id'::uuid then 'AI Review E2E Editor'
+    when :'viewer_id'::uuid then 'AI Review E2E Viewer'
+    when :'outsider_id'::uuid then 'AI Review E2E Outsider'
+    else name
+  end,
   onboarding_completed = true
-where id = :'owner_id'::uuid;
+where id in (
+  :'owner_id'::uuid,
+  :'editor_id'::uuid,
+  :'viewer_id'::uuid,
+  :'outsider_id'::uuid
+);
 
 insert into public.projects (id,user_id,title,description,memory_summary)
 values (

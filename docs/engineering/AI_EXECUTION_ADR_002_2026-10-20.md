@@ -1,6 +1,7 @@
 # ADR-002 — PlanOS AI 실행 파이프라인·ModelGateway·예산 원장 (Phase 1 P1-4)
 
 **2026-10-20 · 상태: 설계 대안 평가/권고안 작성 완료, 특정 공급자·상용 예산·구현 승인 미확정.**  
+**2026-11-14 코드 대조:** main `671f6fd` 기준 Mock 실행 축(F-A/B/C, `process_mock_ai_run`)은 존재하나 **실모델 워커·유료 공급자 승인 없음**. 현행 정합은 [PHASE0_AGENT_BASELINE_2026-11-14](../plans/PHASE0_AGENT_BASELINE_2026-11-14.md). FreeLLMAPI는 운영 필수 의존이 아님.  
 **근거:** [ADR-001](ARCHITECTURE.md), [P1-2 계약·비용 정책](../product/MVP_CONTRACT_APPROVAL_COST_POLICY_2026-10-19.md), [UX_FLOWS](../ux/UX_FLOWS.md), [P1-3 재감사](../quality/PHASE1_UX_ARCH_AUDIT_2026-10-20.md), [DATA_MODEL](DATA_MODEL.md), [API_CONTRACTS](API_CONTRACTS.md).
 
 ## 1. 결정과 제안 이유
