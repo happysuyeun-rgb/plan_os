@@ -20,6 +20,8 @@ describe('CrewAI real worker contract', () => {
     assert.match(page, /data-testid="mock-worker-run"/)
     assert.match(page, /data-testid="crewai-worker-enqueue"/)
     assert.match(page, /enqueueForCrewAiWorker/)
+    assert.match(page, /data-testid="execution-refresh"/)
+    assert.match(page, /data-testid="artifact-publish-from-run"/)
   })
 
   it('ships local_only 034 claim/complete RPCs (not migrations/)', () => {
