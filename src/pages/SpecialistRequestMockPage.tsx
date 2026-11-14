@@ -33,6 +33,7 @@ import {
 import { AuditManifestStaleError } from '../lib/api/auditManifests'
 import {
   enqueueAndProcessMockRun,
+  enqueueForCrewAiWorker,
   listAiRunEvents,
   listAiUsageForRun,
   listProjectAiRuns,
@@ -233,6 +234,28 @@ export default function SpecialistRequestMockPage() {
         await refreshArtifact(published)
       } else if (run.status === 'failed') {
         setError(run.error_message ?? run.error_code ?? 'Mock 실행이 실패했습니다.')
+      }
+    } catch (e) {
+      setError(mapError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Real path: enqueue only; Python CrewAI worker claims the run (not process_mock_ai_run). */
+  const enqueueCrewAiWorker = async () => {
+    if (!owner || !serverContract || serverContract.status !== 'active') {
+      setError('승인된 서버 계약으로만 CrewAI 실실행을 큐에 넣을 수 있습니다.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      const run = await enqueueForCrewAiWorker(serverContract.id, runIdempotencyKey)
+      await refreshRun(run)
+      setRunIdempotencyKey(newRequestId())
+      if (run.status === 'queued') {
+        setError('')
       }
     } catch (e) {
       setError(mapError(e))
@@ -538,6 +561,15 @@ export default function SpecialistRequestMockPage() {
                     data-testid="mock-worker-run"
                   >
                     Mock worker 서버 실행
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void enqueueCrewAiWorker()}
+                    className="rounded-md bg-emerald-800 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                    data-testid="crewai-worker-enqueue"
+                  >
+                    CrewAI 실실행 큐에 넣기
                   </button>
                   <button
                     type="button"

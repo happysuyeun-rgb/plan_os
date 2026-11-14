@@ -40,19 +40,17 @@
 
 재사용 우선: `agentContracts.ts`, `aiRuns.ts`, `aiArtifacts.ts`, Specialist 요청 UI, mig 028–031.
 
-## 4. 오픈소스 평가 (Phase 0 결론)
+## 4. 오픈소스 평가 → 실도입 (2026-11-14 지시 변경)
 
-| 도구 | 라이선스(공개 기준) | Phase 0 결정 |
+| 도구 | 라이선스(공개 기준) | 결정 |
 |---|---|---|
-| CrewAI | Apache-2.0 | Phase 3 협업 PoC **후보**. 지금 전면 설치 금지 |
-| MetaGPT | MIT | 역할/프로세스 **참고만** |
-| Agency Swarm | MIT | 위임 모델 **참고만** |
-| OpenHands | MIT | Phase 4 샌드박스 |
-| OpenClaw | 저장소 라이선스 재확인 필요 | Phase 4 · **무제한 로컬/배포 권한 금지** |
-| MS Agent Framework | MIT | 승인/체크포인트 대안 검토 |
-| FreeLLMAPI | 실험용 안내 | **운영 필수 의존 금지** · ModelGateway 옵션만 |
+| CrewAI | Apache-2.0 | **실설치** `workers/crewai/` 격리 워커 · mock과 분리 |
+| MetaGPT | MIT | 역할/절차 → `roles.py` Agent Definition + auditor crew |
+| Liner Router API | 플랫폼 | `linerGateway.ts` + 워커 `llm.py` · 키=`LINER_API_KEY` |
+| OpenHands | MIT | **첫 실 LLM E2E 성공 후** P5 |
+| Agency Swarm / FreeLLMAPI | — | 필수 의존 금지 |
 
-**즉시 채택:** 없음. Phase 1–2는 **기존 TypeScript + Supabase Mock 실행 축**을 확장한다. Python 엔진이 필요해지면 서버 워커 어댑터로 격리.
+상세: [CREWAI_REAL_WORKER_POC_2026-11-14.md](./CREWAI_REAL_WORKER_POC_2026-11-14.md). Mock `process_mock_ai_run`은 유지.
 
 ## 5. DB
 
