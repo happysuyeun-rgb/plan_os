@@ -1,3 +1,4 @@
+import { MARKET_RESEARCHER } from './marketResearchStaff'
 import { MOCK_SPECIALIST } from './mockSpecialistRequest'
 
 export type AiStaffCard = {
@@ -8,11 +9,14 @@ export type AiStaffCard = {
   available: boolean
   /** Optional tracking note (issue / FUTURE). Display only. */
   futureRef?: string
+  /** Hire CTA path suffix under /projects/:id/specialists/ */
+  requestPath?: string
 }
 
 /**
- * Visible roster: 1 hireable Mock role + upcoming placeholders.
+ * Visible roster: hireable live/mock roles + upcoming placeholders.
  * #37/#38 are display seats only — no hire, payment, outbound, or LLM.
+ * Market researcher available flag flips only after live Liner verification.
  */
 export const AI_STAFF_ROSTER: AiStaffCard[] = [
   {
@@ -21,6 +25,16 @@ export const AI_STAFF_ROSTER: AiStaffCard[] = [
     description: MOCK_SPECIALIST.description,
     capability: MOCK_SPECIALIST.capability,
     available: true,
+    requestPath: 'request',
+  },
+  {
+    id: MARKET_RESEARCHER.id,
+    title: MARKET_RESEARCHER.title,
+    description: MARKET_RESEARCHER.description,
+    capability: MARKET_RESEARCHER.capability,
+    // Live Liner Search Agent + Web Search verified 2026-11-14 (research-local).
+    available: true,
+    requestPath: 'market-research',
   },
   {
     id: 'ai_pm_planner_v1',

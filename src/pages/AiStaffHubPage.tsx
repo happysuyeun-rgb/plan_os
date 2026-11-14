@@ -27,10 +27,11 @@ export default function AiStaffHubPage() {
   const selected = AI_STAFF_ROSTER.find((r) => r.id === selectedRoleId)
   const localHint = isLocalDevAuth()
 
-  const hireHref = (projectId: string) =>
-    selected?.available
-      ? `/projects/${projectId}/specialists/request`
-      : `/projects/${projectId}/specialists`
+  const hireHref = (projectId: string) => {
+    if (!selected?.available) return `/projects/${projectId}/specialists`
+    const path = selected.requestPath || 'request'
+    return `/projects/${projectId}/specialists/${path}`
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -38,8 +39,8 @@ export default function AiStaffHubPage() {
         <p className="text-sm font-medium text-brand-700">AI 직원</p>
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">AI 직원 채용</h1>
         <p className="max-w-xl text-sm leading-relaxed text-gray-500">
-          지금 채용 가능한 역할과 준비 중 역할(마케터 #38·영업 #37 자리 포함)을 한눈에 봅니다. (Mock · 결제/유료
-          LLM·실발송 없음)
+          지금 채용 가능한 역할과 준비 중 역할(마케터 #38·영업 #37 자리 포함)을 한눈에 봅니다. 시장조사는
+          Liner 실호출, 검수는 Mock/CrewAI 경로입니다. 외부 게시·실발송은 없습니다.
         </p>
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <span>

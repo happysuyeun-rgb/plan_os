@@ -16,7 +16,7 @@ test('catalog route is protected and lists hireable mock specialist card', () =>
   assert.match(page, /hireableAiStaff/)
   assert.match(page, /결제·유료 LLM/)
   assert.match(page, /산정 전 · 유료 결제 없음/)
-  assert.match(page, /specialists\/request/)
+  assert.match(page, /specialists\/\$\{role\.requestPath \|\| 'request'\}/)
 })
 
 test('catalog does not claim paid hire or invent zero price checkout', () => {
@@ -44,12 +44,11 @@ test('roster reserves #37 sales and #38 marketer as unavailable display seats', 
   assert.match(page, /#37 영업·#38 마케터/)
 })
 
-test('only MOCK_SPECIALIST path is hireable; FUTURE roles stay available:false', () => {
-  assert.match(catalogSrc, /available: true/)
-  // First available:true should be the MOCK_SPECIALIST entry only once
+test('MOCK_SPECIALIST and market researcher are hireable; FUTURE roles stay unavailable', () => {
   const availableTrue = catalogSrc.match(/available:\s*true/g) ?? []
-  assert.equal(availableTrue.length, 1)
+  assert.equal(availableTrue.length, 2)
   assert.match(catalogSrc, /id: MOCK_SPECIALIST\.id[\s\S]*?available: true/)
+  assert.match(catalogSrc, /id: MARKET_RESEARCHER\.id[\s\S]*?available: true/)
   assert.match(
     catalogSrc,
     /id: 'ai_marketer_growth_v1'[\s\S]*?available: false[\s\S]*?futureRef: '#38'/,
