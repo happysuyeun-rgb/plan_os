@@ -6,6 +6,8 @@
  * 2) FIXTURE (VITE_S3_E2E_FIXTURE Vite already up): catalog→handoff only (no fake docs)
  *
  * Never invent documents/tasks. Session handoff ≠ server review job persistence.
+ * Disposable A4 uses dual-entry Mock CTA (specialist-continue-ai-review) after
+ * local contract preview — not VITE_S3_E2E_FIXTURE and not F-A server accept.
  * Seed/login shared via tests/e2e/disposableAiReviewFixture.mjs
  */
 import assert from 'node:assert/strict'

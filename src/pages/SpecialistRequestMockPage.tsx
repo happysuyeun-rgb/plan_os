@@ -376,10 +376,9 @@ export default function SpecialistRequestMockPage() {
   const continueToMockReview = () => {
     if (!projectId) return
     const activeContract = serverContract?.status === 'active' ? serverContract : null
-    if (!fixtureMode && !activeContract) {
-      setError('Mock 검수로 이어가려면 서버 계약을 승인해야 합니다.')
-      return
-    }
+    // Session handoff to Mock AI review is the dual-entry parallel lane (not F-A
+    // server execution). Server Mock worker still requires an active contract
+    // separately; fixtureMode is only for S3 Chromium localDev IDs.
     try {
       const handoffDraft =
         draft ??
@@ -756,16 +755,14 @@ export default function SpecialistRequestMockPage() {
                   서버에 계약 초안 저장
                 </button>
               )}
-              {fixtureMode && (
-                <button
-                  type="button"
-                  onClick={continueToMockReview}
-                  className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white"
-                  data-testid="specialist-continue-ai-review"
-                >
-                  Mock 기획 검수로 이어가기
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={continueToMockReview}
+                className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white"
+                data-testid="specialist-continue-ai-review"
+              >
+                Mock 기획 검수로 이어가기
+              </button>
             </section>
           )}
 

@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/lib/ai/**'
       - 'src/pages/ProjectAiReviewPage.tsx'
+      - 'src/pages/SpecialistRequestMockPage.tsx'
+      - 'src/pages/ProjectTasksPage.tsx'
       - 'src/server/ai/**'
       - 'api/ai/**'
       - 'supabase/local_only/**'
