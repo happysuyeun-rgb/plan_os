@@ -108,11 +108,13 @@ export default function AiStaffCatalogMockPage() {
                 </dl>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Link
-                    to={`/projects/${projectId}/specialists/request`}
+                    to={`/projects/${projectId}/specialists/${role.requestPath || 'request'}`}
                     className="rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white"
                     data-testid="ai-staff-catalog-request-cta"
                   >
-                    이 역할로 업무 요청 Mock
+                    {role.id === 'ai_market_researcher_v1'
+                      ? '이 역할로 시장조사 요청'
+                      : '이 역할로 업무 요청 Mock'}
                   </Link>
                   <Link
                     to={`/projects/${projectId}/ai-review`}

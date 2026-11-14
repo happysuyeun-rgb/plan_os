@@ -15,6 +15,8 @@ Apache-2.0 CrewAI runs in this directory only. It does **not** replace
 - Disposable local Supabase (loopback). **No hosted/ops DB.**
 - Apply `supabase/local_only/034_crewai_worker_rpcs.sql` via
   `node scripts/apply-034-crewai-local-only.mjs`
+- For market research also apply `035_market_researcher_agent.sql` via
+  `node scripts/apply-035-market-researcher-local-only.mjs`
 
 ## Install
 
@@ -43,6 +45,7 @@ Never put Liner keys in `VITE_*` or commit `.env`.
 uv run planos-crewai-worker roles
 uv run planos-crewai-worker smoke-llm
 uv run planos-crewai-worker audit-local
+uv run planos-crewai-worker research-local --target "반려동물 예약 경쟁시장" --region KR
 uv run planos-crewai-worker poll --limit 3
 ```
 
@@ -50,8 +53,10 @@ Without `LINER_API_KEY`, commands run in **dry-run** (no live LLM; report marks 
 
 ## Roles (MetaGPT-mapped)
 
-See `src/planos_crewai/roles.py`. First executable crew:
-`requirements_auditor_v1` in `crews/requirements_auditor.py` (AI PM handoff → auditor).
+See `src/planos_crewai/roles.py`. Executable crews:
+
+- `requirements_auditor_v1` — CrewAI + Liner Router
+- `ai_market_researcher_v1` — Liner Search Agent + Web Search (+ optional Deep Research)
 
 ## License note
 

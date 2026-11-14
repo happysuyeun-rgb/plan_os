@@ -43,6 +43,7 @@ describe('CrewAI real worker contract', () => {
       'ux_ui_auditor_v1',
       'developer_v1',
       'qa_engineer_v1',
+      'ai_market_researcher_v1',
     ]) {
       assert.match(roles, new RegExp(slug))
     }

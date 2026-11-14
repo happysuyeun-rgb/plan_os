@@ -22,6 +22,12 @@ export type AgentContractRow = {
     auditManifestId: string
     mockOnly: boolean
     paidLlmAllowed: boolean
+    researchTarget?: string
+    region?: string
+    researchDepth?: string
+    lang?: string
+    allowedActions?: string[]
+    forbiddenActions?: string[]
   }
   audit_manifest_id: string
   budget_cap_minor: number
@@ -127,6 +133,37 @@ export async function createAgentContractDraft(input: {
     p_audit_manifest_id: input.auditManifestId,
     p_budget_cap_minor: input.budgetCapMinor ?? MOCK_BUDGET_CAP_MINOR,
     p_client_request_id: input.clientRequestId,
+    p_expires_at: input.expiresAt ?? null,
+  })
+  if (error) throwContractError(error)
+  return parseContract(data)
+}
+
+/** Live market research draft — requires local_only 035 RPC on disposable DB. */
+export async function createMarketResearchContractDraft(input: {
+  projectId: string
+  task: string
+  acceptanceCriteria: string
+  auditManifestId: string
+  clientRequestId: string
+  researchTarget: string
+  region: string
+  researchDepth: string
+  lang?: string
+  budgetCapMinor?: number
+  expiresAt?: string | null
+}): Promise<AgentContractRow> {
+  const { data, error } = await supabase.rpc('create_market_research_contract_draft', {
+    p_project_id: input.projectId,
+    p_task: input.task,
+    p_acceptance_criteria: input.acceptanceCriteria,
+    p_audit_manifest_id: input.auditManifestId,
+    p_budget_cap_minor: input.budgetCapMinor ?? 500,
+    p_client_request_id: input.clientRequestId,
+    p_research_target: input.researchTarget,
+    p_region: input.region,
+    p_research_depth: input.researchDepth,
+    p_lang: input.lang ?? 'ko',
     p_expires_at: input.expiresAt ?? null,
   })
   if (error) throwContractError(error)
