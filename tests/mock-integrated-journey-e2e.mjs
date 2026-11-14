@@ -54,10 +54,13 @@ async function runFixtureSubset() {
     const page = await context.newPage()
 
     await page.goto(`${site}/projects/fixture-owner/specialists`, { waitUntil: 'domcontentloaded' })
-    await page.getByTestId('ai-staff-catalog-card').waitFor({ timeout: 15000 })
+    const fixtureAuditor = page.locator(
+      '[data-testid="ai-staff-catalog-card"][data-role-id="requirements_auditor_v1"]',
+    )
+    await fixtureAuditor.waitFor({ timeout: 15000 })
     record('A3-catalog', 'PASS', 'fixture catalog', { url: page.url(), projectId: 'fixture-owner' })
 
-    await page.getByTestId('ai-staff-catalog-request-cta').click()
+    await fixtureAuditor.getByTestId('ai-staff-catalog-request-cta').click()
     await page.waitForURL(/\/specialists\/request/)
     await page
       .getByPlaceholder('검수할 범위와 원하는 결과를 10자 이상 작성하세요.')
@@ -142,11 +145,18 @@ async function runDisposableIntegrated() {
     await page.goto(`${journeySite}/projects/${projectId}/specialists`, {
       waitUntil: 'domcontentloaded',
     })
-    await page.getByTestId('ai-staff-catalog-card').waitFor({ timeout: 15000 })
-    record('A3-catalog', 'PASS', 'AI staff catalog 1 role', { url: page.url(), projectId })
+    const auditorCard = page.locator(
+      '[data-testid="ai-staff-catalog-card"][data-role-id="requirements_auditor_v1"]',
+    )
+    await auditorCard.waitFor({ timeout: 15000 })
+    assert.ok(
+      (await page.getByTestId('ai-staff-catalog-card').count()) >= 1,
+      'expected at least one hireable catalog card',
+    )
+    record('A3-catalog', 'PASS', 'AI staff catalog hireable roles', { url: page.url(), projectId })
 
     // --- A4 request → session handoff ---
-    await page.getByTestId('ai-staff-catalog-request-cta').click()
+    await auditorCard.getByTestId('ai-staff-catalog-request-cta').click()
     await page.waitForURL(new RegExp(`/projects/${projectId}/specialists/request`))
     await page
       .getByPlaceholder('검수할 범위와 원하는 결과를 10자 이상 작성하세요.')
