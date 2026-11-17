@@ -59,7 +59,11 @@ function newRequestId(): string {
   return '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0')
 }
 
+/** S3 Chromium localDev IDs only — skips live server contract hydrate. */
 const fixtureMode = import.meta.env.DEV && import.meta.env.VITE_S3_E2E_FIXTURE === 'true'
+/** Disposable F-B/F-C local E2E: show process_mock CTA without enabling fixtureMode. */
+const allowMockAiRunCta =
+  import.meta.env.DEV && import.meta.env.VITE_ALLOW_MOCK_AI_RUN === 'true'
 
 function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested'): string {
   if (decision === 'accepted') return '결과 수락 및 S1 연결'
@@ -592,7 +596,7 @@ export default function SpecialistRequestMockPage() {
               )}
               {serverContract.status === 'active' && (
                 <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
-                  {fixtureMode && (
+                  {(fixtureMode || allowMockAiRunCta) && (
                     <button
                       type="button"
                       disabled={busy}

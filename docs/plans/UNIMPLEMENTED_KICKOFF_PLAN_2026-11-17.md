@@ -28,7 +28,8 @@
 **코드 예상:** Playwright/E2E 셀렉터, `data-testid`, fixture seed vs Preview seed 분리.  
 **수락:** Chromium E2E PASS 또는 “Preview-only skip + 이유” 문서화.  
 **롤백:** E2E만 되돌림, 앱 동작 무영향.  
-**OSS:** 해당 없음.
+**OSS:** 해당 없음.  
+**진행:** CTA 매트릭스 → [SLICE1_E2E_CTA_MATRIX_2026-11-17](./SLICE1_E2E_CTA_MATRIX_2026-11-17.md). Mock 버튼은 `VITE_ALLOW_MOCK_AI_RUN`(F-B/F-C) 또는 fixtureMode만.
 
 ### Slice 2 — DDL 027 초안 확정 (적용은 별 승인)  
 **F/TF/N:** F-401/F-402 주변 계약 · STAFF DDL TARGET  

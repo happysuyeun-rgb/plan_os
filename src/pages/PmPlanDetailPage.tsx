@@ -162,7 +162,7 @@ export default function PmPlanDetailPage() {
             </div>
             {plan.source === 'ai_suggested' && (
               <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                이 초안은 <strong>AI 제안 Mock</strong>입니다. 검증된 AI PM 실행 결과가 아니며, 저장·승인만으로 유료 모델 호출이나 결제가 시작되지 않습니다.
+                이 초안은 <strong>Gemini AI 제안</strong>(또는 템플릿 폴백)입니다. AI PM 채용·워커 실행 결과가 아니며, 저장·승인만으로 결제가 시작되지 않습니다.
               </p>
             )}
             {plan.status === 'approved' && (

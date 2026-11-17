@@ -12,13 +12,14 @@ test('N29 pm-ops route is protected lazy page', () => {
   assert.match(app, /<Route element=\{<ProtectedRoute \/>\}>[\s\S]*?ai-staff\/pm-ops/)
 })
 
-test('ops room is Mock-only: no auto-run, paid, or hire claims', () => {
+test('ops room is placeholder: no auto-run, paid, or hire claims', () => {
   assert.match(page, /data-testid="n29-pm-ops-room"/)
   assert.match(page, /data-testid="n29-pm-ops-disclaimer"/)
   assert.match(page, /자동 운영 중/)
   assert.match(page, /scheduler/)
   assert.match(page, /유료/)
-  assert.match(page, /미배정 \(Mock\)/)
+  assert.match(page, /미배정 \(준비 중\)/)
+  assert.match(page, /준비 중: 정식 PM 채용/)
   assert.doesNotMatch(page, /자동 운영 중입니다|scheduler 실행 중|₩\s*0|결제하기/)
 })
 

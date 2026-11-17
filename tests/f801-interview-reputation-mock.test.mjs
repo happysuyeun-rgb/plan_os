@@ -18,6 +18,7 @@ test('F-801 reputation route is protected lazy page', () => {
 test('page forbids fabricated scores and paid upgrade claims', () => {
   assert.match(page, /data-testid="f801-interview-reputation-mock"/)
   assert.match(page, /data-testid="f801-disclaimer"/)
+  assert.match(page, /준비 중: 적합성 면담/)
   assert.match(page, /0점 위조/)
   assert.match(page, /가짜 성공률/)
   assert.match(page, /유료 승급/)
