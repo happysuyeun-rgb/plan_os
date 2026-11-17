@@ -15,6 +15,13 @@ dist-ssr
 workers/crewai/.env
 workers/crewai/.env.*
 !workers/crewai/.env.example
+workers/crewai/.venv/
+workers/crewai/**/__pycache__/
+workers/crewai/**/*.pyc
+
+# Local verification dumps / screenshots (do not commit)
+artifacts/
+**/artifacts/
 
 # Editor directories and files
 .vscode/*
@@ -26,4 +33,7 @@ workers/crewai/.env.*
 *.njsproj
 *.sln
 *.sw?
+*.bak
+.env.local.bak*
 .vercel
+.env*

@@ -35,14 +35,14 @@ export default function PmOpsRoomMockPage() {
       </nav>
 
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">N29 · PM OPS MOCK</p>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">정식 PM 운영실 (Mock)</h1>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">N29 · PM OPS · 준비 중</p>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">정식 PM 운영실</h1>
         <p
           className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
           data-testid="n29-pm-ops-disclaimer"
         >
-          정식 PM 채용·프로젝트 배정·백그라운드 scheduler·유료 계약이 없습니다. 「자동 운영 중」이 아니며 C04
-          대시보드와 별도 화면입니다.
+          준비 중: 정식 PM 채용·프로젝트 배정·백그라운드 scheduler·유료 계약이 없습니다. 「자동 운영 중」이 아니며
+          성과·과금 수치를 표시하지 않습니다. 아래 링크는 사람 PM·업무 실경로입니다.
         </p>
       </header>
 
@@ -53,7 +53,7 @@ export default function PmOpsRoomMockPage() {
           data-testid="n29-pm-ops-project-list"
         >
           <h2 className="text-sm font-semibold text-gray-800">프로젝트</h2>
-          <p className="mt-1 text-xs text-gray-500">배정 상태: 전부 미배정 (Mock)</p>
+          <p className="mt-1 text-xs text-gray-500">배정 상태: 전부 미배정 (준비 중)</p>
           {isLoading ? (
             <p className="mt-3 text-sm text-gray-500">불러오는 중…</p>
           ) : active.length === 0 ? (
@@ -79,7 +79,7 @@ export default function PmOpsRoomMockPage() {
                     >
                       <span className="block truncate font-medium">{project.title}</span>
                       <span className={`mt-0.5 block text-[11px] ${on ? 'text-slate-300' : 'text-gray-500'}`}>
-                        미배정 (Mock)
+                        미배정 (준비 중)
                       </span>
                     </button>
                   </li>
@@ -101,7 +101,7 @@ export default function PmOpsRoomMockPage() {
             <div className="mt-3 space-y-3">
               <p className="text-base font-semibold text-gray-900">{selected.title}</p>
               <p className="text-sm text-gray-600">
-                PM worker가 이 프로젝트를 점검하지 않습니다. 사람 PM 계획·업무·Mock 검수로만 이어집니다.
+                PM worker가 이 프로젝트를 점검하지 않습니다. 사람 PM 계획·업무·기획 검수 화면으로만 이어집니다.
               </p>
               <ul className="flex flex-wrap gap-2">
                 <li>
@@ -128,7 +128,7 @@ export default function PmOpsRoomMockPage() {
                     className="inline-block rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50"
                     data-testid="n29-pm-ops-link-ai-review"
                   >
-                    AI 검수 Mock
+                    AI 기획 검수
                   </Link>
                 </li>
               </ul>

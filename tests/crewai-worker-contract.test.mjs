@@ -15,13 +15,22 @@ describe('CrewAI real worker contract', () => {
     assert.match(api, /Never calls process_mock_ai_run/)
   })
 
-  it('exposes CrewAI enqueue CTA without removing mock button', () => {
+  it('exposes CrewAI enqueue CTA; mock button only under E2E fixtureMode', () => {
     const page = read('src/pages/SpecialistRequestMockPage.tsx')
+    assert.match(page, /fixtureMode && \(/)
     assert.match(page, /data-testid="mock-worker-run"/)
     assert.match(page, /data-testid="crewai-worker-enqueue"/)
     assert.match(page, /enqueueForCrewAiWorker/)
     assert.match(page, /data-testid="execution-refresh"/)
     assert.match(page, /data-testid="artifact-publish-from-run"/)
+  })
+
+  it('allows Preview Supabase ref only when PLANOS_CREWAI_ALLOW_PREVIEW is set', () => {
+    const adapter = read('workers/crewai/src/planos_crewai/supabase_adapter.py')
+    assert.match(adapter, /fydngfylpzdwvjyuqhdm/)
+    assert.match(adapter, /PLANOS_CREWAI_ALLOW_PREVIEW/)
+    assert.match(adapter, /ggviusdmxalsflyybamm/)
+    assert.match(adapter, /Refusing ops Production/)
   })
 
   it('ships local_only 034 claim/complete RPCs (not migrations/)', () => {

@@ -12,31 +12,22 @@ plan_os/
 ├── docs/                         # 기획·실행·품질·설계의 문서 허브
 │   ├── README.md                 # 문서 색인
 │   ├── REPOSITORY_GUIDE.md       # 지금 읽는 폴더·활용 가이드
-│   ├── DOCUMENT_INVENTORY_2026-10-21.md
-│   ├── product/                  # 제품·기능·정책
-│   ├── ux/                       # 정보구조·화면·흐름
-│   ├── engineering/              # 개발 계약·API·데이터·아키텍처
-│   ├── plans/                    # 최신 실행계획·작업 운영규칙
-│   ├── quality/                  # QA·결함·검수·테스트 계획
-│   ├── operations/               # 운영·릴리스·롤백
-│   ├── roadmap/                  # 이전/보조 개발계획(최신 계획과 대조)
-│   └── archive/                  # 구문서 보관
+│   ├── engineering/              # API·데이터 + 무료/OSS 연결 현황
+│   ├── plans/ · product/ · ux/ · quality/ · operations/ · archive/
 ├── src/                          # React/TypeScript 서비스 구현
-│   ├── main.tsx, App.tsx         # 진입점과 화면 라우팅
-│   ├── pages/                    # 화면 단위 구현
-│   ├── components/               # 재사용 UI 컴포넌트
-│   ├── store/                    # Zustand 상태·업무 처리
-│   ├── lib/                      # 공통 기능·Supabase 연동
-│   │   └── api/                  # 서버/DB 요청 어댑터
-│   └── types/                    # 공유 타입
+│   ├── pages/ · components/ · store/ · lib/api/ · server/ai/
+├── api/                          # Vercel 서버리스 (예: ai/generate)
+├── workers/crewai/               # CrewAI + Liner 워커 (Python/uv)
 ├── supabase/
-│   └── migrations/               # 버전별 DB 구조/정책 SQL
-├── tests/                        # 단위·계약·통합 테스트
-├── scripts/                      # 개발·검사·DB 유틸리티
-├── .github/workflows/            # GitHub Actions CI
-├── public/                       # 정적 리소스
-└── package.json                  # 개발/빌드/테스트 명령
+│   ├── migrations/               # 버전별 DB DDL/RLS
+│   ├── local_only/               # disposable 전용 SQL (호스티드 금지 스크립트와 쌍)
+│   └── drafts/                   # 미적용 DRAFT SQL (임의 apply 금지)
+├── tests/ · scripts/ · public/
+├── artifacts/                    # 로컬 E2E/검증 산출물 (gitignore · 커밋 금지)
+└── package.json
 ```
+
+무료·OSS·프리티어 실연결 목록: [FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17](engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md)
 
 `src/`, `supabase/`, `tests/` 등의 표시 경로는 **실제로 확인한 대표 폴더**이며, 상기 트리는 이해를 돕기 위한 축약본이다.
 

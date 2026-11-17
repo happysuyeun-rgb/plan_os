@@ -19,15 +19,15 @@ export default function StaffInterviewReputationMockPage() {
 
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-          F-801 · INTERVIEW / REPUTATION MOCK
+          F-801 · INTERVIEW / REPUTATION · 준비 중
         </p>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">면담 · 추천 · 평판 (Mock)</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">면담 · 추천 · 평판</h1>
         <p
           className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
           data-testid="f801-disclaimer"
         >
-          적합성 면담·추천 엔진·검증 경력일수·별점 원장이 없습니다. 0점 위조·가짜 성공률·유료 승급 가격을
-          표시하지 않습니다.
+          준비 중: 적합성 면담·추천 엔진·검증 경력일수·별점 원장이 없습니다. 0점 위조·가짜 성공률·유료 승급
+          가격을 표시하지 않습니다. 채용은 카탈로그 실경로를 이용하세요.
         </p>
       </header>
 
@@ -38,8 +38,8 @@ export default function StaffInterviewReputationMockPage() {
       >
         <h2 className="text-sm font-semibold text-gray-800">면담 (N18 자리)</h2>
         <p className="mt-2 text-sm text-gray-600">
-          희망 과업·도구·가능/불가를 확인하는 면담 UI는 미구현입니다. 지금은 채용 가능 Mock 역할로만 요청할 수
-          있습니다.
+          희망 과업·도구·가능/불가를 확인하는 면담 UI는 미구현입니다. 지금은 카탈로그의채용 가능 역할로만 요청할
+          수 있습니다.
         </p>
         <button
           type="button"
@@ -68,7 +68,7 @@ export default function StaffInterviewReputationMockPage() {
               data-testid={`f801-recommend-hireable-${role.id}`}
             >
               <span className="font-medium text-gray-900">{role.title}</span>
-              <span className="text-xs font-semibold text-emerald-800">채용 가능 · Mock</span>
+              <span className="text-xs font-semibold text-emerald-800">채용 가능</span>
             </li>
           ))}
           {upcoming.slice(0, 3).map((role) => (

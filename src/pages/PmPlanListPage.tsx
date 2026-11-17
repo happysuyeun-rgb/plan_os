@@ -4,7 +4,7 @@ import { DualEntryLaneNotice } from '../components/common/DualEntryLaneNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 import { useMemberStore } from '../store/memberStore'
-import { buildAiSuggestedPlanDraft } from '../lib/aiSuggestedPmPlanDraft'
+import { buildAiSuggestedPlanDraftAsync } from '../lib/aiSuggestedPmPlanDraft'
 import { createPmPlan, listPmPlans, type PmPlan } from '../lib/api/pmPlans'
 import { PM_PLAN_STATUS_LABELS } from '../lib/pmPlanLabels'
 
@@ -47,12 +47,12 @@ export default function PmPlanListPage() {
     currentProject?.user_id === userId || membership?.role === 'owner' || membership?.role === 'editor'
   )
 
-  const createAiSuggestedMock = async () => {
+  const createAiSuggestedDraft = async () => {
     if (!projectId || !canEdit || suggesting || !currentProject) return
     setSuggesting(true)
     setError('')
     try {
-      const draft = buildAiSuggestedPlanDraft({
+      const draft = await buildAiSuggestedPlanDraftAsync({
         title: currentProject.title,
         description: currentProject.description,
         targetUser: currentProject.target_user,
@@ -64,9 +64,9 @@ export default function PmPlanListPage() {
         crypto.randomUUID(),
         'ai_suggested',
       )
-      navigate(`/projects/${projectId}/plans/${plan.id}`)
+      navigate(`/projects/${projectId}/plans/${plan.id}?suggestMode=${draft.mode}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 제안 초안(Mock) 생성에 실패했습니다.')
+      setError(e instanceof Error ? e.message : 'AI 제안 초안 생성에 실패했습니다.')
     } finally {
       setSuggesting(false)
     }
@@ -79,7 +79,7 @@ export default function PmPlanListPage() {
           <Link className="text-sm text-indigo-700 underline" to={projectId ? `/projects/${projectId}/tasks` : '/projects'}>← 프로젝트 업무 보드</Link>
           <h1 className="mt-2 text-2xl font-bold">PM 계획</h1>
           <p className="mt-1 text-sm text-gray-500">
-            사람 작성 또는 AI 제안 Mock 초안을 서버에 저장하고, 소유자 승인 후 업무로 연결합니다. AI 제안은 실행·결제가 아닙니다.
+            사람 작성 또는 Gemini AI 제안 초안을 서버에 저장하고, 소유자 승인 후 업무로 연결합니다. AI 제안은 채용·실행·결제가 아닙니다.
           </p>
         </div>
         {canEdit && (
@@ -88,9 +88,9 @@ export default function PmPlanListPage() {
               type="button"
               className="rounded border border-indigo-300 px-4 py-2 font-semibold text-indigo-800"
               disabled={suggesting}
-              onClick={() => void createAiSuggestedMock()}
+              onClick={() => void createAiSuggestedDraft()}
             >
-              {suggesting ? '제안 생성 중…' : 'AI 제안 초안(Mock)'}
+              {suggesting ? '제안 생성 중…' : 'AI 제안 초안'}
             </button>
             <button
               type="button"

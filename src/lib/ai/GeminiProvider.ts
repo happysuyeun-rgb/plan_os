@@ -18,6 +18,33 @@ function buildPrompt(type: DocumentType, vars: GenerationVars): string {
           .join('\n')
       : '(없음)'
 
+  const purpose = vars.interviewAnswers?.purpose?.trim()
+  if (purpose === 'pm_plan_draft') {
+    const extra = vars.interviewAnswers?.instruction?.trim() ?? ''
+    return [
+      '당신은 PlanOS의 시니어 PM입니다.',
+      '출력은 한국어 마크다운만. 서론·사과 금지.',
+      '형식 고정:',
+      '## 목표',
+      '(한 단락)',
+      '### 단계 1 제목',
+      '완료 기준: …',
+      '### 단계 2 제목',
+      '완료 기준: …',
+      '### 단계 3 제목',
+      '완료 기준: …',
+      '결제·채용·성과 수치·가짜 KPI를 만들지 마세요.',
+      '',
+      `프로젝트명: ${vars.title}`,
+      `목표 사용자: ${vars.targetUser}`,
+      `서비스 유형: ${vars.serviceType ?? '미정'}`,
+      `서비스 설명: ${vars.description ?? ''}`,
+      extra ? `추가 지시: ${extra}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+
   return [
     '당신은 PlanOS의 시니어 프로덕트 라이터입니다.',
     `요청 산출물: ${label} (${type})`,

@@ -1,8 +1,9 @@
 # PlanOS 남은 개발 체크리스트
 
-**기준 tip:** `main` @ `671f6fd` (#80 병합, 2026-11-13)  
-**정책:** 이중진입 유지 · 호스티드 027/033 / 유료 LLM / Production = **명시 승인 전 금지**  
+**기준 tip:** `main` @ `c7d7ab1` (#83 시장조사 포함; #80=`671f6fd` 이후)  
+**정책:** 이중진입 유지 · 호스티드 027/033 / 유료 LLM / Production = **명시 승인 전 금지** · **OSS 추가 시 무과금(크레딧/무료만)**  
 **최신 스냅샷:** [PHASE0_AGENT_BASELINE_2026-11-14.md](./PHASE0_AGENT_BASELINE_2026-11-14.md) · [PROGRESS_STATUS.md](../PROGRESS_STATUS.md)  
+**OSS 연결 대장(연결/미연결/나중·무과금):** [FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md](../engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md)  
 **승인 게이트 보류(급하지 않음):** [DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
 **정합 산출물:** [STATUS_VOCABULARY](./STATUS_VOCABULARY_2026-10-25.md) · [PERMISSION_MATRIX](./PERMISSION_MATRIX_2026-10-25.md) · [FEATURE_TRACEABILITY](./FEATURE_TRACEABILITY_2026-10-25.md) · [DESIGN_DEFECT_DECISION_LOG](./DESIGN_DEFECT_DECISION_LOG_2026-10-25.md) (R2 표 포함)
 
@@ -34,12 +35,18 @@
 - [x] C08 아바타 파일 업로드 · 랜딩 · 이용 가이드 · 카드 진행률 (#80)
 - [x] Phase 0 CI `ubuntu-24.04` + AI 직원 Mock/실실행 기준선 문서 (PR-A)
 
-### 0-B. 아직 Mock만 (실모델 워커 아님)
+### 0-B. 실실행 vs Mock vs 후순위 OSS (2026-11-17 정합)
 
-- [ ] `requirements_auditor_v1` **실모델** 분석 워커 (현재 `process_mock_ai_run`만)
-- [ ] Agent Definition / Skill·Tool Registry (PR-B)
+- [x] CrewAI 격리 워커 + Liner 경로 (`workers/crewai`, Preview allowlist) — Mock과 분리 CTA
+- [x] `ai_market_researcher_v1` Liner 실경로
+- [x] Gemini 문서 BFF / Preview `api/ai/generate` (무료 크레딧 · Gate C 아님)
+- [ ] `requirements_auditor_v1` Preview E2E를 CrewAI 큐 기본으로 고정 (fixture Mock은 E2E 전용)
+- [ ] Agent Definition / Skill·Tool Registry 보강 (PR-B · **추가 OSS 설치 없이** CrewAI/`roles.py`)
+- [ ] OpenHands / OpenClaw — Phase 4 · 샌드박스 · **무과금·승인 전**
+- [ ] FreeLLMAPI — 로컬 실험만 · 운영 필수 금지
+- [ ] Agency Swarm / MS Agent Framework — 기본 제외 (ADR-002로 재평가 시에만)
 - [ ] 호스티드 `033_avatars_storage` 적용 (승인 후)
-- [ ] 유료/승인 LLM 경로 (Gate C-LLM)
+- [ ] 유료/승인 LLM 경로 (Gate C-LLM) — **의도적 미개방**
 
 ---
 
@@ -113,9 +120,13 @@
 
 ---
 
-## 추천 다음 1개 (작음) · 2026-11-10
+## 추천 다음 1개 (작음) · 2026-11-17
 
-1. **#34 인터뷰 모집·시연**(owner · 코드 외) 또는 게이트 승인 후 항목  
-2. 게이트(C-LLM/027/F-303/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 착수 금지  
-3. P2 잔여: 인력사무소 풀스펙 · 서버 리뷰 스토어 프로덕션 경로 (#37/#38 실직무)
+**착수 순서 전체:** [UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17](./UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17.md)  
+무과금 OSS 매트릭스: [FREE_OPEN_SOURCE_CONNECTIONS](../engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md)
+
+1. **즉시 코드:** Slice 1 — E2E/픽스처를 실 CTA(CrewAI/Gemini)에 맞춤  
+2. 이후 순차: Slice 2 DDL 027 초안(적용 별도 승인) → F-105 LS→서버 → 초대(무료 SMTP만) → AI PM CrewAI 확장 → N29/F-801  
+3. 게이트(C-LLM/027 apply/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 apply/merge 금지  
+4. P2 잔여: 인력사무소 풀스펙 · #37/#38 실직무 · OpenHands/OpenClaw는 Phase 4
 
