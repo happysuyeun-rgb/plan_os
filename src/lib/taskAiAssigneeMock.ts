@@ -1,13 +1,18 @@
 import { MOCK_SPECIALIST } from './mockSpecialistRequest'
 
 /**
- * F-105 Mock: task assignee kind metadata only.
+ * F-105 task assignee kind metadata.
  * Does not hire, run models, open contracts, or charge.
- * Browser-local; no DB migration / ops schema change.
  *
- * Storage is scoped by userId + projectId (F105-02 isolation).
+ * Default persistence: browser localStorage (userId + projectId, F105-02).
+ * Optional server path: VITE_F105_SERVER_ASSIGNEE=true + local_only/036 columns.
  * Callers must persist kind only after the durable task write succeeds (F105-01).
  */
+
+/** Opt-in server dual-write. Off → LS only (safe on Preview without 036). */
+export function isF105ServerAssigneeEnabled(): boolean {
+  return import.meta.env.VITE_F105_SERVER_ASSIGNEE === 'true'
+}
 export type TaskAssigneeKind = 'human' | 'agent'
 
 export type TaskAiAssigneeMock = {
@@ -116,6 +121,26 @@ export function getTaskAiAssignee(
 }
 
 /**
+ * Prefer server row (036) when present so another browser sees the same kind;
+ * otherwise fall back to user-scoped localStorage.
+ */
+export function resolveTaskAiAssignee(
+  userId: string,
+  projectId: string,
+  taskId: string,
+  server?: { assigneeKind?: TaskAssigneeKind; agentRoleId?: string | null },
+): TaskAiAssigneeMock {
+  if (server?.assigneeKind === 'human' || server?.assigneeKind === 'agent') {
+    return {
+      kind: server.assigneeKind,
+      agentRoleId: server.assigneeKind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
+      updatedAt: '',
+    }
+  }
+  return getTaskAiAssignee(userId, projectId, taskId)
+}
+
+/**
  * Persist assignee-kind Mock. Call only after the task row (server or prototype)
  * write has succeeded — otherwise UI and durable state diverge (F105-01).
  */
@@ -147,7 +172,7 @@ export function formatTaskAssigneeDisplay(
   humanLabel: string,
 ): string {
   if (kind === 'agent') {
-    return `AI · ${MOCK_AI_ASSIGNEE_ROLE.title} (Mock · 실행 아님)`
+    return `AI · ${MOCK_AI_ASSIGNEE_ROLE.title} (메타데이터 · 실행 아님)`
   }
   return humanLabel
 }

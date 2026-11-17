@@ -1,0 +1,7 @@
+-- DRAFT POINTER — executable SQL:
+--   supabase/local_only/036_task_assignee_kind.sql
+--
+-- Slice 3 F-105: assignee_kind + agent_role_id on project_tasks.
+-- FORBIDDEN without explicit approval: migrations/, Preview, ops, db push.
+-- App flag: VITE_F105_SERVER_ASSIGNEE=true (else localStorage dual-write fallback).
+-- Checklist: docs/plans/SLICE3_F105_SERVER_ASSIGNEE_2026-11-17.md

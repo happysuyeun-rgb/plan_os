@@ -45,7 +45,8 @@
 **목표:** 브라우저 LS에만 있던 상태를 Preview JWT+RLS 경로로 이전(또는 이중쓰기 후 cutover).  
 **수락:** 시크릿 창·다른 브라우저에서 동일 사용자 데이터 재현.  
 **롤백:** feature flag로 LS fallback.  
-**OSS:** 해당 없음.
+**OSS:** 해당 없음.  
+**진행:** [SLICE3_F105_SERVER_ASSIGNEE_2026-11-17](./SLICE3_F105_SERVER_ASSIGNEE_2026-11-17.md) · `local_only/036` + `VITE_F105_SERVER_ASSIGNEE` 이중쓰기 · **Preview 036 apply 미실행**.
 
 ### Slice 4 — 초대 메일: mock → 무료/무과금 경로만  
 **F/TF/N:** 초대 플로우 (PERMISSIONS / member invite)  

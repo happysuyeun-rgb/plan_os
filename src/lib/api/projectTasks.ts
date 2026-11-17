@@ -1,24 +1,41 @@
 import { supabase } from '../supabase'
 import type { PrototypeTask, TaskStatus } from '../taskPrototype'
+import type { TaskAssigneeKind } from '../taskAiAssigneeMock'
 
 type DbTask = {
   id: string; project_id: string; title: string; objective: string; acceptance_criteria: string[]
   assignee_user_id: string | null; status: TaskStatus; blocked_reason: string | null
   deleted_at: string | null; created_at: string; updated_at: string; version: number
+  /** Present only after local_only/036 (or approved Preview apply). */
+  assignee_kind?: string | null
+  agent_role_id?: string | null
 }
-export type ServerTask = PrototypeTask & { version: number }
+export type ServerTask = PrototypeTask & {
+  version: number
+  assigneeKind?: TaskAssigneeKind
+  agentRoleId?: string | null
+}
 export type TaskPatch = {
   title?: string; objective?: string; acceptanceCriteria?: string[]; assigneeId?: string | null
   status?: TaskStatus; blockedReason?: string | null; deletedAt?: string | null
+  /** F-105 server path — requires 036 columns when set. */
+  assigneeKind?: TaskAssigneeKind
+  agentRoleId?: string | null
 }
 export class TaskConflictError extends Error {
   constructor() { super('업무가 다른 곳에서 변경됐습니다. 새로고침 후 다시 시도하세요.') }
+}
+function mapAssigneeKind(raw: string | null | undefined): TaskAssigneeKind | undefined {
+  if (raw === 'human' || raw === 'agent') return raw
+  return undefined
 }
 const toTask = (row: DbTask): ServerTask => ({
   id: row.id, projectId: row.project_id, title: row.title, objective: row.objective, acceptanceCriteria: row.acceptance_criteria ?? [],
   assigneeId: row.assignee_user_id, assigneeName: null,
   status: row.status, blockedReason: row.blocked_reason, deletedAt: row.deleted_at,
   createdAt: row.created_at, updatedAt: row.updated_at, version: row.version,
+  assigneeKind: mapAssigneeKind(row.assignee_kind),
+  agentRoleId: row.agent_role_id ?? null,
 })
 
 export async function listServerTasks(projectId: string): Promise<ServerTask[]> {
@@ -53,6 +70,8 @@ export async function patchServerTask(
   if (patch.status !== undefined) updates.status = patch.status
   if (patch.blockedReason !== undefined) updates.blocked_reason = patch.blockedReason
   if (patch.deletedAt !== undefined) updates.deleted_at = patch.deletedAt
+  if (patch.assigneeKind !== undefined) updates.assignee_kind = patch.assigneeKind
+  if (patch.agentRoleId !== undefined) updates.agent_role_id = patch.agentRoleId
   const { data, error } = await supabase.from('project_tasks').update(updates)
     .eq('project_id', projectId).eq('id', taskId).eq('version', expectedVersion)
     .select('*').maybeSingle()
@@ -66,6 +85,12 @@ export async function patchServerTask(
   if (error) throw error
   if (!data) throw new TaskConflictError()
   return toTask(data as DbTask)
+}
+
+/** True when schema lacks F-105 columns (036 not applied). */
+export function isMissingAssigneeKindColumnError(error: unknown): boolean {
+  const message = String((error as { message?: string })?.message ?? error ?? '')
+  return /assignee_kind|agent_role_id/i.test(message) && /column|schema cache|could not find/i.test(message)
 }
 
 export type TaskEvent = {
