@@ -1,6 +1,6 @@
 # PlanOS — 미구현 개발 착수 계획 (2026-11-17)
 
-기준 SHA: `c7d7ab1` (로컬 dirty: Gemini/CrewAI Mock 제거·문서·gitignore 정리 중)  
+기준 SHA: `871626a` · branch `feat/unimplemented-kickoff-slice1-e2e-20261117` (G0~Slice6 코드 착수 완료 · push/PR 미실행)  
 범위: Preview(`fydngfylpzdwvjyuqhdm`) 실데이터 + 무과금 OSS 우선  
 금지: Gate C 유료 LLM 자동 과금 · 운영 DB 마이그레이션 · main 무단 merge · customer 데이터 외부 유료 전송
 
