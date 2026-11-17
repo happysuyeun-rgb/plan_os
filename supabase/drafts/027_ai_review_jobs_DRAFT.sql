@@ -2,9 +2,10 @@
 --   supabase/local_only/027_ai_review_jobs.sql
 --
 -- Slice 2 freeze (2026-11-17): apply-ready draft for review only.
--- SHA256(local_only/027_ai_review_jobs.sql) =
---   a426460752c875f57e90d4d2736b668c54f5fafd7e18387960ceb81a1f6e0457
--- bytes: 10270
+-- SHA256 LF-normalized (local_only/027_ai_review_jobs.sql) =
+--   33fb44ae1c35112bc7da4b59d70b56629aa34c769d61d421c232d8421fa1b5fe
+-- (CRLF working copies differ; CI uses LF)
+
 --
 -- Apply ONLY via scripts/apply-027-local-only.mjs against disposable loopback Postgres.
 -- FORBIDDEN without explicit user approval:

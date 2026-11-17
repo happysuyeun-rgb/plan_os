@@ -8,8 +8,14 @@ import { describe, it } from 'node:test'
 
 const EXEC = 'supabase/local_only/027_ai_review_jobs.sql'
 const DRAFT = 'supabase/drafts/027_ai_review_jobs_DRAFT.sql'
+/** LF-normalized digest (CI/Linux checkout). CRLF working trees hash differently. */
 const EXPECTED_SHA256 =
-  'a426460752c875f57e90d4d2736b668c54f5fafd7e18387960ceb81a1f6e0457'
+  '33fb44ae1c35112bc7da4b59d70b56629aa34c769d61d421c232d8421fa1b5fe'
+
+function sha256Lf(buf) {
+  const text = Buffer.isBuffer(buf) ? buf.toString('utf8') : String(buf)
+  return createHash('sha256').update(text.replace(/\r\n/g, '\n')).digest('hex')
+}
 
 describe('Slice 2 DDL 027 draft freeze', () => {
   it('keeps executable SQL in local_only and pointer in drafts', () => {
@@ -20,7 +26,7 @@ describe('Slice 2 DDL 027 draft freeze', () => {
 
   it('pins SHA256 of executable SQL in draft pointer', () => {
     const sql = readFileSync(EXEC)
-    const sha = createHash('sha256').update(sql).digest('hex')
+    const sha = sha256Lf(sql)
     assert.equal(sha, EXPECTED_SHA256)
     const pointer = readFileSync(DRAFT, 'utf8')
     assert.match(pointer, new RegExp(EXPECTED_SHA256))

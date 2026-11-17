@@ -10,8 +10,8 @@
 |------|-----|
 | Executable SQL | `supabase/local_only/027_ai_review_jobs.sql` |
 | Draft pointer | `supabase/drafts/027_ai_review_jobs_DRAFT.sql` |
-| SHA256 | `a426460752c875f57e90d4d2736b668c54f5fafd7e18387960ceb81a1f6e0457` |
-| Size | 10270 bytes |
+| SHA256 (LF) | `33fb44ae1c35112bc7da4b59d70b56629aa34c769d61d421c232d8421fa1b5fe` |
+| Size | ~10270 bytes (CRLF vs LF) |
 | `supabase/migrations/027_*` | **없음** (의도적 — 026 다음 028) |
 | Local apply | `scripts/apply-027-local-only.mjs` (loopback only) |
 
