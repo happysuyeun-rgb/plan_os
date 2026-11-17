@@ -10,7 +10,10 @@ import { listPmPlans } from '../lib/api/pmPlans'
 export default function PmOpsRoomMockPage() {
   const { projects, isLoading, fetchProjects, currentProject } = useProjectStore()
   const [selectedId, setSelectedId] = useState<string>('')
-  const [approvedCount, setApprovedCount] = useState<number | null>(null)
+  const [planStats, setPlanStats] = useState<{
+    projectId: string
+    approvedCount: number
+  } | null>(null)
   const [planLoadError, setPlanLoadError] = useState('')
 
   useEffect(() => {
@@ -27,24 +30,24 @@ export default function PmOpsRoomMockPage() {
   const resolvedId =
     selectedId && active.some((p) => p.id === selectedId) ? selectedId : (active[0]?.id ?? '')
   const selected = active.find((p) => p.id === resolvedId) ?? null
+  const approvedCount =
+    planStats && planStats.projectId === resolvedId ? planStats.approvedCount : null
 
   useEffect(() => {
+    if (!resolvedId) return
     let mounted = true
-    if (!resolvedId) {
-      setApprovedCount(null)
-      setPlanLoadError('')
-      return
-    }
-    setApprovedCount(null)
-    setPlanLoadError('')
     void listPmPlans(resolvedId)
       .then((rows) => {
         if (!mounted) return
-        setApprovedCount(rows.filter((p) => p.status === 'approved').length)
+        setPlanStats({
+          projectId: resolvedId,
+          approvedCount: rows.filter((p) => p.status === 'approved').length,
+        })
+        setPlanLoadError('')
       })
       .catch(() => {
         if (!mounted) return
-        setApprovedCount(null)
+        setPlanStats(null)
         setPlanLoadError('계획 목록을 불러오지 못했습니다.')
       })
     return () => {
