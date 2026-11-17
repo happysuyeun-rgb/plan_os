@@ -248,9 +248,9 @@ export default function SpecialistRequestMockPage() {
     setArtifactEvents(await listAiArtifactEvents(row.id))
   }
 
-  /** CI/fixture only — not shown in normal Preview/local UI. */
+  /** CI/fixture or disposable F-B/F-C (VITE_ALLOW_MOCK_AI_RUN) only. */
   const runMockWorker = async () => {
-    if (!fixtureMode) return
+    if (!fixtureMode && !allowMockAiRunCta) return
     if (!owner || !serverContract || serverContract.status !== 'active') {
       setError('승인된 서버 계약으로만 Mock worker를 실행할 수 있습니다.')
       return
