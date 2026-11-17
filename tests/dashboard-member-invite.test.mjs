@@ -23,12 +23,22 @@ test('invite modal supports email and link tabs', () => {
   assert.match(inviteModal, /data-testid="invite-link-copy"/)
   assert.match(inviteModal, /buildProjectInviteLink/)
   assert.match(inviteModal, /projects\?:/)
+  assert.match(inviteModal, /data-testid="invite-email-disclaimer"/)
+  assert.match(inviteModal, /무과금/)
+  assert.doesNotMatch(inviteModal, /실제 메일 발송은 mock/)
 })
 
-test('invite link builder and localDev member invite exist', () => {
+test('invite link builder and no-billing delivery modes exist', () => {
   assert.match(inviteLink, /export function buildProjectInviteLink/)
   assert.match(inviteLink, /searchParams\.set\('invite', '1'\)/)
   assert.match(membersApi, /isLocalDevAuth\(\)/)
   assert.match(membersApi, /localInviteMember/)
+  assert.match(membersApi, /VITE_INVITE_EMAIL_MODE/)
+  assert.match(membersApi, /signInWithOtp/)
+  assert.match(membersApi, /formatInviteDeliveryToast/)
+  assert.match(membersApi, /pending_no_email/)
+  assert.doesNotMatch(membersApi, /from ['"]resend['"]|@sendgrid|postmark/i)
   assert.match(localDev, /export function localInviteMember/)
+  assert.match(dashboard, /formatInviteDeliveryToast/)
+  assert.doesNotMatch(dashboard, /초대를 보냈습니다 \(mock\)/)
 })

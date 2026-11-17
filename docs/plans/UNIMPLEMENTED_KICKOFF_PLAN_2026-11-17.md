@@ -53,7 +53,8 @@
 **목표:** mock 초대 UI를 실제 발송 또는 “발송 대기 큐+매뉴얼”로. **유료 SMTP면 보류.**  
 **수락:** Preview에서 owner 초대 → DB row + (무료 티어면) 메일 또는 명확한 “대기” 상태.  
 **롤백:** mock 라벨 복귀.  
-**OSS/비용:** 무료 티어만; 아니면 큐만.
+**OSS/비용:** 무료 티어만; 아니면 큐만.  
+**진행:** [SLICE4_INVITE_NO_BILLING_2026-11-17](./SLICE4_INVITE_NO_BILLING_2026-11-17.md) · 기본 `queue` · 옵트인 `supabase_otp`.
 
 ### Slice 5 — AI PM 실경로 확장 (CrewAI 줄기만)  
 **F/TF/N:** F-401 draft → F-402 owner approve → S1 link (Issue #32)  

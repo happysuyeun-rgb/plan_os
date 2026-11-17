@@ -168,8 +168,9 @@ export function InviteMemberModal({
 
         {tab === 'email' ? (
           <>
-            <p className="text-sm text-gray-500">
-              이메일로 초대합니다. 실제 메일 발송은 mock이며, 초대 대기 멤버로 기록됩니다.
+            <p className="text-sm text-gray-500" data-testid="invite-email-disclaimer">
+              기본은 초대 대기만 저장하고 메일은 보내지 않습니다(무과금). 링크 탭으로 공유하세요.
+              Supabase 무료 Auth 메일을 쓰려면 `VITE_INVITE_EMAIL_MODE=supabase_otp` — 유료 SMTP는 사용하지 않습니다.
             </p>
             <Input
               label="이메일"

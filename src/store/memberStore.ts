@@ -5,6 +5,7 @@ import {
   inviteProjectMember as apiInviteMember,
   removeProjectMember as apiRemoveMember,
   updateProjectMemberRole as apiUpdateMemberRole,
+  type InviteDelivery,
 } from '../lib/api/members'
 import { logProjectActivity } from '../lib/api/activities'
 
@@ -17,7 +18,7 @@ interface MemberState {
     projectId: string,
     email: string,
     role: Exclude<MemberRole, 'owner'>,
-  ) => Promise<void>
+  ) => Promise<InviteDelivery>
   removeMember: (memberId: string) => Promise<void>
   updateMemberRole: (
     projectId: string,
@@ -39,13 +40,18 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   inviteMember: async (projectId, email, role) => {
-    const member = await apiInviteMember({ project_id: projectId, email, role })
+    const { member, delivery } = await apiInviteMember({
+      project_id: projectId,
+      email,
+      role,
+    })
     await logProjectActivity({
       project_id: projectId,
       action: 'member_invite',
-      meta: { email, role },
+      meta: { email, role, delivery },
     })
     set((s) => ({ members: [...s.members, member] }))
+    return delivery
   },
 
   removeMember: async (memberId) => {

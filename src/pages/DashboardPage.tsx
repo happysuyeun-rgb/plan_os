@@ -22,7 +22,7 @@ import { usePlanStore } from '../store/planStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { useUIStore } from '../store/uiStore'
 import { fetchDashboardProjects, fetchWorkSummaries } from '../lib/api/dashboard'
-import { fetchProjectMembers } from '../lib/api/members'
+import { fetchProjectMembers, formatInviteDeliveryToast } from '../lib/api/members'
 import { isLocalDevAuth } from '../lib/localDevAuth'
 import {
   resolveCardProgress,
@@ -227,8 +227,11 @@ export default function DashboardPage() {
     email: string,
     role: 'editor' | 'viewer',
   ) => {
-    await inviteMember(projectId, email, role)
-    showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
+    const delivery = await inviteMember(projectId, email, role)
+    showToast(
+      delivery.mode === 'supabase_otp' && delivery.status === 'otp_failed' ? 'error' : 'success',
+      formatInviteDeliveryToast(email, delivery),
+    )
     try {
       const members = await fetchProjectMembers(projectId)
       const people = toAvatarPeople(members.filter((m) => m.role !== 'owner'))
