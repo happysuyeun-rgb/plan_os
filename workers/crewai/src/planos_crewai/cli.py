@@ -16,6 +16,14 @@ from planos_crewai.worker import poll_once
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    try:
+        from dotenv import load_dotenv
+        from pathlib import Path
+
+        env_path = Path(__file__).resolve().parents[2] / ".env"
+        load_dotenv(env_path)
+    except Exception:  # noqa: BLE001 — optional in some install layouts
+        pass
     parser = argparse.ArgumentParser(prog="planos-crewai-worker")
     sub = parser.add_subparsers(dest="cmd", required=True)
 

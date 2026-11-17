@@ -17,6 +17,7 @@ const {
   readTaskAiAssigneeMap,
   formatTaskAssigneeDisplay,
   clearLegacyTaskAiAssigneeProjectKey,
+  resolveTaskAiAssignee,
   MOCK_AI_ASSIGNEE_ROLE,
 } = await import('data:text/javascript;base64,' + Buffer.from(libJs).toString('base64'))
 
@@ -76,27 +77,44 @@ test('rejects unknown agent role ids when reading storage', () => {
   assert.deepEqual(readTaskAiAssigneeMap('u1', 'p1'), {})
 })
 
-test('display copy marks AI assignee as non-executing Mock', () => {
+test('display copy marks AI assignee as non-executing metadata', () => {
   assert.match(formatTaskAssigneeDisplay('agent', 'ignored'), /실행 아님/)
+  assert.match(formatTaskAssigneeDisplay('agent', 'ignored'), /메타데이터/)
   assert.equal(formatTaskAssigneeDisplay('human', 'Alice'), 'Alice')
 })
 
-test('F105-01: detail writes Mock kind only after durable task persist', () => {
+test('resolveTaskAiAssignee prefers server kind over localStorage', () => {
+  globalThis.localStorage = memoryStorage()
+  writeTaskAiAssignee('u1', 'p1', 't1', { kind: 'human', agentRoleId: null })
+  assert.equal(
+    resolveTaskAiAssignee('u1', 'p1', 't1', { assigneeKind: 'agent', agentRoleId: null }).kind,
+    'agent',
+  )
+  assert.equal(resolveTaskAiAssignee('u1', 'p1', 't1').kind, 'human')
+})
+
+test('F105-01: detail writes kind only after durable task persist', () => {
   const saveFn = detail.slice(detail.indexOf('async function saveAssignee'), detail.indexOf('const statusOptions'))
-  const writeIdx = saveFn.indexOf('writeTaskAiAssignee')
-  const patchIdx = saveFn.indexOf('patchServerTask')
+  const firstWrite = saveFn.indexOf('writeTaskAiAssignee')
+  const firstPatch = saveFn.indexOf('patchServerTask')
   const replaceIdx = saveFn.indexOf('prototypeTaskRepository.replace')
-  assert.ok(writeIdx > 0)
-  assert.ok(patchIdx > 0 && writeIdx > patchIdx)
+  assert.ok(firstWrite > 0)
+  assert.ok(firstPatch > 0 && firstWrite > firstPatch)
   assert.ok(replaceIdx > 0)
-  // Both server and prototype branches must write after their durable call.
-  const serverChunk = saveFn.slice(patchIdx, saveFn.indexOf('} else {'))
-  assert.ok(serverChunk.indexOf('writeTaskAiAssignee') > serverChunk.indexOf('patchServerTask'))
-  const protoChunk = saveFn.slice(saveFn.indexOf('} else {'))
+  assert.match(saveFn, /isF105ServerAssigneeEnabled/)
+  assert.match(saveFn, /isMissingAssigneeKindColumnError/)
+  // Prototype branch: LS write after replace.
+  const protoStart = saveFn.lastIndexOf('} else {')
+  const protoChunk = saveFn.slice(protoStart)
   assert.ok(
     protoChunk.indexOf('writeTaskAiAssignee') >
       protoChunk.indexOf('prototypeTaskRepository.replace'),
   )
+  // Server branch still dual-writes LS after durable patch (including column fallback).
+  const serverChunk = saveFn.slice(0, protoStart)
+  assert.ok(serverChunk.includes('patchServerTask'))
+  assert.ok(serverChunk.includes('writeTaskAiAssignee'))
+  assert.ok(serverChunk.indexOf('writeTaskAiAssignee') > serverChunk.indexOf('patchServerTask'))
 })
 
 test('task detail exposes F-105 kind UI without hire/pay/run claims', () => {
@@ -106,7 +124,7 @@ test('task detail exposes F-105 kind UI without hire/pay/run claims', () => {
   assert.match(detail, /specialists/)
   assert.doesNotMatch(detail, /결제하기|지금 채용|유료 LLM 실행/)
   assert.match(list, /formatTaskAssigneeDisplay/)
-  assert.match(list, /getTaskAiAssignee\(userId, projectId/)
+  assert.match(list, /resolveTaskAiAssignee\(/)
 })
 
 test('human↔agent switch and refresh use user-scoped getters', () => {

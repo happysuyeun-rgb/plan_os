@@ -50,7 +50,9 @@
 | OpenHands | MIT | **첫 실 LLM E2E 성공 후** P5 |
 | Agency Swarm / FreeLLMAPI | — | 필수 의존 금지 |
 
-상세: [CREWAI_REAL_WORKER_POC_2026-11-14.md](./CREWAI_REAL_WORKER_POC_2026-11-14.md). Mock `process_mock_ai_run`은 유지.
+**2026-11-17 갱신:** 지시문 후보 전체(Agency·OpenClaw·MS Agent Framework·FreeLLMAPI 포함)의 **연결됨 / 미연결 / 나중에 / 무과금 원칙**은  
+[FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md](../engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md) 가 정본이다.  
+상세 PoC: [CREWAI_REAL_WORKER_POC_2026-11-14.md](./CREWAI_REAL_WORKER_POC_2026-11-14.md). Mock `process_mock_ai_run`은 E2E fixture용으로 유지.
 
 ## 5. DB
 

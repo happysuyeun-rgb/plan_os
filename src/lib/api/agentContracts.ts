@@ -140,6 +140,31 @@ export async function createAgentContractDraft(input: {
 }
 
 /** Live market research draft — requires local_only 035 RPC on disposable DB. */
+/** AI PM draft — requires local_only 037 RPC; plan must already be approved. */
+export async function createAiPmContractDraft(input: {
+  projectId: string
+  task: string
+  acceptanceCriteria: string
+  auditManifestId: string
+  clientRequestId: string
+  pmPlanId: string
+  budgetCapMinor?: number
+  expiresAt?: string | null
+}): Promise<AgentContractRow> {
+  const { data, error } = await supabase.rpc('create_ai_pm_contract_draft', {
+    p_project_id: input.projectId,
+    p_task: input.task,
+    p_acceptance_criteria: input.acceptanceCriteria,
+    p_audit_manifest_id: input.auditManifestId,
+    p_budget_cap_minor: input.budgetCapMinor ?? MOCK_BUDGET_CAP_MINOR,
+    p_client_request_id: input.clientRequestId,
+    p_pm_plan_id: input.pmPlanId,
+    p_expires_at: input.expiresAt ?? null,
+  })
+  if (error) throwContractError(error)
+  return parseContract(data)
+}
+
 export async function createMarketResearchContractDraft(input: {
   projectId: string
   task: string

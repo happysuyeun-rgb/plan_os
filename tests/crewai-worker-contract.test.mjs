@@ -15,13 +15,30 @@ describe('CrewAI real worker contract', () => {
     assert.match(api, /Never calls process_mock_ai_run/)
   })
 
-  it('exposes CrewAI enqueue CTA without removing mock button', () => {
+  it('exposes CrewAI enqueue CTA; mock button only under fixtureMode or ALLOW_MOCK_AI_RUN', () => {
     const page = read('src/pages/SpecialistRequestMockPage.tsx')
+    assert.match(page, /allowMockAiRunCta/)
+    assert.match(page, /VITE_ALLOW_MOCK_AI_RUN/)
+    assert.match(page, /\(fixtureMode \|\| allowMockAiRunCta\) && \(/)
     assert.match(page, /data-testid="mock-worker-run"/)
     assert.match(page, /data-testid="crewai-worker-enqueue"/)
     assert.match(page, /enqueueForCrewAiWorker/)
     assert.match(page, /data-testid="execution-refresh"/)
     assert.match(page, /data-testid="artifact-publish-from-run"/)
+  })
+
+  it('disposable local_browser_env enables mock AI run without S3 fixtureMode', () => {
+    const envHelper = read('tests/e2e/local_browser_env.mjs')
+    assert.match(envHelper, /VITE_ALLOW_MOCK_AI_RUN=true/)
+    assert.doesNotMatch(envHelper, /VITE_S3_E2E_FIXTURE=true/)
+  })
+
+  it('allows Preview Supabase ref only when PLANOS_CREWAI_ALLOW_PREVIEW is set', () => {
+    const adapter = read('workers/crewai/src/planos_crewai/supabase_adapter.py')
+    assert.match(adapter, /fydngfylpzdwvjyuqhdm/)
+    assert.match(adapter, /PLANOS_CREWAI_ALLOW_PREVIEW/)
+    assert.match(adapter, /ggviusdmxalsflyybamm/)
+    assert.match(adapter, /Refusing ops Production/)
   })
 
   it('ships local_only 034 claim/complete RPCs (not migrations/)', () => {

@@ -5,8 +5,8 @@ import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 
 /**
- * F-301 catalog Mock: hireable card + FUTURE placeholders (#37/#38 등).
- * No hire checkout, payment, or model execution for upcoming roles.
+ * Project-scoped AI staff catalog: hireable roles → real request routes.
+ * FUTURE seats stay display-only (no hire, payment, or fabricated scores).
  */
 export default function AiStaffCatalogMockPage() {
   const { projectId } = useParams()
@@ -52,11 +52,11 @@ export default function AiStaffCatalogMockPage() {
       </nav>
 
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">AI 인력 · CATALOG MOCK</p>
-        <h1 className="text-3xl font-bold">AI 직원 카탈로그 (Mock)</h1>
+        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">AI 인력 · CATALOG</p>
+        <h1 className="text-3xl font-bold">AI 직원 카탈로그</h1>
         <p className="text-sm text-gray-600">
-          채용 가능 역할만 업무 요청으로 이어집니다. FUTURE 자리(#37 영업·#38 마케터)는 표시만이며 결제·유료 LLM·실발송이
-          없습니다.
+          채용 가능 역할은 서버 계약·CrewAI 큐로 이어집니다. 준비 중 자리(#37 영업·#38 마케터)는 표시만이며
+          결제·유료 LLM·실발송이 없습니다.
         </p>
       </header>
 
@@ -74,9 +74,7 @@ export default function AiStaffCatalogMockPage() {
       ) : (
         <div className="space-y-8">
           <section aria-label="채용 가능 AI 직원" className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700">
-              채용 가능 · {hireable.length}종 (Mock)
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-700">채용 가능 · {hireable.length}종</h2>
             {hireable.map((role) => (
               <article
                 key={role.id}
@@ -94,8 +92,12 @@ export default function AiStaffCatalogMockPage() {
                     <dd>{role.id}</dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-gray-800">도구 / 모델</dt>
-                    <dd>없음 · 유료 LLM 미연결</dd>
+                    <dt className="font-semibold text-gray-800">실행</dt>
+                    <dd>
+                      {role.id === 'ai_market_researcher_v1'
+                        ? 'CrewAI + Liner 실경로'
+                        : 'CrewAI 실실행 큐'}
+                    </dd>
                   </div>
                   <div>
                     <dt className="font-semibold text-gray-800">가격</dt>
@@ -103,7 +105,7 @@ export default function AiStaffCatalogMockPage() {
                   </div>
                   <div>
                     <dt className="font-semibold text-gray-800">상태</dt>
-                    <dd>카탈로그 안내만 · 채용 확정 아님</dd>
+                    <dd>요청·계약·큐잉 가능</dd>
                   </div>
                 </dl>
                 <div className="mt-5 flex flex-wrap gap-3">
@@ -114,13 +116,13 @@ export default function AiStaffCatalogMockPage() {
                   >
                     {role.id === 'ai_market_researcher_v1'
                       ? '이 역할로 시장조사 요청'
-                      : '이 역할로 업무 요청 Mock'}
+                      : '이 역할로 업무 요청'}
                   </Link>
                   <Link
                     to={`/projects/${projectId}/ai-review`}
                     className="rounded-md border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-800"
                   >
-                    AI 기획 검수 (Mock)
+                    AI 기획 검수
                   </Link>
                 </div>
               </article>

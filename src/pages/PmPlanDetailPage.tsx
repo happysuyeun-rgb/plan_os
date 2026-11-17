@@ -162,7 +162,7 @@ export default function PmPlanDetailPage() {
             </div>
             {plan.source === 'ai_suggested' && (
               <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                이 초안은 <strong>AI 제안 Mock</strong>입니다. 검증된 AI PM 실행 결과가 아니며, 저장·승인만으로 유료 모델 호출이나 결제가 시작되지 않습니다.
+                이 초안은 <strong>Gemini AI 제안</strong>(또는 템플릿 폴백)입니다. AI PM 채용·워커 실행 결과가 아니며, 저장·승인만으로 결제가 시작되지 않습니다.
               </p>
             )}
             {plan.status === 'approved' && (
@@ -289,6 +289,34 @@ export default function PmPlanDetailPage() {
             )}
           </section>
 
+          {plan.status === 'approved' && isOwner && projectId && planId && (
+            <section
+              className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4"
+              data-testid="pm-plan-crewai-followup"
+            >
+              <h2 className="text-lg font-bold">AI PM · CrewAI 실행 (별도)</h2>
+              <p className="text-sm text-gray-700">
+                승인은 기록일 뿐이며 CrewAI 큐·유료 호출을 시작하지 않습니다. 실행하려면 S2 manifest 후
+                계약 승인·enqueue가 필요합니다 (`ai_pm_v1`, local_only 037).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/projects/${projectId}/specialists/request?fromPlan=${planId}`}
+                  className="rounded bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
+                  data-testid="pm-plan-crewai-specialist-link"
+                >
+                  전문가 요청·CrewAI 큐로 이어가기
+                </Link>
+                <Link
+                  to={`/projects/${projectId}/audits/new`}
+                  className="rounded border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-900"
+                >
+                  S2 manifest 준비
+                </Link>
+              </div>
+            </section>
+          )}
+
           {canEdit && plan.status !== 'approved' && (
             <section className="space-y-3 rounded-xl border p-4">
               <h2 className="text-lg font-bold">승인 흐름</h2>
@@ -322,7 +350,7 @@ export default function PmPlanDetailPage() {
                       disabled={busy}
                       onClick={() => void run(async () => {
                         await transitionPmPlan(plan, 'approve', comment)
-                      }, '계획을 승인했습니다. 업무 연결이 가능합니다.')}
+                      }, '계획을 승인했습니다. 업무 연결이 가능합니다. AI 실행·결제는 시작되지 않았습니다.')}
                     >
                       승인
                     </button>

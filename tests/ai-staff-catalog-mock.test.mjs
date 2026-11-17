@@ -21,7 +21,9 @@ test('catalog route is protected and lists hireable mock specialist card', () =>
 
 test('catalog does not claim paid hire or invent zero price checkout', () => {
   assert.doesNotMatch(page, /결제하기|지금 채용|₩\s*0|가격\s*0/)
-  assert.match(page, /카탈로그 안내만 · 채용 확정 아님/)
+  assert.match(page, /서버 계약·CrewAI 큐/)
+  assert.match(page, /산정 전 · 유료 결제 없음/)
+  assert.match(page, /요청·계약·큐잉 가능/)
 })
 
 test('hub lists hireable and upcoming staff without requiring project first', () => {

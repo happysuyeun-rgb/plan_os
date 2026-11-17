@@ -21,17 +21,20 @@ assert(
 const serverTasks =
   process.env.VITE_S1_SERVER_TASKS ||
   (storeMode === 'server' ? 'true' : 'false')
+// Mock AI run CTA for F-B/F-C only — do not set VITE_S3_E2E_FIXTURE (that skips server hydrate).
 writeFileSync('.env.local',
   'VITE_SUPABASE_URL=' + apiUrl + '\n' +
   'VITE_SUPABASE_ANON_KEY=' + env.ANON_KEY + '\n' +
   'VITE_ENABLE_DEV_LOGIN=true\n' +
   'VITE_AI_REVIEW_STORE=' + storeMode + '\n' +
-  'VITE_S1_SERVER_TASKS=' + serverTasks + '\n',
+  'VITE_S1_SERVER_TASKS=' + serverTasks + '\n' +
+  'VITE_ALLOW_MOCK_AI_RUN=true\n',
   { mode: 0o600 },
 )
 console.log(
   'Created local-only Vite configuration for disposable Supabase (keys not logged); store=' +
     storeMode +
     ' s1=' +
-    serverTasks,
+    serverTasks +
+    ' mockAiRun=true',
 )

@@ -7,8 +7,14 @@ import {
   prototypeTaskRepository, permittedTransition,
   type PrototypeTask, type TaskStatus,
 } from '../lib/taskPrototype'
-import { formatTaskAssigneeDisplay, getTaskAiAssignee } from '../lib/taskAiAssigneeMock'
-import { listServerTasks, createServerTask, patchServerTask, TaskConflictError } from '../lib/api/projectTasks'
+import { formatTaskAssigneeDisplay, resolveTaskAiAssignee } from '../lib/taskAiAssigneeMock'
+import {
+  listServerTasks,
+  createServerTask,
+  patchServerTask,
+  TaskConflictError,
+  type ServerTask,
+} from '../lib/api/projectTasks'
 
 const useServerTasks = import.meta.env.VITE_S1_SERVER_TASKS === 'true'
 const labels: Record<TaskStatus, string> = {
@@ -253,7 +259,17 @@ export default function ProjectTasksPage() {
                       담당:{' '}
                       {formatTaskAssigneeDisplay(
                         userId && projectId
-                          ? getTaskAiAssignee(userId, projectId, task.id).kind
+                          ? resolveTaskAiAssignee(
+                              userId,
+                              projectId,
+                              task.id,
+                              'assigneeKind' in task
+                                ? {
+                                    assigneeKind: (task as ServerTask).assigneeKind,
+                                    agentRoleId: (task as ServerTask).agentRoleId,
+                                  }
+                                : undefined,
+                            ).kind
                           : 'human',
                         assigneeLabel(task.assigneeId),
                       )}

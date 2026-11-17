@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { fetchPmPlan } from '../lib/api/pmPlans'
 import { StaffingDigestGateNotice } from '../components/common/StaffingDigestGateNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
@@ -37,7 +38,6 @@ import {
   listAiRunEvents,
   listAiUsageForRun,
   listProjectAiRuns,
-  processMockAiRun,
   retryFailedAiRun,
   type AiRunEventRow,
   type AiRunRow,
@@ -60,7 +60,11 @@ function newRequestId(): string {
   return '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0')
 }
 
+/** S3 Chromium localDev IDs only — skips live server contract hydrate. */
 const fixtureMode = import.meta.env.DEV && import.meta.env.VITE_S3_E2E_FIXTURE === 'true'
+/** Disposable F-B/F-C local E2E: show process_mock CTA without enabling fixtureMode. */
+const allowMockAiRunCta =
+  import.meta.env.DEV && import.meta.env.VITE_ALLOW_MOCK_AI_RUN === 'true'
 
 function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested'): string {
   if (decision === 'accepted') return '결과 수락 및 S1 연결'
@@ -71,6 +75,8 @@ function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested
 export default function SpecialistRequestMockPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromPlanId = searchParams.get('fromPlan')
   const userId = useAuthStore((s) => s.user?.id)
   const { currentProject, setCurrentProject } = useProjectStore()
   const [task, setTask] = useState('')
@@ -121,6 +127,30 @@ export default function SpecialistRequestMockPage() {
       mounted = false
     }
   }, [projectId, userId, setCurrentProject])
+
+  /** Slice 5: approved PM plan → prefill specialist task (approve≠enqueue). */
+  useEffect(() => {
+    let mounted = true
+    if (!fromPlanId || !projectId) return
+    void fetchPmPlan(fromPlanId)
+      .then((found) => {
+        if (!mounted || !found || found.plan.project_id !== projectId) return
+        if (found.plan.status !== 'approved') {
+          setError('승인된 PM 계획만 CrewAI 이어가기에 연결할 수 있습니다.')
+          return
+        }
+        setTask(
+          `승인된 PM 계획(${found.plan.id}) 목표: ${found.plan.objective}`.slice(0, 1000),
+        )
+        setCriteria('계획 단계와 수락 기준을 검수·분해 보고서로 정리'.slice(0, 500))
+      })
+      .catch(() => {
+        if (mounted) setError('연결된 PM 계획을 불러오지 못했습니다.')
+      })
+    return () => {
+      mounted = false
+    }
+  }, [fromPlanId, projectId])
 
   useEffect(() => {
     let mounted = true
@@ -218,7 +248,9 @@ export default function SpecialistRequestMockPage() {
     setArtifactEvents(await listAiArtifactEvents(row.id))
   }
 
+  /** CI/fixture or disposable F-B/F-C (VITE_ALLOW_MOCK_AI_RUN) only. */
   const runMockWorker = async () => {
+    if (!fixtureMode && !allowMockAiRunCta) return
     if (!owner || !serverContract || serverContract.status !== 'active') {
       setError('승인된 서버 계약으로만 Mock worker를 실행할 수 있습니다.')
       return
@@ -322,20 +354,14 @@ export default function SpecialistRequestMockPage() {
     }
   }
 
-  const retryMockWorker = async () => {
+  const retryCrewAiQueue = async () => {
     if (!owner || !serverRun || serverRun.status !== 'failed') return
     setBusy(true)
     setError('')
     try {
       const queued = await retryFailedAiRun(serverRun.id, serverRun.version)
-      const processed = await processMockAiRun(queued.id)
-      await refreshRun(processed)
-      if (processed.status === 'succeeded') {
-        const published = await publishAiArtifactFromRun(processed.id)
-        await refreshArtifact(published)
-      } else if (processed.status === 'failed') {
-        setError(processed.error_message ?? processed.error_code ?? 'Mock 재시도가 실패했습니다.')
-      }
+      await refreshRun(queued)
+      setRunIdempotencyKey(newRequestId())
     } catch (e) {
       setError(mapError(e))
     } finally {
@@ -479,8 +505,8 @@ export default function SpecialistRequestMockPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">AI 인력사무소 · F-A 서버 계약</p>
         <h1 className="mt-2 text-3xl font-bold">전문가에게 업무 요청하기</h1>
         <p className="mt-3 text-sm text-gray-600">
-          계약 초안·명시적 동의는 서버에 저장됩니다. 유료 LLM·실공급사 과금은 없습니다. Mock worker 실행은 승인된 계약만
-          허용됩니다. 프로젝트 진행 중에도 카탈로그에서 추가 요청할 수 있습니다(E-03).
+          계약 초안·명시적 동의는 Preview 서버에 저장됩니다. 승인 후 CrewAI 워커 큐에만 넣으며, Mock worker·유료 LLM
+          과금 경로는 없습니다. 프로젝트 진행 중에도 카탈로그에서 추가 요청할 수 있습니다(E-03).
         </p>
       </div>
 
@@ -524,9 +550,9 @@ export default function SpecialistRequestMockPage() {
             <p className="text-xs font-semibold text-indigo-700">선택된 전문가 · requirements_auditor_v1</p>
             <h2 className="mt-2 text-xl font-semibold">{MOCK_SPECIALIST.title}</h2>
             <p className="mt-2 text-sm">{MOCK_SPECIALIST.description}</p>
-            <p className="mt-2 text-sm font-medium text-indigo-900">Mock 실행만 가능 · 유료 LLM 금지</p>
+            <p className="mt-2 text-sm font-medium text-indigo-900">CrewAI 실실행 큐 · 유료 LLM 과금 없음</p>
             <p className="mt-2 text-xs text-gray-600">
-              약관 버전: {AGENT_CONTRACT_TERMS_VERSION} · Mock 예산 상한: {MOCK_BUDGET_CAP_MINOR} (KRW minor, 결제 아님)
+              약관 버전: {AGENT_CONTRACT_TERMS_VERSION} · 예산 상한: {MOCK_BUDGET_CAP_MINOR} (KRW minor, 결제 아님)
             </p>
             <p className="mt-2 text-xs text-gray-700">
               S2 manifest:{' '}
@@ -597,15 +623,17 @@ export default function SpecialistRequestMockPage() {
               )}
               {serverContract.status === 'active' && (
                 <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void runMockWorker()}
-                    className="rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
-                    data-testid="mock-worker-run"
-                  >
-                    Mock worker 서버 실행
-                  </button>
+                  {(fixtureMode || allowMockAiRunCta) && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void runMockWorker()}
+                      className="rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+                      data-testid="mock-worker-run"
+                    >
+                      Mock worker 서버 실행 (E2E)
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}
@@ -705,27 +733,20 @@ export default function SpecialistRequestMockPage() {
                     성공 실행 → 보고서 발행
                   </button>
                 )}
-                {serverRun.status === 'failed' &&
-                  serverRun.result_json?.engineFamily !== 'crewai' &&
-                  serverRun.result_json?.engine !== 'crewai' &&
-                  !String(serverRun.error_message || '').includes('crewai') && (
+                {serverRun.status === 'failed' && (
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void retryMockWorker()}
+                    onClick={() => void retryCrewAiQueue()}
                     className="rounded-md bg-violet-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                    data-testid="mock-worker-retry"
+                    data-testid="crewai-worker-retry"
                   >
-                    Mock 실패 실행 재시도
+                    실패 실행 재큐 (CrewAI 워커)
                   </button>
                 )}
-                {serverRun.status === 'failed' &&
-                  (serverRun.result_json?.engineFamily === 'crewai' ||
-                    serverRun.result_json?.engine === 'crewai' ||
-                    String(serverRun.error_code || '').startsWith('CREWAI') ||
-                    String(serverRun.error_message || '').toLowerCase().includes('crewai')) && (
-                  <p className="text-sm text-amber-900" data-testid="crewai-retry-hint" role="note">
-                    CrewAI 실패는 Mock 재시도로 덮지 않습니다. 워커를 확인한 뒤 새 실실행을 큐에 넣으세요.
+                {serverRun.status === 'queued' && (
+                  <p className="text-sm text-slate-700" data-testid="crewai-queue-hint" role="note">
+                    큐에 대기 중입니다. 로컬 CrewAI 워커가 claim·완료하면 상태가 갱신됩니다.
                   </p>
                 )}
               </div>

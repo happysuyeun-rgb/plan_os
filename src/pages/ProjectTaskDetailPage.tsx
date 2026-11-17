@@ -7,6 +7,7 @@ import {
   listServerTasks,
   listServerTaskEvents,
   patchServerTask,
+  isMissingAssigneeKindColumnError,
   TaskConflictError,
   type ServerTask,
   type TaskEvent,
@@ -19,8 +20,9 @@ import {
 } from '../lib/taskPrototype'
 import {
   formatTaskAssigneeDisplay,
-  getTaskAiAssignee,
+  isF105ServerAssigneeEnabled,
   MOCK_AI_ASSIGNEE_ROLE,
+  resolveTaskAiAssignee,
   writeTaskAiAssignee,
   type TaskAssigneeKind,
 } from '../lib/taskAiAssigneeMock'
@@ -60,7 +62,16 @@ export default function ProjectTaskDetailPage() {
         const found = items.find((item) => item.id === taskId) ?? null
         setTask(found)
         setAssigneeDraft(found?.assigneeId ?? '')
-        setAssigneeKindDraft(getTaskAiAssignee(userId, projectId, taskId).kind)
+        const serverKind =
+          found && 'assigneeKind' in found
+            ? {
+                assigneeKind: (found as ServerTask).assigneeKind,
+                agentRoleId: (found as ServerTask).agentRoleId,
+              }
+            : undefined
+        setAssigneeKindDraft(
+          resolveTaskAiAssignee(userId, projectId, taskId, serverKind).kind,
+        )
         if (!found) setError('업무를 찾을 수 없습니다.')
       })
       .catch(() => { if (mounted) setError('업무를 불러올 수 없습니다.') })
@@ -155,18 +166,42 @@ export default function ProjectTaskDetailPage() {
     setSaving(true)
     setError('')
     try {
-      // F105-01: persist durable task first; write Mock kind only after success.
+      // F105-01: persist durable task first; write kind metadata only after success.
       if (useServerTasks && 'version' in task) {
-        const updated = await patchServerTask(projectId, taskId, task.version, {
-          assigneeId: nextId,
-        })
+        const kindPatch =
+          isF105ServerAssigneeEnabled()
+            ? {
+                assigneeKind: kind,
+                agentRoleId: kind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
+              }
+            : {}
+        let updated: ServerTask
+        try {
+          updated = await patchServerTask(projectId, taskId, task.version, {
+            assigneeId: nextId,
+            ...kindPatch,
+          })
+        } catch (e) {
+          if (kindPatch.assigneeKind && isMissingAssigneeKindColumnError(e)) {
+            updated = await patchServerTask(projectId, taskId, task.version, {
+              assigneeId: nextId,
+            })
+          } else {
+            throw e
+          }
+        }
         writeTaskAiAssignee(userId, projectId, taskId, {
           kind,
           agentRoleId: kind === 'agent' ? MOCK_AI_ASSIGNEE_ROLE.id : null,
         })
         setTask(updated)
         setAssigneeDraft(updated.assigneeId ?? '')
-        setAssigneeKindDraft(kind)
+        setAssigneeKindDraft(
+          resolveTaskAiAssignee(userId, projectId, taskId, {
+            assigneeKind: updated.assigneeKind ?? kind,
+            agentRoleId: updated.agentRoleId,
+          }).kind,
+        )
         const rows = await listServerTaskEvents(projectId, taskId)
         setEvents(rows)
       } else {
@@ -249,7 +284,17 @@ export default function ProjectTaskDetailPage() {
               담당:{' '}
               {formatTaskAssigneeDisplay(
                 userId && projectId && taskId
-                  ? getTaskAiAssignee(userId, projectId, taskId).kind
+                  ? resolveTaskAiAssignee(
+                      userId,
+                      projectId,
+                      taskId,
+                      'assigneeKind' in task
+                        ? {
+                            assigneeKind: (task as ServerTask).assigneeKind,
+                            agentRoleId: (task as ServerTask).agentRoleId,
+                          }
+                        : undefined,
+                    ).kind
                   : 'human',
                 assigneeLabel(task.assigneeId),
               )}
@@ -257,7 +302,7 @@ export default function ProjectTaskDetailPage() {
             {canEditTasks && (
               <div className="space-y-2" data-testid="task-detail-assignee-kind-block">
                 <label className="block text-sm text-gray-700">
-                  담당 유형 (F-105 Mock)
+                  담당 유형 (F-105 · 실행 아님)
                   <select
                     className="mt-1 block w-full rounded border border-gray-300 p-2"
                     value={assigneeKindDraft}
@@ -266,7 +311,7 @@ export default function ProjectTaskDetailPage() {
                     onChange={(e) => setAssigneeKindDraft(e.target.value as TaskAssigneeKind)}
                   >
                     <option value="human">사람 담당</option>
-                    <option value="agent">AI 담당 (Mock · 실행 아님)</option>
+                    <option value="agent">AI 담당 (메타데이터 · 실행 아님)</option>
                   </select>
                 </label>
                 {assigneeKindDraft === 'human' ? (
@@ -295,7 +340,7 @@ export default function ProjectTaskDetailPage() {
                     <p className="font-medium">AI 역할: {MOCK_AI_ASSIGNEE_ROLE.title}</p>
                     <p className="mt-1 text-xs">
                       역할 ID `{MOCK_AI_ASSIGNEE_ROLE.id}` · 메타데이터만 저장합니다. 유료 LLM·계약·채용·검수
-                      실행이 시작되지 않습니다. 실제 Mock 투입은{' '}
+                      실행이 시작되지 않습니다. 실경로 요청은{' '}
                       <Link
                         to={projectId ? `/projects/${projectId}/specialists` : '/projects'}
                         className="font-medium underline underline-offset-2"
@@ -303,6 +348,9 @@ export default function ProjectTaskDetailPage() {
                         AI 직원 카탈로그
                       </Link>
                       를 이용하세요.
+                      {isF105ServerAssigneeEnabled()
+                        ? ' 서버(036) 이중쓰기 켜짐 · 실패 시 localStorage 폴백.'
+                        : ' 기본은 브라우저 저장 · VITE_F105_SERVER_ASSIGNEE로 서버 이중쓰기.'}
                     </p>
                   </div>
                 )}

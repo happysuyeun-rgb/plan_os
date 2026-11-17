@@ -11,11 +11,13 @@ const mig = readFileSync(
   'utf8',
 )
 
-test('ai suggested draft builder is labeled Mock and not a paid AI PM claim', () => {
-  assert.match(draftSrc, /AI 제안 Mock/)
-  assert.match(draftSrc, /실제 AI PM 실행 아님/)
-  assert.match(draftSrc, /buildAiSuggestedPlanDraft/)
-  assert.doesNotMatch(draftSrc, /유료|결제|LLM 실행/)
+test('ai suggested draft prefers Gemini BFF and keeps honest non-hire labels', () => {
+  assert.match(draftSrc, /buildAiSuggestedPlanDraftAsync/)
+  assert.match(draftSrc, /generateDocumentViaBff/)
+  assert.match(draftSrc, /mode: 'gemini'/)
+  assert.match(draftSrc, /템플릿 폴백/)
+  assert.match(draftSrc, /Does not start AI PM hire/)
+  assert.doesNotMatch(draftSrc, /AI 제안 Mock/)
 })
 
 test('createPmPlan accepts ai_suggested source for display-only persistence', () => {
@@ -24,16 +26,19 @@ test('createPmPlan accepts ai_suggested source for display-only persistence', ()
   assert.match(apiSrc, /ai_suggested` does not start AI execution/)
 })
 
-test('list page exposes Mock suggest CTA without claiming live AI PM', () => {
-  assert.match(listSrc, /AI 제안 초안\(Mock\)/)
+test('list page exposes Gemini suggest CTA without claiming live AI PM hire', () => {
+  assert.match(listSrc, /Gemini AI 제안/)
+  assert.match(listSrc, /AI 제안 초안/)
   assert.match(listSrc, /ai_suggested/)
-  assert.match(listSrc, /buildAiSuggestedPlanDraft/)
-  assert.match(listSrc, /실행·결제가 아닙니다/)
+  assert.match(listSrc, /buildAiSuggestedPlanDraftAsync/)
+  assert.match(listSrc, /채용·실행·결제가 아닙니다/)
+  assert.doesNotMatch(listSrc, /AI 제안 초안\(Mock\)/)
 })
 
-test('detail page warns ai_suggested is Mock not verified AI PM output', () => {
-  assert.match(detailSrc, /AI 제안 Mock/)
-  assert.match(detailSrc, /검증된 AI PM 실행 결과가 아니/)
+test('detail page warns ai_suggested is Gemini draft not hired AI PM output', () => {
+  assert.match(detailSrc, /Gemini AI 제안/)
+  assert.match(detailSrc, /AI PM 채용·워커 실행 결과가 아니/)
+  assert.doesNotMatch(detailSrc, /AI 제안 Mock/)
 })
 
 test('migration 032 allows human|ai_suggested and keeps default human', () => {

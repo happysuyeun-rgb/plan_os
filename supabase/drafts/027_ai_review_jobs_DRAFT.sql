@@ -1,12 +1,21 @@
 -- DRAFT POINTER — executable SQL lives at:
 --   supabase/local_only/027_ai_review_jobs.sql
 --
+-- Slice 2 freeze (2026-11-17): apply-ready draft for review only.
+-- SHA256 LF-normalized (local_only/027_ai_review_jobs.sql) =
+--   33fb44ae1c35112bc7da4b59d70b56629aa34c769d61d421c232d8421fa1b5fe
+-- (CRLF working copies differ; CI uses LF)
+
+--
 -- Apply ONLY via scripts/apply-027-local-only.mjs against disposable loopback Postgres.
--- FORBIDDEN: supabase/migrations auto-apply, Preview hosted DB, ops/production, db push.
+-- FORBIDDEN without explicit user approval:
+--   supabase/migrations auto-apply, Preview hosted DB, ops/production, db push.
 --
 -- Contract: RLS (can_access / can_edit), CAS (cas_ai_review_job P4001),
 -- idempotent bind_ai_review_finding_task, parent/source task links.
+-- App: src/lib/ai/serverReviewJobStore.ts
 --
--- Status: executable local_only; Preview/ops application still requires explicit approval.
--- Preview-only human runbook (no auto apply):
+-- Migration gap: migrations/ has 026 then 028 — 027 intentionally NOT in migrations/.
+-- Checklist: docs/plans/SLICE2_027_DRAFT_FREEZE_2026-11-17.md
+-- Preview human runbook (no auto apply):
 --   docs/plans/PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md

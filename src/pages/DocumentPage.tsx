@@ -15,6 +15,7 @@ import { MemberPanel } from '../components/project/MemberPanel'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
 import { MemberAvatarStack } from '../components/project/MemberAvatarStack'
 import { toAvatarPeople } from '../lib/memberAvatars'
+import { formatInviteDeliveryToast } from '../lib/api/members'
 import { DocumentTypeTabs } from '../components/document/DocumentTypeTabs'
 import { DocumentLayout } from '../components/document/DocumentLayout'
 import { DocumentLeftPanel } from '../components/document/DocumentLeftPanel'
@@ -500,8 +501,11 @@ export default function DocumentPage() {
     email: string,
     inviteRole: 'editor' | 'viewer',
   ) => {
-    await inviteMember(inviteProjectId, email, inviteRole)
-    showToast('success', `${email}에게 초대를 보냈습니다 (mock)`)
+    const delivery = await inviteMember(inviteProjectId, email, inviteRole)
+    showToast(
+      delivery.mode === 'supabase_otp' && delivery.status === 'otp_failed' ? 'error' : 'success',
+      formatInviteDeliveryToast(email, delivery),
+    )
   }
 
   const handleRemoveMember = async () => {

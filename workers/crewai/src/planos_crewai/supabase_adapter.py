@@ -18,6 +18,23 @@ from typing import Any
 import httpx
 
 LOOPBACK = re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?(/.*)?$", re.I)
+# PlanOS-Preview only — never ops Production (ggviusdmxalsflyybamm).
+PREVIEW_REF = "fydngfylpzdwvjyuqhdm"
+PREVIEW_API = re.compile(
+    rf"^https://{re.escape(PREVIEW_REF)}\.supabase\.co/?$",
+    re.I,
+)
+OPS_REF = "ggviusdmxalsflyybamm"
+
+
+def _preview_allowlisted(api_url: str) -> bool:
+    """Allow Preview hosted API when PLANOS_CREWAI_ALLOW_PREVIEW=1."""
+    flag = (os.environ.get("PLANOS_CREWAI_ALLOW_PREVIEW") or "").strip().lower()
+    if flag not in {"1", "true", "yes"}:
+        return False
+    if OPS_REF in api_url.lower():
+        return False
+    return bool(PREVIEW_API.match(api_url.rstrip("/")))
 
 
 class SupabaseAdapterError(RuntimeError):
@@ -38,7 +55,16 @@ class SupabaseAdapter:
             raise SupabaseAdapterError(
                 "PLANOS_LOCAL_API_URL and SUPABASE_SERVICE_ROLE_KEY are required"
             )
-        if not allow_non_loopback and not LOOPBACK.match(self.api_url):
+        if OPS_REF in self.api_url.lower():
+            raise SupabaseAdapterError(
+                f"Refusing ops Production API URL for CrewAI worker: {self.api_url}"
+            )
+        allowed = (
+            LOOPBACK.match(self.api_url)
+            or allow_non_loopback
+            or _preview_allowlisted(self.api_url)
+        )
+        if not allowed:
             raise SupabaseAdapterError(
                 f"Refusing non-loopback API URL for CrewAI worker: {self.api_url}"
             )
