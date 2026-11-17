@@ -41,7 +41,7 @@ test('recommend panel lists catalog seats without match scores and links request
   assert.match(page, /data-testid=\{`f801-recommend-request-\$\{role\.id\}`\}/)
   assert.match(page, /data-testid="f801-catalog-link"/)
   assert.match(page, /specialists/)
-  assert.doesNotMatch(page, /OpenClaw/)
+  assert.doesNotMatch(page, /성공률\s*\d|별점\s*[1-5]/)
 })
 
 test('hub links to F-801 mock', () => {

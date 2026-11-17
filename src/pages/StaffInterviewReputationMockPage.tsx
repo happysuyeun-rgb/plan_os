@@ -4,7 +4,7 @@ import { useProjectStore } from '../store/projectStore'
 
 /**
  * F-801: interview/reputation seats stay non-scoring; hireable roles deep-link to catalog request.
- * No ratings ledger, career days, paid hire, OpenClaw, or fabricated scores.
+ * No ratings ledger, career days, paid hire, or fabricated scores.
  */
 export default function StaffInterviewReputationMockPage() {
   const currentProject = useProjectStore((s) => s.currentProject)
