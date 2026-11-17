@@ -125,8 +125,8 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   const vars =
     body.vars && typeof body.vars === 'object' ? (body.vars as Vars) : ({} as Vars)
   // Gate C closed: Preview API never honors client paid flags.
-  const allowPaidCalls = false
-  if (body.allowPaidCalls === true && allowPaidCalls === false) {
+  const unpaidGuard = { allowPaidCalls: false }
+  if (body.allowPaidCalls === true && unpaidGuard.allowPaidCalls === false) {
     // Ignore paid request — Gemini credit path is still non-Gate-C template/BFF only.
   }
 
