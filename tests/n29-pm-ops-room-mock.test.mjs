@@ -23,18 +23,21 @@ test('ops room is placeholder: no auto-run, paid, or hire claims', () => {
   assert.doesNotMatch(page, /자동 운영 중입니다|scheduler 실행 중|₩\s*0|결제하기/)
 })
 
-test('side panel CTAs are disabled placeholders', () => {
+test('side panel keeps paid/dismiss disabled; assign deep-links to plans', () => {
+  assert.match(page, /data-testid="n29-pm-ops-assign-plans"/)
   assert.match(page, /data-testid="n29-pm-ops-assign-disabled"/)
   assert.match(page, /data-testid="n29-pm-ops-budget-disabled"/)
   assert.match(page, /data-testid="n29-pm-ops-dismiss-disabled"/)
-  assert.match(page, /disabled/)
-  assert.match(page, /미구현 · 유료·worker 없음/)
+  assert.match(page, /OpenClaw/)
+  assert.match(page, /유료 없음/)
 })
 
-test('center links reuse existing plans/tasks/ai-review routes', () => {
+test('center links reuse plans/tasks/ai-review and show approved plan count', () => {
   assert.match(page, /data-testid="n29-pm-ops-link-plans"/)
   assert.match(page, /data-testid="n29-pm-ops-link-tasks"/)
   assert.match(page, /data-testid="n29-pm-ops-link-ai-review"/)
+  assert.match(page, /data-testid="n29-pm-ops-approved-count"/)
+  assert.match(page, /listPmPlans/)
   assert.match(page, /\/plans/)
   assert.match(page, /\/tasks/)
   assert.match(page, /\/ai-review/)

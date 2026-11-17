@@ -33,11 +33,15 @@ test('interview and reputation CTAs stay disabled', () => {
   assert.match(page, /disabled/)
 })
 
-test('recommend panel lists catalog seats without match scores', () => {
+test('recommend panel lists catalog seats without match scores and links requests', () => {
   assert.match(page, /data-testid="f801-recommend-panel"/)
   assert.match(page, /점수·매칭 알고리즘 추천이 아닙니다/)
   assert.match(page, /hireableAiStaff/)
   assert.match(page, /추천 점수 없음/)
+  assert.match(page, /data-testid=\{`f801-recommend-request-\$\{role\.id\}`\}/)
+  assert.match(page, /data-testid="f801-catalog-link"/)
+  assert.match(page, /specialists/)
+  assert.doesNotMatch(page, /OpenClaw/)
 })
 
 test('hub links to F-801 mock', () => {

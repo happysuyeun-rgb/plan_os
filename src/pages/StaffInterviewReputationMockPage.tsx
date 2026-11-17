@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom'
 import { AI_STAFF_ROSTER, hireableAiStaff } from '../lib/aiStaffCatalog'
+import { useProjectStore } from '../store/projectStore'
 
 /**
- * F-801 Mock seat: interview / recommend / reputation (N18·N30·N31 자리).
- * No ratings ledger, career days, paid hire, or fabricated scores.
+ * F-801: interview/reputation seats stay non-scoring; hireable roles deep-link to catalog request.
+ * No ratings ledger, career days, paid hire, OpenClaw, or fabricated scores.
  */
 export default function StaffInterviewReputationMockPage() {
+  const currentProject = useProjectStore((s) => s.currentProject)
+  const projectId =
+    currentProject && !currentProject.deleted_at ? currentProject.id : null
   const hireable = hireableAiStaff()
   const upcoming = AI_STAFF_ROSTER.filter((r) => !r.available)
 
@@ -68,7 +72,17 @@ export default function StaffInterviewReputationMockPage() {
               data-testid={`f801-recommend-hireable-${role.id}`}
             >
               <span className="font-medium text-gray-900">{role.title}</span>
-              <span className="text-xs font-semibold text-emerald-800">채용 가능</span>
+              {projectId ? (
+                <Link
+                  to={`/projects/${projectId}/specialists/${role.requestPath || 'request'}`}
+                  className="text-xs font-semibold text-emerald-800 underline underline-offset-2"
+                  data-testid={`f801-recommend-request-${role.id}`}
+                >
+                  요청하기
+                </Link>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-800">채용 가능</span>
+              )}
             </li>
           ))}
           {upcoming.slice(0, 3).map((role) => (
@@ -83,8 +97,12 @@ export default function StaffInterviewReputationMockPage() {
           ))}
         </ul>
         <p className="mt-3 text-sm">
-          <Link to="/ai-staff" className="font-semibold text-brand-700 underline underline-offset-2">
-            AI 직원 카탈로그로 이동
+          <Link
+            to={projectId ? `/projects/${projectId}/specialists` : '/ai-staff'}
+            className="font-semibold text-brand-700 underline underline-offset-2"
+            data-testid="f801-catalog-link"
+          >
+            {projectId ? '프로젝트 카탈로그로 요청' : 'AI 직원 허브로 이동'}
           </Link>
         </p>
       </section>

@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProjectStore } from '../store/projectStore'
+import { listPmPlans } from '../lib/api/pmPlans'
 
 /**
- * N29 Mock: formal hired-PM ops room placeholder.
- * No assignment DDL, scheduler, paid hire, or "auto-running" claims.
- * Does not duplicate C04 /dashboard aggregation.
+ * N29: PM ops room — PlanOS-first read path (approved plan count + deep links).
+ * No assignment DDL, scheduler, paid hire, OpenClaw, or "auto-running" claims.
  */
 export default function PmOpsRoomMockPage() {
   const { projects, isLoading, fetchProjects, currentProject } = useProjectStore()
   const [selectedId, setSelectedId] = useState<string>('')
+  const [approvedCount, setApprovedCount] = useState<number | null>(null)
+  const [planLoadError, setPlanLoadError] = useState('')
 
   useEffect(() => {
     void fetchProjects()
@@ -25,6 +27,30 @@ export default function PmOpsRoomMockPage() {
   const resolvedId =
     selectedId && active.some((p) => p.id === selectedId) ? selectedId : (active[0]?.id ?? '')
   const selected = active.find((p) => p.id === resolvedId) ?? null
+
+  useEffect(() => {
+    let mounted = true
+    if (!resolvedId) {
+      setApprovedCount(null)
+      setPlanLoadError('')
+      return
+    }
+    setApprovedCount(null)
+    setPlanLoadError('')
+    void listPmPlans(resolvedId)
+      .then((rows) => {
+        if (!mounted) return
+        setApprovedCount(rows.filter((p) => p.status === 'approved').length)
+      })
+      .catch(() => {
+        if (!mounted) return
+        setApprovedCount(null)
+        setPlanLoadError('계획 목록을 불러오지 못했습니다.')
+      })
+    return () => {
+      mounted = false
+    }
+  }, [resolvedId])
 
   return (
     <div className="mx-auto max-w-5xl space-y-6" data-testid="n29-pm-ops-room">
@@ -101,7 +127,14 @@ export default function PmOpsRoomMockPage() {
             <div className="mt-3 space-y-3">
               <p className="text-base font-semibold text-gray-900">{selected.title}</p>
               <p className="text-sm text-gray-600">
-                PM worker가 이 프로젝트를 점검하지 않습니다. 사람 PM 계획·업무·기획 검수 화면으로만 이어집니다.
+                정식 AI PM 배정·scheduler는 없습니다. 승인된 사람 PM 계획 수와 실경로 링크만 표시합니다.
+              </p>
+              <p className="text-sm text-gray-800" data-testid="n29-pm-ops-approved-count">
+                {planLoadError
+                  ? planLoadError
+                  : approvedCount === null
+                    ? '승인 계획 수를 확인하는 중…'
+                    : `승인된 PM 계획: ${approvedCount}건 (자동 실행 아님)`}
               </p>
               <ul className="flex flex-wrap gap-2">
                 <li>
@@ -142,16 +175,26 @@ export default function PmOpsRoomMockPage() {
           data-testid="n29-pm-ops-side-panel"
         >
           <h2 className="text-sm font-semibold text-gray-800">승인함 · 비용 · 해임</h2>
-          <p className="mt-2 text-xs text-gray-600">미구현 · 유료·worker 없음</p>
+          <p className="mt-2 text-xs text-gray-600">비용·해임·OpenClaw 미구현 · 유료 없음</p>
           <div className="mt-4 space-y-2">
-            <button
-              type="button"
-              disabled
-              className="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-400"
-              data-testid="n29-pm-ops-assign-disabled"
-            >
-              프로젝트 배정 변경
-            </button>
+            {selected ? (
+              <Link
+                to={`/projects/${selected.id}/plans`}
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-sm font-medium text-slate-900 hover:bg-slate-50"
+                data-testid="n29-pm-ops-assign-plans"
+              >
+                계획 승인·CrewAI 이어가기
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-400"
+                data-testid="n29-pm-ops-assign-disabled"
+              >
+                프로젝트 배정 변경
+              </button>
+            )}
             <button
               type="button"
               disabled

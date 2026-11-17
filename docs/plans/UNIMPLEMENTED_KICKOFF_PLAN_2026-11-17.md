@@ -69,7 +69,8 @@
 **목표:** 스펙·화면 매트릭스 기준으로 최소 실경로 1개. OpenClaw 끼워 넣지 않음.  
 **수락:** C/N acceptance 항목 PASS 목록.  
 **롤백:** feature flag off.  
-**OSS:** Phase 4 후보와 분리.
+**OSS:** Phase 4 후보와 분리.  
+**진행:** [SLICE6_N29_F801_MIN_PATH_2026-11-17](./SLICE6_N29_F801_MIN_PATH_2026-11-17.md) · 승인 계획 카운트 + 카탈로그 요청 링크.
 
 ---
 
