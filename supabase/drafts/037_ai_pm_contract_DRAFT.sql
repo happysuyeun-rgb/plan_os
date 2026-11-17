@@ -1,0 +1,5 @@
+-- DRAFT POINTER — executable SQL:
+--   supabase/local_only/037_ai_pm_contract.sql
+-- Slice 5: ai_pm_v1 contract after plan.approved (enqueue is separate).
+-- FORBIDDEN without approval: migrations/, Preview, ops, db push.
+-- Docs: docs/plans/SLICE5_AI_PM_CREWAI_2026-11-17.md

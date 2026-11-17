@@ -61,7 +61,8 @@
 **목표:** PM 초안(Gemini BFF) 이후 **실행 큐**를 Specialist와 같은 CrewAI worker 패턴으로 확장. MetaGPT/Agency/OpenHands **설치 금지**.  
 **수락:** owner 승인 ≠ 자동 유료 실행; `plan.approved`와 execution/consent 상태 분리 유지; Mock 라벨 없음.  
 **롤백:** Gemini draft-only로 축소.  
-**OSS:** CrewAI + 기존 Liner/Gemini 크레딧 캡.
+**OSS:** CrewAI + 기존 Liner/Gemini 크레딧 캡.  
+**진행:** [SLICE5_AI_PM_CREWAI_2026-11-17](./SLICE5_AI_PM_CREWAI_2026-11-17.md) · `local_only/037` + 승인 후 CTA · **037 apply 미실행**.
 
 ### Slice 6 — N29 / F-801 (PlanOS first)  
 **F/TF/N:** N29 · F-801  

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { fetchPmPlan } from '../lib/api/pmPlans'
 import { StaffingDigestGateNotice } from '../components/common/StaffingDigestGateNotice'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
@@ -74,6 +75,8 @@ function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested
 export default function SpecialistRequestMockPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromPlanId = searchParams.get('fromPlan')
   const userId = useAuthStore((s) => s.user?.id)
   const { currentProject, setCurrentProject } = useProjectStore()
   const [task, setTask] = useState('')
@@ -124,6 +127,30 @@ export default function SpecialistRequestMockPage() {
       mounted = false
     }
   }, [projectId, userId, setCurrentProject])
+
+  /** Slice 5: approved PM plan → prefill specialist task (approve≠enqueue). */
+  useEffect(() => {
+    let mounted = true
+    if (!fromPlanId || !projectId) return
+    void fetchPmPlan(fromPlanId)
+      .then((found) => {
+        if (!mounted || !found || found.plan.project_id !== projectId) return
+        if (found.plan.status !== 'approved') {
+          setError('승인된 PM 계획만 CrewAI 이어가기에 연결할 수 있습니다.')
+          return
+        }
+        setTask(
+          `승인된 PM 계획(${found.plan.id}) 목표: ${found.plan.objective}`.slice(0, 1000),
+        )
+        setCriteria('계획 단계와 수락 기준을 검수·분해 보고서로 정리'.slice(0, 500))
+      })
+      .catch(() => {
+        if (mounted) setError('연결된 PM 계획을 불러오지 못했습니다.')
+      })
+    return () => {
+      mounted = false
+    }
+  }, [fromPlanId, projectId])
 
   useEffect(() => {
     let mounted = true
