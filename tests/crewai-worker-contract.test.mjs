@@ -17,9 +17,10 @@ describe('CrewAI real worker contract', () => {
 
   it('exposes CrewAI enqueue CTA; mock button only under fixtureMode or ALLOW_MOCK_AI_RUN', () => {
     const page = read('src/pages/SpecialistRequestMockPage.tsx')
-    assert.match(page, /allowMockAiRunCta/)
-    assert.match(page, /VITE_ALLOW_MOCK_AI_RUN/)
-    assert.match(page, /\(fixtureMode \|\| allowMockAiRunCta\) && \(/)
+    const path = read('src/lib/aiExecutionPath.ts')
+    assert.match(page, /mockAiRunAllowed/)
+    assert.match(path, /VITE_ALLOW_MOCK_AI_RUN/)
+    assert.match(page, /mockAiRunAllowed && \(/)
     assert.match(page, /data-testid="mock-worker-run"/)
     assert.match(page, /data-testid="crewai-worker-enqueue"/)
     assert.match(page, /enqueueForCrewAiWorker/)

@@ -1,9 +1,13 @@
-/** F-301 mock: no persistence, model execution, payment, or data transfer. */
+/**
+ * Catalog card for requirements_auditor_v1.
+ * Hire/request UI still uses “Mock*” module names for history; execution default is CrewAI (PR-C).
+ * process_mock_ai_run remains E2E-only — not advertised as product capability.
+ */
 export const MOCK_SPECIALIST = {
   id: 'requirements_auditor_v1',
   title: '요구사항 검수 전문가',
   description: '기획 문서의 누락·불일치·검증 기준을 검토하는 역할입니다.',
-  capability: '요청 초안 작성만 가능 (현재 AI 실행 불가)',
+  capability: 'CrewAI 실실행 큐 · Liner 크레딧(무과금 Gate C) · Mock은 E2E 전용',
   tools: [] as string[],
 } as const
 

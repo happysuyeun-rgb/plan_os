@@ -43,19 +43,26 @@ Never put Liner keys in `VITE_*` or commit `.env`.
 
 ```powershell
 uv run planos-crewai-worker roles
+uv run planos-crewai-worker skills
+uv run planos-crewai-worker tools
+uv run planos-crewai-worker skill-contract --slug requirements_auditor_v1
 uv run planos-crewai-worker smoke-llm
 uv run planos-crewai-worker audit-local
 uv run planos-crewai-worker research-local --target "반려동물 예약 경쟁시장" --region KR
 uv run planos-crewai-worker poll --limit 3
+uv run pytest
 ```
 
 Without `LINER_API_KEY`, commands run in **dry-run** (no live LLM; report marks `dryRun: true`).
 
-## Roles (MetaGPT-mapped)
+## Roles / Skills / Tools (PR-B)
 
-See `src/planos_crewai/roles.py`. Executable crews:
+See `roles.py` (Agent Definitions), `skills.py` (Skill Registry), `tools_registry.py` (Tool allowlist).  
+No extra OSS engines. OpenHands tools stay `deferred_sandbox`.
 
-- `requirements_auditor_v1` — CrewAI + Liner Router
+Executable crews:
+
+- `requirements_auditor_v1` — CrewAI + Liner Router (+ skill↔tool contract in report)
 - `ai_market_researcher_v1` — Liner Search Agent + Web Search (+ optional Deep Research)
 
 ## License note

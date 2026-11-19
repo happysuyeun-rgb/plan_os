@@ -96,7 +96,7 @@ export default function AiStaffCatalogMockPage() {
                     <dd>
                       {role.id === 'ai_market_researcher_v1'
                         ? 'CrewAI + Liner 실경로'
-                        : 'CrewAI 실실행 큐'}
+                        : 'CrewAI 실실행 큐 (기본) · Mock E2E 전용'}
                     </dd>
                   </div>
                   <div>

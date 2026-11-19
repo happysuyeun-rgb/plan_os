@@ -79,6 +79,14 @@ def run_requirements_audit(
     import fails — never silently returns mock:true.
     """
     bundle = build_document_bundle(documents)
+    skill_contract = REQUIREMENTS_AUDITOR.skill_tool_contract()
+    skill_lines = []
+    for skill in skill_contract["skills"]:
+        tool_ids = ", ".join(t["id"] for t in skill["tools"]) or "(none)"
+        skill_lines.append(
+            f"- {skill['id']}: {skill['description']} [tools: {tool_ids}]"
+        )
+    allowed_tool_ids = [t["id"] for t in skill_contract["tools"]]
     pm_brief = (
         f"AI PM ({AI_PM.slug}) handoff for project={project_id} run={run_id}:\n"
         f"Task: {task}\nAcceptance: {acceptance_criteria}\n"
@@ -87,7 +95,10 @@ def run_requirements_audit(
     auditor_prompt = (
         f"{REQUIREMENTS_AUDITOR.role}: {REQUIREMENTS_AUDITOR.goal}\n"
         f"Backstory: {REQUIREMENTS_AUDITOR.backstory}\n"
-        f"Skills: {', '.join(REQUIREMENTS_AUDITOR.skills)}\n\n"
+        f"Skill registry (PR-B):\n" + "\n".join(skill_lines) + "\n"
+        f"Allowed tools only: {', '.join(allowed_tool_ids)}\n"
+        "Do not invent tools outside this allowlist. "
+        "Do not claim paid LLM success when dry-run.\n\n"
         f"{pm_brief}\n\nDocuments:\n{bundle}\n\n{FINDING_SCHEMA_HINT}"
     )
 
@@ -124,6 +135,10 @@ def run_requirements_audit(
                 }
             ],
             "improvements": ["Configure LINER_API_KEY and re-enqueue the run."],
+            "skillToolContract": {
+                "skills": [s["id"] for s in skill_contract["skills"]],
+                "tools": allowed_tool_ids,
+            },
             "generatedAt": datetime.now(timezone.utc).isoformat(),
             "engine": "crewai-worker-dry-run",
         }
@@ -215,6 +230,10 @@ def run_requirements_audit(
         "runId": run_id,
         "task": task,
         "acceptanceCriteria": acceptance_criteria,
+        "skillToolContract": {
+            "skills": [s["id"] for s in skill_contract["skills"]],
+            "tools": allowed_tool_ids,
+        },
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "engine": engine,
         "rawPreview": raw_text[:1500],

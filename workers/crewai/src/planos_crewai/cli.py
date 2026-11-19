@@ -10,7 +10,9 @@ import sys
 from planos_crewai.crews.market_researcher import run_market_research
 from planos_crewai.crews.requirements_auditor import run_requirements_audit
 from planos_crewai.llm import load_llm_config, smoke_chat
-from planos_crewai.roles import ROLE_REGISTRY
+from planos_crewai.roles import ROLE_REGISTRY, get_role
+from planos_crewai.skills import SKILL_REGISTRY
+from planos_crewai.tools_registry import TOOL_REGISTRY
 from planos_crewai.worker import poll_once
 
 
@@ -28,6 +30,17 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("roles", help="Print PlanOS Agent Definition registry")
+    sub.add_parser("skills", help="Print PlanOS Skill Registry (PR-B)")
+    sub.add_parser("tools", help="Print PlanOS Tool Registry (PR-B)")
+    p_contract = sub.add_parser(
+        "skill-contract",
+        help="Print skill↔tool contract for one staff slug (default: requirements_auditor_v1)",
+    )
+    p_contract.add_argument(
+        "--slug",
+        default="requirements_auditor_v1",
+        help="Agent Definition slug",
+    )
 
     p_smoke = sub.add_parser("smoke-llm", help="One cheap Liner/OpenAI call (or dry-run)")
     p_smoke.add_argument(
@@ -79,11 +92,47 @@ def main(argv: list[str] | None = None) -> int:
                 "display_name": d.display_name,
                 "role": d.role,
                 "skills": list(d.skills),
+                "executable_crew": d.executable_crew,
                 "metagpt_refs": list(d.metagpt_refs),
             }
             for slug, d in ROLE_REGISTRY.items()
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "skills":
+        payload = {
+            sid: {
+                "display_name": s.display_name,
+                "description": s.description,
+                "executable_today": s.executable_today,
+                "tools": [t.id for t in s.resolve_tools()],
+                "notes": s.notes,
+            }
+            for sid, s in SKILL_REGISTRY.items()
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "tools":
+        payload = {
+            tid: {
+                "display_name": t.display_name,
+                "description": t.description,
+                "runtime": t.runtime,
+                "default_for_skills": list(t.default_for_skills),
+                "requires_secret": list(t.requires_secret),
+                "paid_risk": t.paid_risk,
+                "notes": t.notes,
+            }
+            for tid, t in TOOL_REGISTRY.items()
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "skill-contract":
+        role = get_role(args.slug)
+        print(json.dumps(role.skill_tool_contract(), ensure_ascii=False, indent=2))
         return 0
 
     if args.cmd == "smoke-llm":

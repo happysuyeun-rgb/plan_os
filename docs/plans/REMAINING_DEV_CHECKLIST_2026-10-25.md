@@ -40,8 +40,8 @@
 - [x] CrewAI 격리 워커 + Liner 경로 (`workers/crewai`, Preview allowlist) — Mock과 분리 CTA
 - [x] `ai_market_researcher_v1` Liner 실경로
 - [x] Gemini 문서 BFF / Preview `api/ai/generate` (무료 크레딧 · Gate C 아님)
-- [ ] `requirements_auditor_v1` Preview E2E를 CrewAI 큐 기본으로 고정 (fixture Mock은 E2E 전용)
-- [ ] Agent Definition / Skill·Tool Registry 보강 (PR-B · **추가 OSS 설치 없이** CrewAI/`roles.py`)
+- [x] `requirements_auditor_v1` Preview E2E를 CrewAI 큐 기본으로 고정 (fixture Mock은 E2E 전용 · PR-C 2026-11-19)
+- [x] Agent Definition / Skill·Tool Registry 보강 (PR-B · **추가 OSS 설치 없이** CrewAI/`roles.py` · 2026-11-19)
 - [ ] OpenHands / OpenClaw — Phase 4 · 샌드박스 · **무과금·승인 전**
 - [ ] FreeLLMAPI — 로컬 실험만 · 운영 필수 금지
 - [ ] Agency Swarm / MS Agent Framework — 기본 제외 (ADR-002로 재평가 시에만)
@@ -120,13 +120,13 @@
 
 ---
 
-## 추천 다음 1개 (작음) · 2026-11-17
+## 추천 다음 1개 (작음) · 2026-11-19
 
-**착수 순서 전체:** [UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17](./UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17.md)  
+**착수 순서 전체:** [UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17](./UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17.md) · [PR-B](./PRB_SKILL_TOOL_REGISTRY_2026-11-19.md)  
 무과금 OSS 매트릭스: [FREE_OPEN_SOURCE_CONNECTIONS](../engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md)
 
-1. **즉시 코드:** Slice 1 — E2E/픽스처를 실 CTA(CrewAI/Gemini)에 맞춤  
-2. 이후 순차: Slice 2 DDL 027 초안(적용 별도 승인) → F-105 LS→서버 → 초대(무료 SMTP만) → AI PM CrewAI 확장 → N29/F-801  
-3. 게이트(C-LLM/027 apply/Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md) — 승인 문장 오기 전 apply/merge 금지  
+1. **방금:** PR-B Skill Registry + PR-C CrewAI 기본 경로  
+2. **다음:** Preview 027/036/037 apply 승인 후 실데이터 스모크 · 또는 auditor live E2E(워커+키)  
+3. 게이트(C-LLM / ops)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
 4. P2 잔여: 인력사무소 풀스펙 · #37/#38 실직무 · OpenHands/OpenClaw는 Phase 4
 

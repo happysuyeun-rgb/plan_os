@@ -17,7 +17,7 @@
 
 | 영역 | 상태 | 근거 |
 |---|---|---|
-| 카탈로그 `requirements_auditor_v1` | **채용 가능(UI)** · 실행은 Mock | `mockSpecialistRequest.ts`, `aiStaffCatalog.ts` |
+| 카탈로그 `requirements_auditor_v1` | **채용 가능(UI)** · 실행 기본 **CrewAI** · Mock=E2E | `aiExecutionPath.ts`, `mockSpecialistRequest.ts` |
 | FUTURE PM/UX/정책/마케터/영업 | 표시만 · 채용 불가 | `available: false` |
 | 계약 F-A (`agentContracts`) | DB RPC · Mock 약관 · `paidLlmAllowed` 차단 | mig 029 |
 | 실행 큐 F-B (`aiRuns`) | `enqueue_ai_run` + **`process_mock_ai_run`** | mig 030 · 유료 LLM 없음 |
@@ -70,8 +70,8 @@
 ## 6. 다음 PR 순서
 
 - **PR-A (본 브랜치):** CI ubuntu-24.04 · Phase 0 문서 · 현황 정합  
-- **PR-B:** Agent Definition / Skill Registry (`requirements_auditor_v1`부터)  
-- **PR-C:** 기획 검수 실실행 경로 (승인된 모델 키 없으면 Mock 경로 유지·실호출 차단)  
+- **PR-B:** Agent Definition / Skill Registry (`requirements_auditor_v1`부터) — **코드 완료 2026-11-19** (`skills.py` / `tools_registry.py`)  
+- **PR-C:** 기획 검수 CrewAI 기본 경로 — **코드 완료 2026-11-19** (Mock=E2E 전용 · 키 없으면 워커 dry-run, process_mock 폴백 없음)  
 - **PR-D:** PM 위임·중간 투입 확장  
 
 main 병합은 각 PR 검증 보고 후 승인.
