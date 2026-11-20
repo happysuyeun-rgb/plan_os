@@ -21,10 +21,10 @@ test('notice points to single AI staffing entry and unpaid mock (E-03)', () => {
   assert.match(notice, /E-06 Mock/)
 })
 
-test('dashboard, project create, and document page surface mid-project AI staffing notice', () => {
+test('dashboard and project create surface mid-project AI staffing notice; document page hides it', () => {
   assert.match(dashboard, /MidProjectAiStaffingNotice/)
   assert.match(createPage, /MidProjectAiStaffingNotice/)
-  assert.match(documentPage, /MidProjectAiStaffingNotice/)
+  assert.doesNotMatch(documentPage, /MidProjectAiStaffingNotice/)
 })
 
 test('global nav exposes AI staff entry', () => {

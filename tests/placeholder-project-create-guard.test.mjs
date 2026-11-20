@@ -39,7 +39,7 @@ test('ProjectCreatePage allows localDev create on placeholder', () => {
   assert.match(page, /isLocalDevAuth/)
   assert.match(page, /assertCanCreateProjectAgainstEnv/)
   const start = page.indexOf('const enterProjectAndGenerate = async')
-  const end = page.indexOf('navigate(`/projects/${projectId}/prd`)')
+  const end = page.indexOf('navigate(`/projects/${projectId}/prd`')
   assert.ok(start > 0 && end > start)
   const runGen = page.slice(start, end)
   assert.match(runGen, /!isLocalDevAuth\(\)/)

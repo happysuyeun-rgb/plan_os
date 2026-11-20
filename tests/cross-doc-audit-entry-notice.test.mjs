@@ -17,9 +17,6 @@ test('cross-doc audit entry requires 2+ doc types and unpaid Mock disclaimer', (
   assert.match(notice, /data-testid="cross-doc-audit-entry-cta"/)
 })
 
-test('document page surfaces cross-doc audit entry and header CTA', () => {
-  assert.match(documentPage, /CrossDocAuditEntryNotice/)
-  assert.match(documentPage, /docTypeCount=\{availableTypes\.length\}/)
-  assert.match(documentPage, /data-testid="cross-doc-audit-header-cta"/)
-  assert.match(documentPage, /availableTypes\.length >= 2/)
+test('document page hides cross-doc audit entry banner (kept as component only)', () => {
+  assert.doesNotMatch(documentPage, /CrossDocAuditEntryNotice/)
 })
