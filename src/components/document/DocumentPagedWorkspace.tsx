@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { DocumentType } from '../../types'
 import {
@@ -62,21 +62,19 @@ export function DocumentPagedWorkspace({
   const sections = useMemo(() => outlineForDoc(docType, content), [docType, content])
   const [activeIndex, setActiveIndex] = useState(0)
   const [pageMode, setPageMode] = useState(true)
-
-  useEffect(() => {
-    setActiveIndex((i) => Math.min(i, Math.max(0, sections.length - 1)))
-  }, [sections.length, docType])
+  const maxIndex = Math.max(0, sections.length - 1)
+  const clampedIndex = Math.min(activeIndex, maxIndex)
 
   const structured = shouldUseStructuredRenderer(docType, content)
   const showPages = !forceFull && !structured && pageMode && sections.length > 0
-  const active = sections[activeIndex] ?? sections[0]
+  const active = sections[clampedIndex] ?? sections[0]
 
   const handlePageChange = (nextBody: string) => {
     if (structured || readOnly) {
       onChange(nextBody)
       return
     }
-    onChange(replaceOutlineSection(content, sections, activeIndex, nextBody))
+    onChange(replaceOutlineSection(content, sections, clampedIndex, nextBody))
   }
 
   return (
@@ -111,7 +109,7 @@ export function DocumentPagedWorkspace({
         {showPages && (
           <DocumentStructurePanel
             sections={sections}
-            activeIndex={activeIndex}
+            activeIndex={clampedIndex}
             onSelect={setActiveIndex}
           />
         )}
@@ -123,8 +121,8 @@ export function DocumentPagedWorkspace({
                 type="button"
                 variant="ghost"
                 className="h-8 text-xs"
-                disabled={activeIndex <= 0}
-                onClick={() => setActiveIndex((i) => Math.max(0, i - 1))}
+                disabled={clampedIndex <= 0}
+                onClick={() => setActiveIndex((i) => Math.max(0, Math.min(i, maxIndex) - 1))}
                 data-testid="document-page-prev"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
@@ -137,8 +135,8 @@ export function DocumentPagedWorkspace({
                 type="button"
                 variant="ghost"
                 className="h-8 text-xs"
-                disabled={activeIndex >= sections.length - 1}
-                onClick={() => setActiveIndex((i) => Math.min(sections.length - 1, i + 1))}
+                disabled={clampedIndex >= maxIndex}
+                onClick={() => setActiveIndex((i) => Math.min(maxIndex, Math.min(i, maxIndex) + 1))}
                 data-testid="document-page-next"
               >
                 다음

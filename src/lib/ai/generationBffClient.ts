@@ -41,7 +41,7 @@ export async function generateDocumentViaBff(
     return data
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('BFF generation timed out')
+      throw new Error('BFF generation timed out', { cause: err })
     }
     throw err
   } finally {
