@@ -10,6 +10,10 @@ export type BffGenerateResult = {
   mode: 'placeholder' | 'gemini' | 'paid'
   providerId: string
   content: string
+  /** Which type-specific prompt pack was assembled (Preview/dev). */
+  promptKind?: 'prd' | 'ia' | 'legacy' | 'pm_plan_draft' | string
+  /** Present when Gemini path failed and placeholder content was returned. */
+  fallbackReason?: string
 }
 
 const BFF_TIMEOUT_MS = 25_000
