@@ -341,6 +341,8 @@ export default function DocumentPage() {
   const pipelineCurrentStep = useGenerationStore((s) => s.currentStep)
   const startPipeline = useGenerationStore((s) => s.startPipeline)
   const consumePendingStart = useGenerationStore((s) => s.consumePendingStart)
+  const hydrateGuidedResume = useGenerationStore((s) => s.hydrateGuidedResume)
+  const resumeAwaitingFromDocs = useGenerationStore((s) => s.resumeAwaitingFromDocs)
   const resetGeneration = useGenerationStore((s) => s.reset)
   const pipelineQueued = Boolean(projectId && pipelinePending?.projectId === projectId)
   const pipelineActive =
@@ -348,6 +350,35 @@ export default function DocumentPage() {
     ((pipelineProjectId === projectId &&
       (pipelineGenerating || pipelineAwaiting || pipelineQueued)) ||
       localPipelineMessageCount > 0)
+
+  // Re-enter project: restore continue CTA so 「진행해줘 / 아직」 come back.
+  useEffect(() => {
+    if (!projectId || isLoading || !currentProject) return
+    if (pipelineGenerating) return
+    if (pipelineAwaiting && pipelineProjectId === projectId) return
+
+    if (hydrateGuidedResume(projectId)) return
+
+    const input = {
+      projectId,
+      title: currentProject.title,
+      description: currentProject.description ?? '',
+      service_type: currentProject.service_type ?? '',
+      targetUser: getTargetUser(currentProject),
+      interviewAnswers: currentProject.interview_answers ?? undefined,
+    }
+    resumeAwaitingFromDocs(projectId, input, availableTypes)
+  }, [
+    projectId,
+    isLoading,
+    currentProject,
+    availableTypes,
+    pipelineGenerating,
+    pipelineAwaiting,
+    pipelineProjectId,
+    hydrateGuidedResume,
+    resumeAwaitingFromDocs,
+  ])
 
   // Start guided PRD generation only after we are inside the project document UI.
   useEffect(() => {
