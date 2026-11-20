@@ -1,13 +1,13 @@
 import type { DocumentType } from '../../types'
 import { generateDocumentViaBff } from '../ai/generationBffClient'
-import { DOCUMENT_TYPE_ORDER } from '../documentTypes'
+import { DOCUMENT_TYPE_ORDER, DOCUMENT_TYPE_UI_ORDER } from '../documentTypes'
 import { buildGeneratedContent } from '../generation/placeholderContent'
 import { fetchDocument, insertDocument, saveDocumentContentCas } from './documents'
 import { updateProject } from './projects'
 
 export type GenerationStep = DocumentType
 
-const PIPELINE_STEPS: GenerationStep[] = [...DOCUMENT_TYPE_ORDER]
+export const PIPELINE_STEPS: GenerationStep[] = [...DOCUMENT_TYPE_ORDER]
 
 export interface GenerationInput {
   projectId: string
@@ -16,6 +16,8 @@ export interface GenerationInput {
   service_type: string
   targetUser: string
   interviewAnswers?: Record<string, string>
+  /** Earlier pipeline drafts for prompt context (e.g. PRD → 기능정의서). */
+  priorDocuments?: Partial<Record<DocumentType, string>>
 }
 
 export interface GenerationProgress {
@@ -24,47 +26,94 @@ export interface GenerationProgress {
   done: boolean
 }
 
-const STREAM_DELAY_MS = 8
+const STREAM_CHUNK_SIZE = 24
+const STREAM_DELAY_MS = 4
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** Hidden from UI tabs — auto-continue without asking the user. */
+export function isAutoContinueStep(step: GenerationStep): boolean {
+  return step === 'screen_list' || step === 'cursor_prompt'
+}
+
+export function isUiVisibleStep(step: GenerationStep): boolean {
+  return (DOCUMENT_TYPE_UI_ORDER as DocumentType[]).includes(step)
+}
+
+export function remainingPipelineSteps(
+  completed: GenerationStep[],
+): GenerationStep[] {
+  const done = new Set(completed)
+  return PIPELINE_STEPS.filter((s) => !done.has(s))
+}
+
+/**
+ * Generate + stream + persist a single document type.
+ * Used by guided sequential pipeline and by the full runGenerationPipeline.
+ */
+export async function* generateOneDocument(
+  input: GenerationInput,
+  step: GenerationStep,
+): AsyncGenerator<GenerationProgress> {
+  // Heartbeat so the project UI is not blank while the BFF/Gemini call runs.
+  yield { step, chunk: '내용을 생성하고 있습니다…\n\n', done: false }
+
+  const vars = {
+    title: input.title,
+    targetUser: input.targetUser,
+    description: input.description,
+    serviceType: input.service_type,
+    interviewAnswers: input.interviewAnswers,
+    priorDocuments: input.priorDocuments,
+    approvedSourceDocuments: input.priorDocuments,
+  }
+  let content: string
+  let usedFallback = false
+  try {
+    const result = await generateDocumentViaBff(step, vars)
+    content = result.content
+  } catch {
+    usedFallback = true
+    // Local fallback if BFF/Gemini is unavailable or timed out.
+    content = buildGeneratedContent(step, {
+      title: input.title,
+      targetUser: input.targetUser,
+    })
+  }
+
+  // Replace the waiting placeholder with real content chunks.
+  yield { step, chunk: '\u0000', done: false }
+  if (usedFallback) {
+    yield {
+      step,
+      chunk: '(모델 응답이 지연되어 로컬 초안으로 작성합니다.)\n\n',
+      done: false,
+    }
+  }
+
+  let accumulated = ''
+  for (let i = 0; i < content.length; i += STREAM_CHUNK_SIZE) {
+    const chunk = content.slice(i, i + STREAM_CHUNK_SIZE)
+    await delay(STREAM_DELAY_MS)
+    accumulated += chunk
+    yield { step, chunk, done: false }
+  }
+
+  if (input.projectId !== 'guest-preview') {
+    await writeGeneratedDocument(input.projectId, step, accumulated)
+  }
+
+  yield { step, chunk: '', done: true }
+}
+
+/** Legacy full-run helper (tests / callers that still want all steps). */
 export async function* runGenerationPipeline(
   input: GenerationInput,
 ): AsyncGenerator<GenerationProgress> {
   for (const step of PIPELINE_STEPS) {
-    const vars = {
-      title: input.title,
-      targetUser: input.targetUser,
-      description: input.description,
-      serviceType: input.service_type,
-      interviewAnswers: input.interviewAnswers,
-    }
-    let content: string
-    try {
-      const result = await generateDocumentViaBff(step, vars)
-      content = result.content
-    } catch {
-      // Local fallback if BFF/Gemini is unavailable — still produce a document.
-      content = buildGeneratedContent(step, {
-        title: input.title,
-        targetUser: input.targetUser,
-      })
-    }
-
-    let accumulated = ''
-    for (const char of content.split('')) {
-      await delay(STREAM_DELAY_MS)
-      accumulated += char
-      yield { step, chunk: char, done: false }
-    }
-
-    if (input.projectId !== 'guest-preview') {
-      await writeGeneratedDocument(input.projectId, step, accumulated)
-    }
-
-    yield { step, chunk: '', done: true }
+    yield* generateOneDocument(input, step)
   }
 
   if (input.projectId !== 'guest-preview') {

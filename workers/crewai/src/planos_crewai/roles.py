@@ -16,6 +16,11 @@ Prompts alone are not "done" — crews in crews/*.py bind these defs to Tasks.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from planos_crewai.skills import SkillDefinition
+    from planos_crewai.tools_registry import ToolDefinition
 
 
 @dataclass(frozen=True)
@@ -29,6 +34,39 @@ class AgentDefinition:
     backstory: str
     skills: tuple[str, ...] = field(default_factory=tuple)
     metagpt_refs: tuple[str, ...] = field(default_factory=tuple)
+    """Crew module that can execute this role today (empty = definition only)."""
+    executable_crew: str = ""
+
+    def resolved_skills(self) -> tuple["SkillDefinition", ...]:
+        from planos_crewai.skills import get_skill
+
+        return tuple(get_skill(sid) for sid in self.skills)
+
+    def allowed_tools(self) -> tuple["ToolDefinition", ...]:
+        seen: dict[str, "ToolDefinition"] = {}
+        for skill in self.resolved_skills():
+            for tool in skill.resolve_tools():
+                seen[tool.id] = tool
+        return tuple(seen.values())
+
+    def skill_tool_contract(self) -> dict:
+        from planos_crewai.skills import skills_payload
+
+        return {
+            "slug": self.slug,
+            "executable_crew": self.executable_crew,
+            "skills": skills_payload(self.skills),
+            "tools": [
+                {
+                    "id": t.id,
+                    "display_name": t.display_name,
+                    "runtime": t.runtime,
+                    "paid_risk": t.paid_risk,
+                    "requires_secret": list(t.requires_secret),
+                }
+                for t in self.allowed_tools()
+            ],
+        }
 
 
 AI_PM = AgentDefinition(
@@ -55,6 +93,7 @@ AI_PM = AgentDefinition(
         "metagpt/roles/project_manager.py",
         "metagpt/actions/project_management.py",
     ),
+    executable_crew="crews.requirements_auditor (PM handoff agent only)",
 )
 
 SERVICE_PLANNER = AgentDefinition(
@@ -71,6 +110,7 @@ SERVICE_PLANNER = AgentDefinition(
         "metagpt/roles/product_manager.py",
         "metagpt/actions/write_prd.py",
     ),
+    executable_crew="",
 )
 
 REQUIREMENTS_AUDITOR = AgentDefinition(
@@ -95,6 +135,7 @@ REQUIREMENTS_AUDITOR = AgentDefinition(
         "metagpt/roles/qa_engineer.py",
         "metagpt/actions/write_test.py",
     ),
+    executable_crew="crews.requirements_auditor",
 )
 
 UX_AUDITOR = AgentDefinition(
@@ -105,6 +146,7 @@ UX_AUDITOR = AgentDefinition(
     backstory="You extend MetaGPT QA review toward interaction and visual contract checks.",
     skills=("flow_coverage", "state_matrix", "a11y_risks"),
     metagpt_refs=("metagpt/roles/qa_engineer.py",),
+    executable_crew="",
 )
 
 DEVELOPER = AgentDefinition(
@@ -122,6 +164,7 @@ DEVELOPER = AgentDefinition(
         "metagpt/actions/write_code.py",
         "metagpt/actions/run_code.py",
     ),
+    executable_crew="",
 )
 
 QA_ENGINEER = AgentDefinition(
@@ -136,6 +179,7 @@ QA_ENGINEER = AgentDefinition(
         "metagpt/actions/write_test.py",
         "metagpt/actions/run_code.py",
     ),
+    executable_crew="",
 )
 
 MARKET_RESEARCHER = AgentDefinition(
@@ -163,6 +207,7 @@ MARKET_RESEARCHER = AgentDefinition(
         "metagpt/roles/product_manager.py",
         "metagpt/actions/write_prd.py",
     ),
+    executable_crew="crews.market_researcher",
 )
 
 ROLE_REGISTRY: dict[str, AgentDefinition] = {
@@ -184,3 +229,19 @@ def get_role(slug: str) -> AgentDefinition:
         return ROLE_REGISTRY[slug]
     except KeyError as exc:
         raise KeyError(f"Unknown PlanOS agent slug: {slug}") from exc
+
+
+def validate_role_registry() -> None:
+    """Fail fast if any role skill is missing from SKILL_REGISTRY."""
+    from planos_crewai.skills import SKILL_REGISTRY
+
+    for slug, role in ROLE_REGISTRY.items():
+        missing = [sid for sid in role.skills if sid not in SKILL_REGISTRY]
+        if missing:
+            raise KeyError(f"Role {slug} has unregistered skills: {missing}")
+        # Force tool resolution (raises on bad tool ids)
+        for skill in role.resolved_skills():
+            skill.resolve_tools()
+
+
+validate_role_registry()

@@ -10,7 +10,7 @@ export const DOCUMENT_TYPE_ORDER: DocumentType[] = [
   'cursor_prompt',
 ]
 
-/** UI 탭·카드 배지에 표시하는 타입 (화면목록 숨김) */
+/** UI 탭·카드 배지에 표시하는 타입 (화면목록·Cursor 프롬프트 숨김) */
 export const DOCUMENT_TYPE_UI_ORDER: DocumentType[] = DOCUMENT_TYPE_ORDER.filter(
-  (type) => type !== 'screen_list',
+  (type) => type !== 'screen_list' && type !== 'cursor_prompt',
 )

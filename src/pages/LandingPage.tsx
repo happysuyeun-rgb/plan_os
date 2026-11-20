@@ -37,12 +37,22 @@ export default function LandingPage() {
     generatedResults,
     isGenerating,
     error: generationError,
+    awaitingUserContinue,
+    nextStep,
+    phase: pipelinePhase,
     startPipeline,
+    continuePipeline,
+    pausePipeline,
     cancelGeneration,
     reset: resetGeneration,
   } = useGenerationStore()
 
   const { answers, reset: resetInterview } = useInterviewStore()
+
+  const persistGuestResults = () => {
+    const { generatedResults: results } = useGenerationStore.getState()
+    sessionStorage.setItem('planos_guest_result', JSON.stringify(results))
+  }
 
   const startGenerating = async () => {
     setPhase('generating')
@@ -60,8 +70,8 @@ export default function LandingPage() {
       interviewAnswers: answers,
     })
 
-    const { generatedResults: results, error } = useGenerationStore.getState()
-    sessionStorage.setItem('planos_guest_result', JSON.stringify(results))
+    persistGuestResults()
+    const { error } = useGenerationStore.getState()
 
     if (result.completedCount === 0) {
       showToast('error', error ?? '생성에 실패했습니다. 다시 시도해주세요.')
@@ -74,6 +84,26 @@ export default function LandingPage() {
       setPhase('input')
       return
     }
+
+    // Stay on generating UI while awaiting next-doc confirm; preview when done/paused.
+    if (result.awaitingContinue || result.phase === 'awaiting') {
+      setPhase('generating')
+      return
+    }
+    setPhase('preview')
+  }
+
+  const handleGuestContinue = async () => {
+    const result = await continuePipeline()
+    persistGuestResults()
+    if (result.phase === 'done' || result.phase === 'paused') {
+      setPhase('preview')
+    }
+  }
+
+  const handleGuestPause = () => {
+    pausePipeline()
+    persistGuestResults()
     setPhase('preview')
   }
 
@@ -153,6 +183,10 @@ export default function LandingPage() {
             isGenerating={isGenerating}
             error={generationError}
             onCancel={cancelGeneration}
+            awaitingContinue={awaitingUserContinue || pipelinePhase === 'awaiting'}
+            nextStep={nextStep}
+            onContinue={() => void handleGuestContinue()}
+            onPause={handleGuestPause}
           />
         </main>
       )}
@@ -161,8 +195,18 @@ export default function LandingPage() {
         <main className="mx-auto max-w-3xl px-6 pb-16 pt-10">
           <h2 className="landing-display text-xl font-semibold text-gray-900">결과 미리보기</h2>
           <p className="mt-1 text-sm text-gray-500">
-            5개 산출물 전체가 펼쳐져 있습니다. 저장 및 편집은 로그인 후 가능합니다.
+            지금까지 만든 산출물입니다. 저장 및 편집은 로그인 후 가능합니다.
+            {awaitingUserContinue && nextStep
+              ? ` 「진행해줘」로 ${DOCUMENT_TYPE_LABELS[nextStep]}을(를) 이어서 만들 수 있습니다.`
+              : ''}
           </p>
+          {awaitingUserContinue && nextStep && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" onClick={() => { setPhase('generating'); void handleGuestContinue() }}>
+                {DOCUMENT_TYPE_LABELS[nextStep]} 이어서 작성
+              </Button>
+            </div>
+          )}
 
           <div className="mt-6 space-y-4">
             {PREVIEW_DOC_TYPES.map((type) => (

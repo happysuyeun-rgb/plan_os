@@ -13,6 +13,8 @@ import { useDocumentStore } from './documentStore'
 
 interface ChatState {
   messages: ChatMessage[]
+  /** Pipeline narration (not persisted / not CAS). Keyed by projectId. */
+  localMessagesByProject: Record<string, ChatMessage[]>
   input: string
   // Keep unsent chat drafts scoped to their project/document identity.
   inputByContext: Record<string, string>
@@ -22,12 +24,51 @@ interface ChatState {
 
   fetchMessages: (projectId: string, documentId?: string) => Promise<void>
   sendMessage: (projectId: string, documentId: string) => Promise<string | null>
+  appendLocalAssistantMessage: (projectId: string, content: string) => void
+  appendLocalUserMessage: (projectId: string, content: string) => void
+  clearLocalMessages: (projectId: string) => void
   setInput: (input: string) => void
   clearInput: () => void
   addAttachment: (file: File) => string | null
   removeAttachment: (id: string) => void
   clearAttachments: () => void
   reset: () => void
+}
+
+const LOCAL_CHAT_KEY = 'planos_local_chat_v1'
+
+function loadLocalMessages(): Record<string, ChatMessage[]> {
+  try {
+    const raw = sessionStorage.getItem(LOCAL_CHAT_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, ChatMessage[]>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function persistLocalMessages(map: Record<string, ChatMessage[]>) {
+  try {
+    sessionStorage.setItem(LOCAL_CHAT_KEY, JSON.stringify(map))
+  } catch {
+    // ignore
+  }
+}
+
+function localMessage(
+  projectId: string,
+  role: 'user' | 'assistant',
+  content: string,
+): ChatMessage {
+  return {
+    id: `local-${role}-${crypto.randomUUID()}`,
+    project_id: projectId,
+    document_id: null,
+    role,
+    content,
+    created_at: new Date().toISOString(),
+  }
 }
 
 function clearAllAttachmentPreviews(attachments: PendingChatAttachment[]) {
@@ -42,6 +83,7 @@ let sendSequence = 0
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
+  localMessagesByProject: typeof sessionStorage === 'undefined' ? {} : loadLocalMessages(),
   input: '',
   inputByContext: {},
   pendingAttachments: [],
@@ -52,9 +94,43 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const context = `${projectId}:${documentId ?? ''}`
     // Switching documents must not carry a pending/sent PRD prompt into IA.
     // Keep any unsent draft so returning to the original document can recover it.
+    // Local pipeline narration is kept in localMessagesByProject (not cleared here).
     set((s) => ({ activeContext: context, messages: [], input: s.inputByContext[context] ?? '' }))
     const messages = await apiFetchChatMessages(projectId, documentId)
     if (get().activeContext === context) set({ messages })
+  },
+
+  appendLocalAssistantMessage: (projectId, content) => {
+    const msg = localMessage(projectId, 'assistant', content)
+    set((s) => {
+      const localMessagesByProject = {
+        ...s.localMessagesByProject,
+        [projectId]: [...(s.localMessagesByProject[projectId] ?? []), msg],
+      }
+      persistLocalMessages(localMessagesByProject)
+      return { localMessagesByProject }
+    })
+  },
+
+  appendLocalUserMessage: (projectId, content) => {
+    const msg = localMessage(projectId, 'user', content)
+    set((s) => {
+      const localMessagesByProject = {
+        ...s.localMessagesByProject,
+        [projectId]: [...(s.localMessagesByProject[projectId] ?? []), msg],
+      }
+      persistLocalMessages(localMessagesByProject)
+      return { localMessagesByProject }
+    })
+  },
+
+  clearLocalMessages: (projectId) => {
+    set((s) => {
+      const next = { ...s.localMessagesByProject }
+      delete next[projectId]
+      persistLocalMessages(next)
+      return { localMessagesByProject: next }
+    })
   },
 
   sendMessage: async (projectId, documentId) => {
@@ -145,6 +221,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
   reset: () => {
     sendSequence += 1
     clearAllAttachmentPreviews(get().pendingAttachments)
-    set({ messages: [], input: '', inputByContext: {}, pendingAttachments: [], isStreaming: false, activeContext: null })
+    // Keep localMessagesByProject — guided pipeline narration must survive
+    // DocumentPage remounts when switching doc tabs.
+    set({
+      messages: [],
+      input: '',
+      inputByContext: {},
+      pendingAttachments: [],
+      isStreaming: false,
+      activeContext: null,
+    })
   },
 }))

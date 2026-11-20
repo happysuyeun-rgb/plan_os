@@ -64,7 +64,7 @@
 
 ```text
 지금 유지: PlanOS 큐 + CrewAI + (Gemini|Liner 크레딧)
-    → PR-B Skill Registry (추가 OSS 없이)
+    → PR-B Skill Registry (추가 OSS 없이) ✅ 2026-11-19 `skills.py` / `tools_registry.py`
     → 직무 확장 = CrewAI crew 추가 (새 프레임워크 X)
     → (선택) FreeLLMAPI 로컬 어댑터 실험
     → Phase 4: OpenHands → OpenClaw (샌드박스·승인)

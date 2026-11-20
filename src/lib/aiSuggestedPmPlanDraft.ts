@@ -30,7 +30,7 @@ export function buildAiSuggestedPlanDraft(seed: AiSuggestedPlanSeed): AiSuggeste
     {
       id: crypto.randomUUID(),
       title: '현재 문서·업무 상태 점검',
-      acceptanceCriteria: '관련 PRD/기능명세와 미완 업무 목록을 확인했고, 우선순위 1건을 명시했다.',
+      acceptanceCriteria: '관련 PRD/기능정의서와 미완 업무 목록을 확인했고, 우선순위 1건을 명시했다.',
       dependsOn: null,
     },
     {

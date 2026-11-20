@@ -6,7 +6,6 @@ import { InterviewPanel } from '../components/project/InterviewPanel'
 import { PlanningEntryPathPicker } from '../components/project/PlanningEntryPathPicker'
 import { ProjectForm, type ProjectFormData } from '../components/project/ProjectForm'
 import { StepProgress } from '../components/project/StepProgress'
-import { GenerationStep } from '../components/project/GenerationStep'
 import { Button } from '../components/common/Button'
 import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
 import { useProjectStore } from '../store/projectStore'
@@ -20,12 +19,11 @@ import {
   PLACEHOLDER_PROJECT_CREATE_BLOCKED,
 } from '../lib/localDevAuth'
 import {
-  postCreateDestination,
   withPlanningEntryPath,
   type PlanningEntryPath,
 } from '../lib/planningEntryPath'
 
-type Step = 1 | 2 | 3
+type Step = 1 | 2
 
 export default function ProjectCreatePage() {
   const navigate = useNavigate()
@@ -34,17 +32,7 @@ export default function ProjectCreatePage() {
   const canGenerate = usePlanStore((s) => s.canGenerate)
 
   const { answers, isComplete, setServiceType, reset: resetInterview } = useInterviewStore()
-
-  const {
-    currentStep,
-    completedSteps,
-    streamText,
-    isGenerating,
-    error: generationError,
-    startPipeline,
-    cancelGeneration,
-    reset: resetGeneration,
-  } = useGenerationStore()
+  const queueGuidedPipeline = useGenerationStore((s) => s.queueGuidedPipeline)
 
   const [step, setStep] = useState<Step>(1)
   const [showUpgrade, setShowUpgrade] = useState(false)
@@ -57,6 +45,7 @@ export default function ProjectCreatePage() {
     target_user: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isEntering, setIsEntering] = useState(false)
 
   const validateStep1 = () => {
     const e: Record<string, string> = {}
@@ -75,18 +64,18 @@ export default function ProjectCreatePage() {
     setStep(2)
   }
 
-  const runGeneration = async () => {
+  /** Create project only — PRD generation starts inside DocumentPage. */
+  const enterProjectAndGenerate = async () => {
     if (!canGenerate()) {
       setShowUpgrade(true)
       return
     }
-
-    setStep(3)
+    if (isEntering) return
+    setIsEntering(true)
 
     try {
       let projectId = createdProjectId
       if (!projectId) {
-        // Placeholder → localDevData; remote Supabase only on real URL.
         if (!isLocalDevAuth()) {
           try {
             assertCanCreateProjectAgainstEnv()
@@ -94,7 +83,6 @@ export default function ProjectCreatePage() {
             const message =
               guardErr instanceof Error ? guardErr.message : PLACEHOLDER_PROJECT_CREATE_BLOCKED
             showToast('error', message)
-            setStep(2)
             return
           }
         }
@@ -112,70 +100,32 @@ export default function ProjectCreatePage() {
       }
 
       const path = entryPath ?? 'direct'
-      const result = await startPipeline({
+      const pipelineInput = {
         projectId,
         title: form.title,
         description: form.description,
         service_type: form.service_type,
         targetUser: form.target_user,
         interviewAnswers: withPlanningEntryPath(answers, path),
-      })
-
+      }
+      queueGuidedPipeline(pipelineInput)
       resetInterview()
-
-      if (result.cancelled) {
-        resetGeneration()
-        showToast('info', `${result.completedCount}개 산출물까지 저장되었습니다`)
-        if (result.completedCount > 0) {
-          navigate(postCreateDestination(projectId, path))
-        } else {
-          navigate('/dashboard')
-        }
-        return
-      }
-
-      if (result.completedCount === 0) {
-        const message = useGenerationStore.getState().error ?? '생성에 실패했습니다'
-        showToast('error', message)
-        setStep(2)
-        resetGeneration()
-        return
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 900))
-      resetGeneration()
-      showToast(
-        'success',
-        path === 'with_pm'
-          ? '산출물 생성 완료 · PM 계획으로 이동합니다'
-          : '산출물 생성이 완료되었습니다',
-        { animation: 'completion' },
-      )
-      navigate(postCreateDestination(projectId, path))
+      // PRD generation starts only after DocumentPage mounts (not on this create screen).
+      navigate(`/projects/${projectId}/prd`, {
+        replace: true,
+        state: { guidedPipeline: pipelineInput },
+      })
     } catch (error) {
-      const message = error instanceof Error ? error.message : '생성에 실패했습니다'
+      const message = error instanceof Error ? error.message : '프로젝트 생성에 실패했습니다'
       showToast('error', message)
-      setStep(2)
-      resetGeneration()
+    } finally {
+      setIsEntering(false)
     }
-  }
-
-  if (step === 3) {
-    return (
-      <GenerationStep
-        currentStep={currentStep}
-        completedSteps={completedSteps}
-        streamText={streamText}
-        isGenerating={isGenerating}
-        error={generationError}
-        onCancel={cancelGeneration}
-      />
-    )
   }
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <StepProgress currentStep={step} />
+      <StepProgress currentStep={step} totalSteps={2} />
       <MidProjectAiStaffingNotice />
 
       {step === 1 && (
@@ -204,15 +154,20 @@ export default function ProjectCreatePage() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <InterviewPanel onComplete={runGeneration} onSkipAll={runGeneration} />
+          <InterviewPanel
+            onComplete={enterProjectAndGenerate}
+            onSkipAll={enterProjectAndGenerate}
+          />
           <div className="flex justify-start">
-            <Button variant="ghost" onClick={() => setStep(1)}>
+            <Button variant="ghost" onClick={() => setStep(1)} disabled={isEntering}>
               이전
             </Button>
           </div>
           {isComplete() && (
             <div className="flex justify-end">
-              <Button onClick={runGeneration}>생성 시작</Button>
+              <Button onClick={enterProjectAndGenerate} isLoading={isEntering}>
+                프로젝트에서 PRD 작성
+              </Button>
             </div>
           )}
         </div>

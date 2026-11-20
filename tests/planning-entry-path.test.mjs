@@ -27,7 +27,8 @@ test('create page requires path picker before step1 next and persists entry', ()
   assert.match(createPage, /PlanningEntryPathPicker/)
   assert.match(createPage, /기획 시작 경로를 선택해주세요/)
   assert.match(createPage, /withPlanningEntryPath/)
-  assert.match(createPage, /postCreateDestination/)
+  assert.match(createPage, /queueGuidedPipeline/)
+  assert.match(createPage, /\/projects\/\$\{projectId\}\/prd/)
 })
 
 test('picker presents both paths and unpaid disclaimer', () => {

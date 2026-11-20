@@ -33,6 +33,11 @@ import {
 } from '../lib/api/agentContracts'
 import { AuditManifestStaleError } from '../lib/api/auditManifests'
 import {
+  CREWAI_DEFAULT_PATH_NOTE,
+  isMockAiRunAllowed,
+  isS3E2eFixtureMode,
+} from '../lib/aiExecutionPath'
+import {
   enqueueAndProcessMockRun,
   enqueueForCrewAiWorker,
   listAiRunEvents,
@@ -61,10 +66,9 @@ function newRequestId(): string {
 }
 
 /** S3 Chromium localDev IDs only — skips live server contract hydrate. */
-const fixtureMode = import.meta.env.DEV && import.meta.env.VITE_S3_E2E_FIXTURE === 'true'
-/** Disposable F-B/F-C local E2E: show process_mock CTA without enabling fixtureMode. */
-const allowMockAiRunCta =
-  import.meta.env.DEV && import.meta.env.VITE_ALLOW_MOCK_AI_RUN === 'true'
+const fixtureMode = isS3E2eFixtureMode()
+/** Mock worker CTA — fixture or VITE_ALLOW_MOCK_AI_RUN; never Preview/prod default (PR-C). */
+const mockAiRunAllowed = isMockAiRunAllowed()
 
 function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested'): string {
   if (decision === 'accepted') return '결과 수락 및 S1 연결'
@@ -248,9 +252,9 @@ export default function SpecialistRequestMockPage() {
     setArtifactEvents(await listAiArtifactEvents(row.id))
   }
 
-  /** CI/fixture or disposable F-B/F-C (VITE_ALLOW_MOCK_AI_RUN) only. */
+  /** E2E / disposable only — never the product default (PR-C). */
   const runMockWorker = async () => {
-    if (!fixtureMode && !allowMockAiRunCta) return
+    if (!mockAiRunAllowed) return
     if (!owner || !serverContract || serverContract.status !== 'active') {
       setError('승인된 서버 계약으로만 Mock worker를 실행할 수 있습니다.')
       return
@@ -505,8 +509,11 @@ export default function SpecialistRequestMockPage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">AI 인력사무소 · F-A 서버 계약</p>
         <h1 className="mt-2 text-3xl font-bold">전문가에게 업무 요청하기</h1>
         <p className="mt-3 text-sm text-gray-600">
-          계약 초안·명시적 동의는 Preview 서버에 저장됩니다. 승인 후 CrewAI 워커 큐에만 넣으며, Mock worker·유료 LLM
-          과금 경로는 없습니다. 프로젝트 진행 중에도 카탈로그에서 추가 요청할 수 있습니다(E-03).
+          계약 초안·명시적 동의는 Preview 서버에 저장됩니다. 승인 후 기본 경로는 CrewAI 워커 큐입니다. Mock worker는
+          E2E·픽스처 전용이며 실 AI 성공으로 표시하지 않습니다. Gate C 유료 LLM은 닫혀 있습니다(E-03).
+        </p>
+        <p className="mt-2 text-xs text-slate-600" data-testid="crewai-default-path-note" role="note">
+          {CREWAI_DEFAULT_PATH_NOTE}
         </p>
       </div>
 
@@ -550,7 +557,9 @@ export default function SpecialistRequestMockPage() {
             <p className="text-xs font-semibold text-indigo-700">선택된 전문가 · requirements_auditor_v1</p>
             <h2 className="mt-2 text-xl font-semibold">{MOCK_SPECIALIST.title}</h2>
             <p className="mt-2 text-sm">{MOCK_SPECIALIST.description}</p>
-            <p className="mt-2 text-sm font-medium text-indigo-900">CrewAI 실실행 큐 · 유료 LLM 과금 없음</p>
+            <p className="mt-2 text-sm font-medium text-indigo-900">
+              {MOCK_SPECIALIST.capability}
+            </p>
             <p className="mt-2 text-xs text-gray-600">
               약관 버전: {AGENT_CONTRACT_TERMS_VERSION} · 예산 상한: {MOCK_BUDGET_CAP_MINOR} (KRW minor, 결제 아님)
             </p>
@@ -623,17 +632,6 @@ export default function SpecialistRequestMockPage() {
               )}
               {serverContract.status === 'active' && (
                 <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
-                  {(fixtureMode || allowMockAiRunCta) && (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void runMockWorker()}
-                      className="rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
-                      data-testid="mock-worker-run"
-                    >
-                      Mock worker 서버 실행 (E2E)
-                    </button>
-                  )}
                   <button
                     type="button"
                     disabled={busy}
@@ -641,8 +639,19 @@ export default function SpecialistRequestMockPage() {
                     className="rounded-md bg-emerald-800 px-4 py-2 font-semibold text-white disabled:opacity-50"
                     data-testid="crewai-worker-enqueue"
                   >
-                    CrewAI 실실행 큐에 넣기
+                    CrewAI 실실행 큐에 넣기 (기본)
                   </button>
+                  {mockAiRunAllowed && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void runMockWorker()}
+                      className="rounded-md border border-indigo-400 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-900 disabled:opacity-50"
+                      data-testid="mock-worker-run"
+                    >
+                      Mock worker (E2E 전용 · 실 AI 아님)
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}
@@ -746,7 +755,8 @@ export default function SpecialistRequestMockPage() {
                 )}
                 {serverRun.status === 'queued' && (
                   <p className="text-sm text-slate-700" data-testid="crewai-queue-hint" role="note">
-                    큐에 대기 중입니다. 로컬 CrewAI 워커가 claim·완료하면 상태가 갱신됩니다.
+                    큐에 대기 중입니다. Preview/로컬에서 `planos-crewai-worker poll`(allowlist)이 claim·완료하면
+                    「실행·보고서 상태 새로고침」으로 확인하세요. process_mock_ai_run으로 바꾸지 않습니다.
                   </p>
                 )}
               </div>

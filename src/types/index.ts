@@ -64,7 +64,7 @@ export const SERVICE_TYPES: ServiceType[] = ['앱', '웹', '커머스', 'SaaS', 
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   prd: 'PRD',
-  ia: '기능명세서',
+  ia: '기능정의서',
   screen_list: '화면목록',
   policy: '정책서',
   wireframe: '화면설계서',
