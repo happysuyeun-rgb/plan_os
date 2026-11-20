@@ -46,6 +46,27 @@ export function nextAskStep(completed: GenerationStep[]): GenerationStep | null 
   return null
 }
 
+/**
+ * Prefer live project docs when present; otherwise fall back to the snapshot.
+ * Always recompute next via nextAskStep — never trust a stored nextStep that
+ * could skip 기능정의서(ia) after PRD (stale sessionStorage / cross-project race).
+ */
+export function reconcileGuidedProgress(
+  snapCompleted: GenerationStep[] | undefined,
+  existingDocTypes: DocumentType[] | undefined,
+): { completedSteps: GenerationStep[]; nextStep: GenerationStep | null } {
+  const fromDocs =
+    existingDocTypes && existingDocTypes.length > 0
+      ? completedStepsFromDocTypes(existingDocTypes)
+      : []
+  const completedSteps =
+    fromDocs.length > 0 ? fromDocs : [...(snapCompleted ?? [])]
+  return {
+    completedSteps,
+    nextStep: nextAskStep(completedSteps),
+  }
+}
+
 export function saveGuidedPipelineResume(snapshot: GuidedPipelineResumeSnapshot): void {
   const map = readAll()
   map[snapshot.projectId] = snapshot

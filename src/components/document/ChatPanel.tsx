@@ -1,8 +1,7 @@
 import { useRef, type ChangeEvent } from 'react'
-import { Paperclip, Send, X } from 'lucide-react'
+import { Loader2, Paperclip, Send, X } from 'lucide-react'
 import type { DocumentType } from '../../types'
 import { DOCUMENT_TYPE_LABELS } from '../../types'
-import { Button } from '../common/Button'
 import { EditableChatTitle } from './EditableChatTitle'
 import { RelatedDocsNotice } from './RelatedDocsNotice'
 import { parseContinueIntent } from '../../lib/generationContinueIntent'
@@ -178,18 +177,17 @@ export function ChatPanel({
         ))}
       </div>
 
-      <div className="border-t border-gray-100 p-3">
-        {!awaitingUserContinue && (
+      <div className="border-t border-slate-200 bg-slate-50/80 p-3">
+        {!showContinueCta && (
           <div className="mb-2">
             <RelatedDocsNotice docType={docType} />
           </div>
         )}
 
         {showContinueCta && nextStep && (
-          <div className="mb-2 flex flex-wrap gap-2" data-testid="pipeline-continue-cta">
-            <Button
+          <div className="mb-3 grid grid-cols-2 gap-2" data-testid="pipeline-continue-cta">
+            <button
               type="button"
-              className="text-xs"
               onClick={() => {
                 useChatStore
                   .getState()
@@ -200,21 +198,27 @@ export function ChatPanel({
                 void continuePipeline()
               }}
               disabled={pipelineBusy}
+              className={cn(
+                'inline-flex h-9 items-center justify-center rounded-lg bg-brand-600 px-2 text-xs font-semibold text-white transition-colors',
+                'hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300',
+              )}
             >
-              {DOCUMENT_TYPE_LABELS[nextStep]} 작성해줘
-            </Button>
-            <Button
+              {DOCUMENT_TYPE_LABELS[nextStep]} 작성
+            </button>
+            <button
               type="button"
-              variant="ghost"
-              className="text-xs"
               onClick={() => {
                 useChatStore.getState().appendLocalUserMessage(projectId, '아직')
                 pausePipeline()
               }}
               disabled={pipelineBusy}
+              className={cn(
+                'inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 transition-colors',
+                'hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50',
+              )}
             >
               아직
-            </Button>
+            </button>
           </div>
         )}
 
@@ -223,16 +227,16 @@ export function ChatPanel({
             {pendingAttachments.map((att) => (
               <span
                 key={att.id}
-                className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 py-0.5 pl-2 pr-1 text-xs text-gray-700"
+                className="inline-flex max-w-full items-center gap-1 rounded-md border border-slate-200 bg-white py-1 pl-2 pr-1 text-xs text-slate-700"
               >
                 <span className="truncate">{att.file.name}</span>
                 <button
                   type="button"
                   onClick={() => removeAttachment(att.id)}
-                  className="rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                   aria-label={`${att.file.name} 제거`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3.5 w-3.5" strokeWidth={2} />
                 </button>
               </span>
             ))}
@@ -248,19 +252,23 @@ export function ChatPanel({
           onChange={handleFileChange}
         />
 
-        <div className="flex items-end gap-1.5">
+        <div className="flex items-end gap-2">
           <button
             type="button"
             title="파일 첨부"
+            aria-label="파일 첨부"
             disabled={disabled || isStreaming || guidedActive}
             onClick={() => fileInputRef.current?.click()}
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors',
-              !disabled && !isStreaming && !guidedActive && 'hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700',
-              (disabled || isStreaming || guidedActive) && 'cursor-not-allowed opacity-50',
+              'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-colors',
+              !disabled &&
+                !isStreaming &&
+                !guidedActive &&
+                'hover:border-slate-400 hover:bg-white hover:text-slate-900',
+              (disabled || isStreaming || guidedActive) && 'cursor-not-allowed opacity-40',
             )}
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-4 w-4" strokeWidth={2} />
           </button>
           <textarea
             value={input}
@@ -275,19 +283,34 @@ export function ChatPanel({
             rows={2}
             disabled={(!guidedReplyAllowed && disabled) || isStreaming || pipelineBusy}
             placeholder={placeholder}
-            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            className={cn(
+              'min-h-10 flex-1 resize-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm leading-5 text-slate-900 outline-none',
+              'placeholder:text-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500',
+              'disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500',
+            )}
             data-testid="pipeline-chat-input"
           />
-          <Button
-            onClick={handleSend}
-            isLoading={isStreaming}
-            disabled={!canSend}
-            className="h-9 w-9 shrink-0 px-0"
+          <button
+            type="button"
+            title="전송"
+            aria-label="전송"
+            onClick={() => void handleSend()}
+            disabled={!canSend || isStreaming}
+            className={cn(
+              'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors',
+              canSend && !isStreaming
+                ? 'bg-brand-600 text-white hover:bg-brand-700'
+                : 'cursor-not-allowed bg-slate-200 text-slate-400',
+            )}
           >
-            <Send className="h-4 w-4" />
-          </Button>
+            {isStreaming ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+            ) : (
+              <Send className="h-4 w-4" strokeWidth={2} />
+            )}
+          </button>
         </div>
-        <p className="mt-1 text-right text-[10px] text-gray-400 tabular-nums">
+        <p className="mt-1.5 text-right text-[11px] text-slate-400 tabular-nums">
           {input.length}/1000
         </p>
       </div>

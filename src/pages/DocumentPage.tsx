@@ -352,12 +352,12 @@ export default function DocumentPage() {
       localPipelineMessageCount > 0)
 
   // Re-enter project: restore continue CTA so 「진행해줘 / 아직」 come back.
+  // Also re-reconcile nextStep against live docs (stale snap must not skip ia → policy).
   useEffect(() => {
     if (!projectId || isLoading || !currentProject) return
     if (pipelineGenerating) return
-    if (pipelineAwaiting && pipelineProjectId === projectId) return
 
-    if (hydrateGuidedResume(projectId)) return
+    if (hydrateGuidedResume(projectId, availableTypes)) return
 
     const input = {
       projectId,
@@ -374,8 +374,6 @@ export default function DocumentPage() {
     currentProject,
     availableTypes,
     pipelineGenerating,
-    pipelineAwaiting,
-    pipelineProjectId,
     hydrateGuidedResume,
     resumeAwaitingFromDocs,
   ])

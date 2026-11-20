@@ -146,6 +146,7 @@ async function regenerateWithRevision(
 }
 
 let fetchSequence = 0
+let lastFetchedProjectId: string | null = null
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   documents: {},
@@ -159,7 +160,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   fetchDocuments: async (projectId) => {
     const sequence = ++fetchSequence
-    set({ isLoading: true })
+    const projectChanged = lastFetchedProjectId !== projectId
+    lastFetchedProjectId = projectId
+    // Drop previous project's docs immediately so resume/CTA cannot infer
+    // completed steps (e.g. skip 기능정의서 → 정책서) from a stale map.
+    // Same-project refetch keeps the map to avoid tab flicker mid-pipeline.
+    set(
+      projectChanged
+        ? { isLoading: true, documents: {}, content: '', recoveryConflicts: {} }
+        : { isLoading: true },
+    )
     try {
       const docs = await apiFetchDocuments(projectId)
       if (sequence !== fetchSequence) return // ignore an older project's response

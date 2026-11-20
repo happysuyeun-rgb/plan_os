@@ -21,9 +21,9 @@ import {
 } from '../lib/guidedPipelineHandoff'
 import {
   clearGuidedPipelineResume,
-  completedStepsFromDocTypes,
   nextAskStep,
   peekGuidedPipelineResume,
+  reconcileGuidedProgress,
   saveGuidedPipelineResume,
 } from '../lib/guidedPipelineResume'
 import { useAuthStore } from './authStore'
@@ -67,7 +67,10 @@ interface GenerationState {
   continuePipeline: () => Promise<PipelineResult>
   pausePipeline: () => void
   /** Re-show continue CTA after leaving/re-entering the project document. */
-  hydrateGuidedResume: (projectId: string) => boolean
+  hydrateGuidedResume: (
+    projectId: string,
+    existingDocTypes?: DocumentType[],
+  ) => boolean
   /** Infer next step from saved docs when memory/session snapshot is missing. */
   resumeAwaitingFromDocs: (
     projectId: string,
@@ -81,13 +84,16 @@ interface GenerationState {
 function persistAwaitingResume(get: () => GenerationState) {
   const s = get()
   const input = s.pipelineInput
-  if (!input?.projectId || !s.nextStep) return
+  if (!input?.projectId) return
   if (!(s.awaitingUserContinue || s.phase === 'awaiting' || s.phase === 'paused')) return
+  // Always derive next from completedSteps so a stale nextStep cannot skip ia.
+  const next = nextAskStep(s.completedSteps) ?? s.nextStep
+  if (!next) return
   saveGuidedPipelineResume({
     projectId: input.projectId,
     pipelineInput: input,
     completedSteps: s.completedSteps,
-    nextStep: s.nextStep,
+    nextStep: next,
     phase: s.phase === 'paused' ? 'paused' : 'awaiting',
     awaitingUserContinue: true,
     savedAt: new Date().toISOString(),
@@ -584,20 +590,47 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
     persistAwaitingResume(get)
   },
 
-  hydrateGuidedResume: (projectId) => {
+  hydrateGuidedResume: (projectId, existingDocTypes) => {
     const existing = get()
+    // Never let doc-inference overwrite an in-flight generation.
+    if (existing.pipelineInput?.projectId === projectId && existing.isGenerating) {
+      return true
+    }
     if (
       existing.pipelineInput?.projectId === projectId &&
-      (existing.awaitingUserContinue || existing.isGenerating) &&
-      existing.nextStep
+      existing.awaitingUserContinue
     ) {
+      // Correct a stale nextStep (e.g. session said policy while only PRD exists).
+      const { completedSteps, nextStep } = reconcileGuidedProgress(
+        existing.completedSteps,
+        existingDocTypes,
+      )
+      const next = nextStep ?? nextAskStep(existing.completedSteps)
+      if (next && next !== existing.nextStep) {
+        set({
+          completedSteps:
+            existingDocTypes && existingDocTypes.length > 0
+              ? completedSteps
+              : existing.completedSteps,
+          nextStep: next,
+          remainingSteps: remainingPipelineSteps(
+            existingDocTypes && existingDocTypes.length > 0
+              ? completedSteps
+              : existing.completedSteps,
+          ),
+        })
+      }
       persistAwaitingResume(get)
-      return existing.awaitingUserContinue
+      return true
     }
 
     const snap = peekGuidedPipelineResume(projectId)
     if (!snap) return false
-    const next = snap.nextStep ?? nextAskStep(snap.completedSteps)
+    const { completedSteps, nextStep } = reconcileGuidedProgress(
+      snap.completedSteps,
+      existingDocTypes,
+    )
+    const next = nextStep
     if (!next) {
       clearGuidedPipelineResume(projectId)
       return false
@@ -605,12 +638,12 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
 
     set({
       pipelineInput: snap.pipelineInput,
-      completedSteps: snap.completedSteps,
+      completedSteps,
       nextStep: next,
       phase: snap.phase,
       awaitingUserContinue: true,
       isGenerating: false,
-      remainingSteps: remainingPipelineSteps(snap.completedSteps),
+      remainingSteps: remainingPipelineSteps(completedSteps),
       currentStep: null,
       streamText: '',
       error: null,
@@ -624,19 +657,40 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
 
   resumeAwaitingFromDocs: (projectId, input, existingDocTypes) => {
     const existing = get()
+    if (existing.pipelineInput?.projectId === projectId && existing.isGenerating) {
+      return true
+    }
     if (
       existing.pipelineInput?.projectId === projectId &&
-      (existing.awaitingUserContinue || existing.isGenerating) &&
-      existing.nextStep
+      existing.awaitingUserContinue
     ) {
+      const { completedSteps, nextStep } = reconcileGuidedProgress(
+        existing.completedSteps,
+        existingDocTypes,
+      )
+      const next = nextStep ?? nextAskStep(existing.completedSteps)
+      if (next && next !== existing.nextStep) {
+        set({
+          completedSteps:
+            existingDocTypes.length > 0 ? completedSteps : existing.completedSteps,
+          nextStep: next,
+          remainingSteps: remainingPipelineSteps(
+            existingDocTypes.length > 0 ? completedSteps : existing.completedSteps,
+          ),
+        })
+        persistAwaitingResume(get)
+      }
       return true
     }
     if (!hasGuidedPipelineStarted(projectId) && !peekGuidedPipelineResume(projectId)) {
       return false
     }
 
-    const completed = completedStepsFromDocTypes(existingDocTypes)
-    const next = nextAskStep(completed)
+    const { completedSteps, nextStep } = reconcileGuidedProgress(
+      existing.pipelineInput?.projectId === projectId ? existing.completedSteps : undefined,
+      existingDocTypes,
+    )
+    const next = nextStep
     if (!next) {
       clearGuidedPipelineResume(projectId)
       return false
@@ -645,12 +699,12 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
     const pipelineInput = { ...input, projectId }
     set({
       pipelineInput,
-      completedSteps: completed,
+      completedSteps,
       nextStep: next,
       phase: 'awaiting',
       awaitingUserContinue: true,
       isGenerating: false,
-      remainingSteps: remainingPipelineSteps(completed),
+      remainingSteps: remainingPipelineSteps(completedSteps),
       currentStep: null,
       streamText: '',
       error: null,
