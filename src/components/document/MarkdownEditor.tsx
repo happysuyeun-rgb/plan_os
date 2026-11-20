@@ -14,7 +14,7 @@ export function MarkdownEditor({ value, onChange, readOnly }: MarkdownEditorProp
       readOnly={readOnly}
       maxLength={50000}
       showCount
-      className="min-h-[calc(100vh-200px)] font-mono text-sm"
+      className="min-h-[calc(297mm-6rem)] w-full resize-y border-0 bg-transparent p-0 font-mono text-sm shadow-none focus:ring-0"
       placeholder="문서 내용이 여기에 표시됩니다..."
     />
   )

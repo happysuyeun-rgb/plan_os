@@ -7,6 +7,12 @@ export type GenerationVars = {
   description?: string
   serviceType?: string
   interviewAnswers?: Record<string, string>
+  /** Owner-confirmed decisions (free text or bullet list). */
+  approvedDecisions?: string
+  /** Previously approved source documents by type. */
+  approvedSourceDocuments?: Partial<Record<DocumentType, string>>
+  /** Earlier pipeline drafts used for consistency (not necessarily approved). */
+  priorDocuments?: Partial<Record<DocumentType, string>>
 }
 
 /** Per-call options: abort, correlation for retry/history. */

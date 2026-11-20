@@ -1,15 +1,13 @@
 import { useEffect, useCallback, useState, useMemo, useRef } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import type { DocumentType, DocumentVersion, SidebarVersionInfo } from '../types'
-import { DOCUMENT_TYPE_PATHS } from '../types'
+import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPE_PATHS } from '../types'
 import type { MemberRole } from '../types'
 import { ConfirmModal } from '../components/common/ConfirmModal'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { EmptyState } from '../components/common/EmptyState'
-import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
-import { CrossDocAuditEntryNotice } from '../components/common/CrossDocAuditEntryNotice'
 import { Button } from '../components/common/Button'
 import { MemberPanel } from '../components/project/MemberPanel'
 import { InviteMemberModal } from '../components/project/InviteMemberModal'
@@ -21,8 +19,10 @@ import { DocumentLayout } from '../components/document/DocumentLayout'
 import { DocumentLeftPanel } from '../components/document/DocumentLeftPanel'
 import { DocumentToolbar } from '../components/document/DocumentToolbar'
 import { HistoryPanel } from '../components/document/HistoryPanel'
-import { DocumentRenderer } from '../components/document/DocumentRenderer'
+import { DocumentPagedWorkspace } from '../components/document/DocumentPagedWorkspace'
+import { DocumentPaperFrame } from '../components/document/DocumentPaperFrame'
 import { DocumentReviewPane } from '../components/document/DocumentReviewPane'
+import { useDocumentDecisionStore } from '../store/documentDecisionStore'
 import { CommentSidebar } from '../components/document/CommentSidebar'
 import { ChatPanel } from '../components/document/ChatPanel'
 import { DocumentRightPanel } from '../components/document/DocumentRightPanel'
@@ -47,6 +47,9 @@ import { useProjectStore } from '../store/projectStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useVersionStore } from '../store/versionStore'
 import { useChatStore } from '../store/chatStore'
+import { useGenerationStore } from '../store/generationStore'
+import { isUiVisibleStep, type GenerationInput } from '../lib/api/generation'
+import { hasGuidedPipelineStarted } from '../lib/guidedPipelineHandoff'
 import { usePlanStore } from '../store/planStore'
 import { useMemberStore } from '../store/memberStore'
 import { useActivityStore } from '../store/activityStore'
@@ -75,6 +78,8 @@ export default function DocumentPage() {
   const { projectId, docType: docTypePath } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const guidedStartRef = useRef<string | null>(null)
 
   const { currentProject, setCurrentProject, updateProject } = useProjectStore()
   const {
@@ -106,6 +111,11 @@ export default function DocumentPage() {
     reset: resetVersions,
   } = useVersionStore()
   const { messages, fetchMessages, reset: resetChat } = useChatStore()
+  // Use a primitive snapshot — `?? []` returns a new array each time and
+  // triggers "getSnapshot should be cached" infinite re-renders.
+  const localPipelineMessageCount = useChatStore((s) =>
+    projectId ? (s.localMessagesByProject[projectId]?.length ?? 0) : 0,
+  )
   const chatWritingDocumentId = useDocumentStore((state) => state.chatWritingDocumentId)
   const canGenerate = usePlanStore((s) => s.canGenerate)
   const canSaveVersionPlan = usePlanStore((s) => s.canSaveVersion)
@@ -131,9 +141,15 @@ export default function DocumentPage() {
     reset: resetActivities,
   } = useActivityStore()
 
-  const { can, canManageMembers, role } = useProjectPermissions(currentProject, members)
+  const { can, canManageMembers, role, isOwner } = useProjectPermissions(currentProject, members)
   const canEditProjectTitle = can('project.edit_meta')
   const currentUser = useAuthStore((s) => s.user)
+  const docDecisions = useDocumentDecisionStore((s) => s.decisions)
+  const setDocDecision = useDocumentDecisionStore((s) => s.setDecision)
+  const docDecision =
+    projectId && activeDocType
+      ? (docDecisions[`${projectId}:${activeDocType}`] ?? 'pending')
+      : 'pending'
   const restoreProject = useProjectStore((s) => s.restoreProject)
 
   const handleProjectTitleSave = useCallback(
@@ -315,6 +331,126 @@ export default function DocumentPage() {
       void fetchMessages(projectId, activeDocumentId)
     }
   }, [activeDocumentId, projectId, fetchVersions, fetchMessages])
+
+  const pipelineCompletedSteps = useGenerationStore((s) => s.completedSteps)
+  const pipelineProjectId = useGenerationStore((s) => s.pipelineInput?.projectId)
+  const pipelinePending = useGenerationStore((s) => s.pendingStart)
+  const pipelineGenerating = useGenerationStore((s) => s.isGenerating)
+  const pipelineAwaiting = useGenerationStore((s) => s.awaitingUserContinue)
+  const pipelineStreamText = useGenerationStore((s) => s.streamText)
+  const pipelineCurrentStep = useGenerationStore((s) => s.currentStep)
+  const startPipeline = useGenerationStore((s) => s.startPipeline)
+  const consumePendingStart = useGenerationStore((s) => s.consumePendingStart)
+  const resetGeneration = useGenerationStore((s) => s.reset)
+  const pipelineQueued = Boolean(projectId && pipelinePending?.projectId === projectId)
+  const pipelineActive =
+    Boolean(projectId) &&
+    ((pipelineProjectId === projectId &&
+      (pipelineGenerating || pipelineAwaiting || pipelineQueued)) ||
+      localPipelineMessageCount > 0)
+
+  // Start guided PRD generation only after we are inside the project document UI.
+  useEffect(() => {
+    if (!projectId || isLoading) return
+    if (guidedStartRef.current === projectId) return
+    // Tab remounts must not restart — that cleared chat narration.
+    if (hasGuidedPipelineStarted(projectId)) {
+      guidedStartRef.current = projectId
+      return
+    }
+    const gen = useGenerationStore.getState()
+    if (
+      gen.pipelineInput?.projectId === projectId &&
+      (gen.isGenerating ||
+        gen.awaitingUserContinue ||
+        gen.phase === 'generating' ||
+        gen.phase === 'awaiting' ||
+        gen.phase === 'paused' ||
+        gen.completedSteps.length > 0)
+    ) {
+      guidedStartRef.current = projectId
+      return
+    }
+
+    const fromNav = (location.state as { guidedPipeline?: GenerationInput } | null)
+      ?.guidedPipeline
+    const pending =
+      consumePendingStart(projectId) ??
+      (fromNav?.projectId === projectId ? fromNav : null)
+    if (!pending) return
+
+    guidedStartRef.current = projectId
+    // Clear one-shot nav state without remounting (react-router navigate can interrupt).
+    if (fromNav && typeof window !== 'undefined') {
+      window.history.replaceState({}, '', `${location.pathname}${location.search}`)
+    }
+
+    void startPipeline(pending).then((result) => {
+      if (result.cancelled && result.completedCount === 0) {
+        resetGeneration()
+        navigate('/dashboard')
+        return
+      }
+      if (result.completedCount === 0) {
+        const message = useGenerationStore.getState().error ?? '생성에 실패했습니다'
+        showToast('error', message)
+        resetGeneration()
+        return
+      }
+      if (result.awaitingContinue || result.phase === 'awaiting') {
+        showToast('success', 'PRD를 만들었습니다. 채팅에서 다음 문서 진행 여부를 확인해 주세요.', {
+          animation: 'completion',
+        })
+      } else if (result.phase === 'done') {
+        showToast('success', '산출물 생성이 완료되었습니다', { animation: 'completion' })
+      }
+    })
+  }, [
+    projectId,
+    isLoading,
+    location.state,
+    location.pathname,
+    location.search,
+    consumePendingStart,
+    startPipeline,
+    resetGeneration,
+    navigate,
+    showToast,
+  ])
+
+  // After each visible pipeline step, open that document in the project.
+  useEffect(() => {
+    if (!projectId || pipelineProjectId !== projectId) return
+    const last = pipelineCompletedSteps[pipelineCompletedSteps.length - 1]
+    if (!last || !isUiVisibleStep(last)) return
+    const path = DOCUMENT_TYPE_PATHS[last]
+    if (docTypePath === path) {
+      void fetchDocuments(projectId)
+      return
+    }
+    navigate(`/projects/${projectId}/${path}`)
+  }, [
+    pipelineCompletedSteps,
+    pipelineProjectId,
+    projectId,
+    docTypePath,
+    navigate,
+    fetchDocuments,
+  ])
+
+  // Refresh docs when a generation step finishes streaming.
+  useEffect(() => {
+    if (!projectId || pipelineProjectId !== projectId) return
+    if (pipelineGenerating) return
+    if (pipelineCompletedSteps.length === 0) return
+    void fetchDocuments(projectId)
+  }, [
+    pipelineGenerating,
+    pipelineCompletedSteps.length,
+    pipelineProjectId,
+    projectId,
+    fetchDocuments,
+  ])
 
   useEffect(() => {
     if (activeVersionId) {
@@ -630,12 +766,6 @@ export default function DocumentPage() {
 
   return (
     <>
-      {projectId && (
-        <div className="mx-5 mt-3 space-y-3">
-          <MidProjectAiStaffingNotice projectId={projectId} />
-          <CrossDocAuditEntryNotice projectId={projectId} docTypeCount={availableTypes.length} />
-        </div>
-      )}
       {saveStatus === 'conflict' && activeDocumentId && (
         <section role="alert" className="mx-5 my-3 rounded-lg border border-red-400 bg-red-50 p-4 text-sm text-gray-900">
           <h2 className="font-semibold">저장 충돌이 발생했습니다</h2>
@@ -737,25 +867,26 @@ export default function DocumentPage() {
           />
         }
         leftPanel={
-          activeDoc ? (
+          activeDoc || pipelineActive ? (
             <DocumentLeftPanel
               canChat={can('project.view')}
               chatPanel={
                 <ChatPanel
                   projectId={projectId}
-                  documentId={activeDoc.id}
+                  documentId={activeDoc?.id ?? ''}
                   docType={activeDocType}
                   chatTitle={currentProject ? resolveChatTitle(currentProject) : 'AI 채팅'}
-                  canEditTitle={can('chat.send')}
+                  canEditTitle={Boolean(activeDoc) && can('chat.send')}
                   onChatTitleSave={handleChatTitleSave}
-                  onMessageSent={() =>
+                  onMessageSent={() => {
+                    if (!activeDoc) return
                     logActivity({
                       project_id: projectId,
                       document_id: activeDoc.id,
                       action: 'chat',
                     })
-                  }
-                  disabled={editorReadOnly || !can('chat.send')}
+                  }}
+                  disabled={!activeDoc || editorReadOnly || !can('chat.send')}
                 />
               }
             />
@@ -796,7 +927,26 @@ export default function DocumentPage() {
           )
         }
         editor={
-          hasNoDocuments ? (
+          hasNoDocuments && pipelineActive ? (
+            <div className="h-full overflow-y-auto" data-testid="in-project-pipeline-editor">
+              <DocumentPaperFrame>
+                <p className="text-sm font-medium text-slate-800">
+                  {pipelineQueued && !pipelineGenerating
+                    ? '프로젝트에서 PRD 작성을 시작합니다…'
+                    : pipelineGenerating
+                      ? `${pipelineCurrentStep ? DOCUMENT_TYPE_LABELS[pipelineCurrentStep] : '문서'} 작성 중…`
+                      : '다음 문서 진행 여부를 왼쪽 채팅에서 확인해 주세요.'}
+                </p>
+                {pipelineStreamText ? (
+                  <pre className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                    {pipelineStreamText}
+                  </pre>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">왼쪽 채팅에서 진행 상황을 확인하세요.</p>
+                )}
+              </DocumentPaperFrame>
+            </div>
+          ) : hasNoDocuments ? (
             <EmptyState
               title="아직 생성된 산출물이 없습니다"
               action={
@@ -806,31 +956,56 @@ export default function DocumentPage() {
               }
             />
           ) : activeDoc ? (
-            viewMode === 'review' &&
-            canComment &&
-            !(
-              usesStructuredView(activeDocType) &&
-              shouldUseStructuredRenderer(activeDocType, content)
-            ) ? (
-              <DocumentReviewPane
-                content={content}
-                threads={threads}
-                isCommentMode={isCommentMode && can('comment.create')}
-                activeThreadId={activeThreadId}
-                onSelectThread={(id) => {
-                  setActiveThreadId(id)
-                  setCommentsOpen(true)
-                }}
-                onCreateComment={handleCreateComment}
-              />
-            ) : (
-              <DocumentRenderer
-                docType={activeDocType}
-                value={content}
-                onChange={updateContent}
-                readOnly={editorReadOnly || viewMode === 'review'}
-              />
-            )
+            <DocumentPagedWorkspace
+              projectId={projectId}
+              docType={activeDocType}
+              content={content}
+              onChange={updateContent}
+              readOnly={editorReadOnly || viewMode === 'review'}
+              decision={docDecision}
+              canDecide={isOwner}
+              onApprove={() => {
+                if (!projectId) return
+                setDocDecision(projectId, activeDocType, 'approved')
+                showToast('success', `${DOCUMENT_TYPE_LABELS[activeDocType]}을(를) 승인했습니다`)
+              }}
+              onReject={() => {
+                if (!projectId) return
+                setDocDecision(projectId, activeDocType, 'rejected')
+                showToast('info', `${DOCUMENT_TYPE_LABELS[activeDocType]}을(를) 거부했습니다`)
+              }}
+              onResetDecision={() => {
+                if (!projectId) return
+                setDocDecision(projectId, activeDocType, 'pending')
+              }}
+              forceFull={
+                viewMode === 'review' &&
+                canComment &&
+                !(
+                  usesStructuredView(activeDocType) &&
+                  shouldUseStructuredRenderer(activeDocType, content)
+                )
+              }
+            >
+              {viewMode === 'review' &&
+              canComment &&
+              !(
+                usesStructuredView(activeDocType) &&
+                shouldUseStructuredRenderer(activeDocType, content)
+              ) ? (
+                <DocumentReviewPane
+                  content={content}
+                  threads={threads}
+                  isCommentMode={isCommentMode && can('comment.create')}
+                  activeThreadId={activeThreadId}
+                  onSelectThread={(id) => {
+                    setActiveThreadId(id)
+                    setCommentsOpen(true)
+                  }}
+                  onCreateComment={handleCreateComment}
+                />
+              ) : undefined}
+            </DocumentPagedWorkspace>
           ) : (
             <EmptyState title="이 산출물은 아직 생성되지 않았습니다" />
           )

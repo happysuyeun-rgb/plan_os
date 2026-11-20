@@ -2,11 +2,11 @@ import type { DocumentType } from '../../types'
 import { DOCUMENT_TYPE_LABELS } from '../../types'
 
 const RELATED_DOCS: Partial<Record<DocumentType, DocumentType[]>> = {
-  prd: ['ia', 'screen_list', 'policy', 'wireframe', 'cursor_prompt'],
-  ia: ['screen_list', 'policy', 'wireframe', 'cursor_prompt'],
-  screen_list: ['policy', 'wireframe', 'cursor_prompt'],
-  policy: ['wireframe', 'cursor_prompt'],
-  wireframe: ['cursor_prompt'],
+  prd: ['ia', 'screen_list', 'policy', 'wireframe'],
+  ia: ['screen_list', 'policy', 'wireframe'],
+  screen_list: ['policy', 'wireframe'],
+  policy: ['wireframe'],
+  wireframe: [],
 }
 
 interface RelatedDocsNoticeProps {

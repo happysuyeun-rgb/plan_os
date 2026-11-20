@@ -3,7 +3,7 @@ import { serializeScreenList, serializeWireframe } from '../documentContent'
 
 const PLACEHOLDER_CONTENT: Record<DocumentType, string> = {
   prd: `# PRD (자동 생성)\n\n## 개요\n{title} 서비스 기획서입니다.\n\n## 목표 사용자\n{targetUser}\n\n## 핵심 기능\n- 사용자 인증\n- 핵심 서비스 기능\n- 알림`,
-  ia: `# 기능명세서 (자동 생성)\n\n## 1Depth\n- 홈\n- 서비스\n- 마이페이지`,
+  ia: `# 기능정의서 (자동 생성)\n\n## 1. 기능정의서 개요\n{title}의 기능 범위를 정의합니다.\n\n## 2. 전체 기능 구성\n- 홈\n- 서비스\n- 마이페이지`,
   screen_list: serializeScreenList([
     {
       code: 'HOME-001',

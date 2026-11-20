@@ -19,7 +19,7 @@ const STEPS = [
   {
     icon: FileText,
     title: '산출물 생성',
-    description: 'PRD, 기능명세서, 화면목록, 정책서, Cursor 프롬프트가 자동 생성됩니다.',
+    description: 'PRD, 기능정의서, 화면목록, 정책서, Cursor 프롬프트가 자동 생성됩니다.',
   },
 ]
 

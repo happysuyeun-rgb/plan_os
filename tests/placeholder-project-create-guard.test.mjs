@@ -38,8 +38,8 @@ test('projectStore skips remote guard when localDevAuth', () => {
 test('ProjectCreatePage allows localDev create on placeholder', () => {
   assert.match(page, /isLocalDevAuth/)
   assert.match(page, /assertCanCreateProjectAgainstEnv/)
-  const start = page.indexOf('const runGeneration = async')
-  const end = page.indexOf('const result = await startPipeline')
+  const start = page.indexOf('const enterProjectAndGenerate = async')
+  const end = page.indexOf('navigate(`/projects/${projectId}/prd`)')
   assert.ok(start > 0 && end > start)
   const runGen = page.slice(start, end)
   assert.match(runGen, /!isLocalDevAuth\(\)/)
@@ -47,4 +47,6 @@ test('ProjectCreatePage allows localDev create on placeholder', () => {
     runGen.indexOf('createProject({') > 0,
     'createProject still called after local/remote branch',
   )
+  assert.match(runGen, /queueGuidedPipeline/)
+  assert.doesNotMatch(page, /startPipeline/)
 })

@@ -60,7 +60,7 @@ export function DocumentLayout({
         {leftPanel}
         <main className="flex min-w-[400px] flex-1 flex-col overflow-hidden">
           {toolbar}
-          <div className="min-h-0 flex-1 overflow-y-auto p-6">{editor}</div>
+          <div className="min-h-0 flex-1 overflow-hidden bg-slate-100/90">{editor}</div>
         </main>
         {rightPanel}
       </div>

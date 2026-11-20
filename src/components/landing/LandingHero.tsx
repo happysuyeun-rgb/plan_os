@@ -34,7 +34,7 @@ export function LandingHero({ idea, onIdeaChange, onStart, onNeedLogin }: Landin
           아이디어를 기획서로, 기획서를 코드로
         </h1>
         <p className="landing-rise landing-rise-delay-2 mt-4 whitespace-nowrap text-sm leading-relaxed text-gray-500 sm:text-base">
-          한 줄 아이디어로 PRD·기능명세·화면목록·정책서·Cursor 프롬프트를 바로 미리봅니다.
+          한 줄 아이디어로 PRD·기능정의서·화면목록·정책서·Cursor 프롬프트를 바로 미리봅니다.
         </p>
 
         <div className="landing-rise landing-rise-delay-3 mt-6 w-full text-left">
