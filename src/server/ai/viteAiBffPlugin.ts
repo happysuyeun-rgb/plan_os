@@ -21,19 +21,9 @@ export function viteAiBffPlugin(): Plugin {
         req.on('end', () => {
           void (async () => {
             try {
-              const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as {
-                documentType?: string
-                vars?: {
-                  title?: string
-                  targetUser?: string
-                  description?: string
-                  serviceType?: string
-                  interviewAnswers?: Record<string, string>
-                }
-                allowPaidCalls?: boolean
-                attemptId?: string
-                retryIndex?: number
-              }
+              const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as Parameters<
+                typeof handleGenerateHttp
+              >[0]
               const result = await handleGenerateHttp(body, { runtime: 'vite-dev' })
               res.statusCode = result.status
               res.setHeader('Content-Type', 'application/json')

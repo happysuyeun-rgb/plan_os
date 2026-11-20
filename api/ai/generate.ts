@@ -1,9 +1,12 @@
 /**
  * Vercel Preview serverless route: POST /api/ai/generate
- * Self-contained (no relative imports into src/) so Node16 ESM resolution on
- * Vercel does not break the function. Vite-dev continues to use generationHttp.
+ * Uses the same type-specific assemblePrompt as Vite GeminiProvider.
  * Never enables paid LLM calls.
  */
+import { assemblePrompt } from '../../src/lib/generation/prompts/assemblePrompt'
+import type { GenerationVars } from '../../src/lib/ai/GenerationProvider'
+import type { DocumentType } from '../../src/types'
+
 type Req = {
   method?: string
   body?: unknown
@@ -15,17 +18,18 @@ type Res = {
   end(body?: string): void
 }
 
-type Vars = {
-  title?: string
-  targetUser?: string
-  description?: string
-  serviceType?: string
-  interviewAnswers?: Record<string, string>
-}
-
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite'
 
-function placeholderContent(documentType: string, vars: Vars): string {
+const DOC_TYPES = new Set<DocumentType>([
+  'prd',
+  'ia',
+  'screen_list',
+  'policy',
+  'wireframe',
+  'cursor_prompt',
+])
+
+function placeholderContent(documentType: string, vars: GenerationVars): string {
   const title = vars.title ?? '프로젝트'
   const target = vars.targetUser ?? '사용자'
   return [
@@ -42,43 +46,37 @@ function placeholderContent(documentType: string, vars: Vars): string {
   ].join('\n')
 }
 
-function buildPrompt(documentType: string, vars: Vars): string {
-  const purpose = vars.interviewAnswers?.purpose?.trim()
-  if (purpose === 'pm_plan_draft') {
-    return [
-      '당신은 PlanOS의 시니어 PM입니다.',
-      '출력은 한국어 마크다운만. 서론·사과 금지.',
-      '형식 고정:',
-      '## 목표',
-      '(한 단락)',
-      '### 단계 1 제목',
-      '완료 기준: …',
-      '### 단계 2 제목',
-      '완료 기준: …',
-      '### 단계 3 제목',
-      '완료 기준: …',
-      '결제·채용·성과 수치·가짜 KPI를 만들지 마세요.',
-      '',
-      `프로젝트명: ${vars.title}`,
-      `목표 사용자: ${vars.targetUser}`,
-      `서비스 유형: ${vars.serviceType ?? '미정'}`,
-      `서비스 설명: ${vars.description ?? ''}`,
-    ].join('\n')
-  }
-
-  return [
-    '당신은 PlanOS의 시니어 프로덕트 라이터입니다.',
-    `요청 산출물: ${documentType}`,
-    '반드시 한국어 마크다운만 출력하세요. 서론·사과 금지.',
-    `프로젝트명: ${vars.title}`,
-    `목표 사용자: ${vars.targetUser}`,
-    `서비스 유형: ${vars.serviceType ?? '미정'}`,
-    `서비스 설명: ${vars.description ?? ''}`,
-    `첫 제목에는 반드시 "${vars.title}"을(를) 포함하세요.`,
-  ].join('\n')
+function asDocumentType(value: string): DocumentType | null {
+  return DOC_TYPES.has(value as DocumentType) ? (value as DocumentType) : null
 }
 
-async function generateWithGemini(documentType: string, vars: Vars): Promise<string> {
+function parseVars(raw: unknown): GenerationVars | null {
+  if (!raw || typeof raw !== 'object') return null
+  const v = raw as Record<string, unknown>
+  if (typeof v.title !== 'string' || typeof v.targetUser !== 'string') return null
+  return {
+    title: v.title,
+    targetUser: v.targetUser,
+    description: typeof v.description === 'string' ? v.description : undefined,
+    serviceType: typeof v.serviceType === 'string' ? v.serviceType : undefined,
+    interviewAnswers:
+      v.interviewAnswers && typeof v.interviewAnswers === 'object'
+        ? (v.interviewAnswers as Record<string, string>)
+        : undefined,
+    approvedDecisions:
+      typeof v.approvedDecisions === 'string' ? v.approvedDecisions : undefined,
+    approvedSourceDocuments:
+      v.approvedSourceDocuments && typeof v.approvedSourceDocuments === 'object'
+        ? (v.approvedSourceDocuments as GenerationVars['approvedSourceDocuments'])
+        : undefined,
+    priorDocuments:
+      v.priorDocuments && typeof v.priorDocuments === 'object'
+        ? (v.priorDocuments as GenerationVars['priorDocuments'])
+        : undefined,
+  }
+}
+
+async function generateWithGemini(documentType: DocumentType, vars: GenerationVars): Promise<string> {
   const apiKey = (process.env.GEMINI_API_KEY || '').trim()
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY missing')
@@ -87,12 +85,13 @@ async function generateWithGemini(documentType: string, vars: Vars): Promise<str
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent` +
     `?key=${encodeURIComponent(apiKey)}`
+  const prompt = assemblePrompt(documentType, vars)
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(documentType, vars) }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.55, maxOutputTokens: 8192 },
     }),
   })
   const raw = (await res.json()) as {
@@ -121,16 +120,16 @@ export default async function handler(req: Req, res: Res): Promise<void> {
       ? (JSON.parse(raw || '{}') as Record<string, unknown>)
       : ((raw ?? {}) as Record<string, unknown>)
 
-  const documentType = typeof body.documentType === 'string' ? body.documentType : ''
-  const vars =
-    body.vars && typeof body.vars === 'object' ? (body.vars as Vars) : ({} as Vars)
+  const documentTypeRaw = typeof body.documentType === 'string' ? body.documentType : ''
+  const documentType = asDocumentType(documentTypeRaw)
+  const vars = parseVars(body.vars)
   // Gate C closed: Preview API never honors client paid flags.
   const unpaidGuard = { allowPaidCalls: false }
   if (body.allowPaidCalls === true && unpaidGuard.allowPaidCalls === false) {
     // Ignore paid request — Gemini credit path is still non-Gate-C template/BFF only.
   }
 
-  if (!documentType || !vars.title || !vars.targetUser) {
+  if (!documentType || !vars) {
     res.statusCode = 400
     res.setHeader('Content-Type', 'application/json')
     res.setHeader('X-PlanOS-AI-Runtime', 'vercel-preview')

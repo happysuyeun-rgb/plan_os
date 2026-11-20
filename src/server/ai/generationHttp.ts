@@ -15,6 +15,9 @@ export type GenerateHttpBody = {
     description?: string
     serviceType?: string
     interviewAnswers?: Record<string, string>
+    approvedDecisions?: string
+    approvedSourceDocuments?: Record<string, string>
+    priorDocuments?: Record<string, string>
   }
   allowPaidCalls?: boolean
   attemptId?: string
@@ -47,6 +50,9 @@ export async function handleGenerateHttp(
         description: body.vars.description,
         serviceType: body.vars.serviceType,
         interviewAnswers: body.vars.interviewAnswers,
+        approvedDecisions: body.vars.approvedDecisions,
+        approvedSourceDocuments: body.vars.approvedSourceDocuments as never,
+        priorDocuments: body.vars.priorDocuments as never,
       },
       allowPaidCalls: false,
       attemptId: body.attemptId,
