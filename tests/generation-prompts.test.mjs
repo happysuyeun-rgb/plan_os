@@ -35,15 +35,34 @@ describe('generation prompts', () => {
     assert.doesNotMatch(gemini, /function buildPrompt/)
   })
 
-  it('Vercel Preview BFF and Vite HTTP forward assemblePrompt + priorDocuments', () => {
+  it('Vercel Preview BFF uses self-contained type prompts (no src import)', () => {
     const api = read('api/ai/generate.ts')
+    const assemble = read('api/ai/prompts/assembleDocumentPrompt.ts')
+    const registry = read('api/ai/prompts/registry.ts')
     const http = read('src/server/ai/generationHttp.ts')
-    assert.match(api, /assemblePrompt/)
+    assert.match(api, /assembleDocumentPrompt/)
+    assert.doesNotMatch(api, /from ['\"]\.\.\/\.\.\/src\//)
     assert.doesNotMatch(api, /function buildPrompt/)
     assert.match(api, /priorDocuments/)
+    assert.match(api, /promptKind/)
+    assert.match(assemble, /SHARED_VOICE/)
+    assert.match(registry, /prd:\s*\{/)
+    assert.match(registry, /ia:\s*\{/)
     assert.match(http, /priorDocuments/)
     assert.match(http, /approvedSourceDocuments/)
     assert.match(http, /approvedDecisions/)
+  })
+
+  it('api prompt pack stays aligned with src specialized prompts', () => {
+    const srcVoice = read('src/lib/generation/prompts/shared/voice.ts')
+    const apiVoice = read('api/ai/prompts/shared/voice.ts')
+    const srcIa = read('src/lib/generation/prompts/ia/system.ts')
+    const apiIa = read('api/ai/prompts/ia/system.ts')
+    const srcPrd = read('src/lib/generation/prompts/prd/outline.ts')
+    const apiPrd = read('api/ai/prompts/prd/outline.ts')
+    assert.equal(apiVoice, srcVoice)
+    assert.equal(apiIa, srcIa)
+    assert.equal(apiPrd, srcPrd)
   })
 
   it('assemblePrompt wires shared + type + project inputs', () => {

@@ -74,6 +74,13 @@ export async function* generateOneDocument(
   try {
     const result = await generateDocumentViaBff(step, vars)
     content = result.content
+    // Preview may still return HTTP 200 with placeholder if Gemini failed.
+    if (result.mode === 'placeholder') {
+      usedFallback = true
+      if (result.fallbackReason) {
+        content = `(모델 응답 폴백: ${result.fallbackReason})\n\n${content}`
+      }
+    }
   } catch {
     usedFallback = true
     // Local fallback if BFF/Gemini is unavailable or timed out.

@@ -1,11 +1,10 @@
 /**
  * Vercel Preview serverless route: POST /api/ai/generate
- * Uses the same type-specific assemblePrompt as Vite GeminiProvider.
+ * Self-contained under api/ (no src/ imports) — type-specific prompts live in ./prompts.
  * Never enables paid LLM calls.
  */
-import { assemblePrompt } from '../../src/lib/generation/prompts/assemblePrompt'
-import type { GenerationVars } from '../../src/lib/ai/GenerationProvider'
-import type { DocumentType } from '../../src/types'
+import { assembleDocumentPrompt } from './prompts/assembleDocumentPrompt'
+import type { ApiDocumentType, ApiGenerationVars } from './prompts/types'
 
 type Req = {
   method?: string
@@ -20,7 +19,7 @@ type Res = {
 
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite'
 
-const DOC_TYPES = new Set<DocumentType>([
+const DOC_TYPES = new Set<ApiDocumentType>([
   'prd',
   'ia',
   'screen_list',
@@ -29,7 +28,7 @@ const DOC_TYPES = new Set<DocumentType>([
   'cursor_prompt',
 ])
 
-function placeholderContent(documentType: string, vars: GenerationVars): string {
+function placeholderContent(documentType: string, vars: ApiGenerationVars): string {
   const title = vars.title ?? '프로젝트'
   const target = vars.targetUser ?? '사용자'
   return [
@@ -46,11 +45,11 @@ function placeholderContent(documentType: string, vars: GenerationVars): string 
   ].join('\n')
 }
 
-function asDocumentType(value: string): DocumentType | null {
-  return DOC_TYPES.has(value as DocumentType) ? (value as DocumentType) : null
+function asDocumentType(value: string): ApiDocumentType | null {
+  return DOC_TYPES.has(value as ApiDocumentType) ? (value as ApiDocumentType) : null
 }
 
-function parseVars(raw: unknown): GenerationVars | null {
+function parseVars(raw: unknown): ApiGenerationVars | null {
   if (!raw || typeof raw !== 'object') return null
   const v = raw as Record<string, unknown>
   if (typeof v.title !== 'string' || typeof v.targetUser !== 'string') return null
@@ -67,16 +66,19 @@ function parseVars(raw: unknown): GenerationVars | null {
       typeof v.approvedDecisions === 'string' ? v.approvedDecisions : undefined,
     approvedSourceDocuments:
       v.approvedSourceDocuments && typeof v.approvedSourceDocuments === 'object'
-        ? (v.approvedSourceDocuments as GenerationVars['approvedSourceDocuments'])
+        ? (v.approvedSourceDocuments as ApiGenerationVars['approvedSourceDocuments'])
         : undefined,
     priorDocuments:
       v.priorDocuments && typeof v.priorDocuments === 'object'
-        ? (v.priorDocuments as GenerationVars['priorDocuments'])
+        ? (v.priorDocuments as ApiGenerationVars['priorDocuments'])
         : undefined,
   }
 }
 
-async function generateWithGemini(documentType: DocumentType, vars: GenerationVars): Promise<string> {
+async function generateWithGemini(
+  documentType: ApiDocumentType,
+  vars: ApiGenerationVars,
+): Promise<{ content: string; promptKind: string }> {
   const apiKey = (process.env.GEMINI_API_KEY || '').trim()
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY missing')
@@ -85,7 +87,7 @@ async function generateWithGemini(documentType: DocumentType, vars: GenerationVa
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent` +
     `?key=${encodeURIComponent(apiKey)}`
-  const prompt = assemblePrompt(documentType, vars)
+  const { prompt, promptKind } = assembleDocumentPrompt(documentType, vars)
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -103,7 +105,7 @@ async function generateWithGemini(documentType: DocumentType, vars: GenerationVa
   }
   const text = raw.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
   if (!text.trim()) throw new Error('Gemini returned empty content')
-  return text.trim()
+  return { content: text.trim(), promptKind }
 }
 
 export default async function handler(req: Req, res: Res): Promise<void> {
@@ -144,29 +146,39 @@ export default async function handler(req: Req, res: Res): Promise<void> {
 
   let mode: 'gemini' | 'placeholder' = 'placeholder'
   let providerId = 'placeholder'
+  let promptKind = assembleDocumentPrompt(documentType, vars).promptKind
   let content = placeholderContent(documentType, vars)
+  let fallbackReason: string | undefined
 
   try {
     if ((process.env.GEMINI_API_KEY || '').trim()) {
-      content = await generateWithGemini(documentType, vars)
+      const result = await generateWithGemini(documentType, vars)
+      content = result.content
+      promptKind = result.promptKind
       mode = 'gemini'
       providerId = 'gemini'
+    } else {
+      fallbackReason = 'GEMINI_API_KEY missing'
     }
-  } catch {
+  } catch (err) {
     mode = 'placeholder'
     providerId = 'placeholder'
     content = placeholderContent(documentType, vars)
+    fallbackReason = err instanceof Error ? err.message : 'generation failed'
   }
 
   res.statusCode = 200
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('X-PlanOS-AI-Runtime', 'vercel-preview')
+  res.setHeader('X-PlanOS-Prompt-Kind', promptKind)
   res.end(
     JSON.stringify({
       mode,
       providerId,
+      promptKind,
       content,
       runtime: 'vercel-preview',
+      ...(fallbackReason ? { fallbackReason } : {}),
       attemptId: typeof body.attemptId === 'string' ? body.attemptId : crypto.randomUUID(),
     }),
   )

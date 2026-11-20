@@ -66,7 +66,9 @@ export function DocumentPagedWorkspace({
   const clampedIndex = Math.min(activeIndex, maxIndex)
 
   const structured = shouldUseStructuredRenderer(docType, content)
-  const showPages = !forceFull && !structured && pageMode && sections.length > 0
+  // Left structure list stays visible even in "전체 보기" / review — only body paging is optional.
+  const showStructure = !structured && sections.length > 0
+  const showPages = showStructure && !forceFull && pageMode && !children
   const active = sections[clampedIndex] ?? sections[0]
 
   const handlePageChange = (nextBody: string) => {
@@ -75,6 +77,13 @@ export function DocumentPagedWorkspace({
       return
     }
     onChange(replaceOutlineSection(content, sections, clampedIndex, nextBody))
+  }
+
+  const handleSelectSection = (index: number) => {
+    setActiveIndex(index)
+    if (!pageMode && !forceFull) {
+      setPageMode(true)
+    }
   }
 
   return (
@@ -91,26 +100,28 @@ export function DocumentPagedWorkspace({
         <p className="text-[11px] text-slate-500">
           {showPages
             ? '구조 목록에서 페이지를 고르거나 아래 버튼으로 이동하세요'
-            : '전체 문서를 한 번에 보고 있습니다'}
+            : showStructure
+              ? '왼쪽 구조 목록을 선택하면 해당 페이지로 이동합니다'
+              : '전체 문서를 한 번에 보고 있습니다'}
         </p>
-        {!forceFull && (
+        {showStructure && !forceFull && !children && (
           <button
             type="button"
             className="text-[11px] text-slate-600 underline-offset-2 hover:underline"
             onClick={() => setPageMode((v) => !v)}
             data-testid="document-page-mode-toggle"
           >
-            {showPages ? '전체 보기' : '페이지로 보기'}
+            {pageMode ? '전체 보기' : '페이지로 보기'}
           </button>
         )}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {showPages && (
+        {showStructure && (
           <DocumentStructurePanel
             sections={sections}
             activeIndex={clampedIndex}
-            onSelect={setActiveIndex}
+            onSelect={handleSelectSection}
           />
         )}
 

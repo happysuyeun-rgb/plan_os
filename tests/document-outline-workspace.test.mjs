@@ -17,6 +17,13 @@ describe('document outline + decision workspace', () => {
     assert.ok(sections.some((s) => s.title === '범위'))
   })
 
+  it('falls back to ### pages when ## is missing', () => {
+    const md = `# PRD\n\n### 목표\n\nA\n\n### 범위\n\nB\n`
+    const sections = parseDocumentOutline(md)
+    assert.equal(sections.length >= 2, true)
+    assert.ok(sections.some((s) => s.title === '목표'))
+  })
+
   it('replaces a single section without dropping others', () => {
     const md = `## A\n\none\n\n## B\n\ntwo\n`
     const sections = parseDocumentOutline(md)
@@ -35,6 +42,7 @@ describe('document outline + decision workspace', () => {
     assert.match(page, /onApprove/)
     assert.match(workspace, /DocumentStructurePanel/)
     assert.match(workspace, /DocumentDecisionBar/)
+    assert.match(workspace, /showStructure/)
     assert.match(workspace, /document-page-prev/)
     assert.match(structure, /document-structure-panel/)
     assert.match(decision, /document-approve/)

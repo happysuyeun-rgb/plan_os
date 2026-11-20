@@ -41,11 +41,15 @@ export function parseDocumentOutline(markdown: string): OutlineSection[] {
     ]
   }
 
-  // Prefer ## pages when present; otherwise use top-level headings.
-  const hasH2 = headingIndexes.some((h) => h.level === 2)
-  const splits = hasH2
-    ? headingIndexes.filter((h) => h.level === 2)
-    : headingIndexes.filter((h) => h.level === headingIndexes[0].level)
+  // Prefer ## pages; if none, use ### when that yields a navigable list; else top-level.
+  const h2 = headingIndexes.filter((h) => h.level === 2)
+  const h3 = headingIndexes.filter((h) => h.level === 3)
+  const splits =
+    h2.length > 0
+      ? h2
+      : h3.length > 1
+        ? h3
+        : headingIndexes.filter((h) => h.level === headingIndexes[0].level)
 
   const sections: OutlineSection[] = []
   for (let i = 0; i < splits.length; i++) {
