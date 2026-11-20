@@ -35,6 +35,17 @@ describe('generation prompts', () => {
     assert.doesNotMatch(gemini, /function buildPrompt/)
   })
 
+  it('Vercel Preview BFF and Vite HTTP forward assemblePrompt + priorDocuments', () => {
+    const api = read('api/ai/generate.ts')
+    const http = read('src/server/ai/generationHttp.ts')
+    assert.match(api, /assemblePrompt/)
+    assert.doesNotMatch(api, /function buildPrompt/)
+    assert.match(api, /priorDocuments/)
+    assert.match(http, /priorDocuments/)
+    assert.match(http, /approvedSourceDocuments/)
+    assert.match(http, /approvedDecisions/)
+  })
+
   it('assemblePrompt wires shared + type + project inputs', () => {
     const assemble = read('src/lib/generation/prompts/assemblePrompt.ts')
     assert.match(assemble, /SHARED_VOICE/)
