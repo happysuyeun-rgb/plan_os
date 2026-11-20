@@ -53,8 +53,18 @@ export function ChatPanel({
   const pausePipeline = useGenerationStore((s) => s.pausePipeline)
   const pipelineProjectId = useGenerationStore((s) => s.pipelineInput?.projectId)
 
+  const pipelinePhase = useGenerationStore((s) => s.phase)
   const guidedActive =
-    pipelineProjectId === projectId && (awaitingUserContinue || pipelineGenerating)
+    pipelineProjectId === projectId &&
+    (awaitingUserContinue ||
+      pipelineGenerating ||
+      pipelinePhase === 'awaiting' ||
+      pipelinePhase === 'paused')
+  const showContinueCta = Boolean(
+    nextStep &&
+      (awaitingUserContinue || pipelinePhase === 'awaiting' || pipelinePhase === 'paused') &&
+      (!pipelineProjectId || pipelineProjectId === projectId),
+  )
   const localMessages = localMessagesByProject[projectId] ?? []
   const displayMessages = [...localMessages, ...messages]
 
@@ -175,7 +185,7 @@ export function ChatPanel({
           </div>
         )}
 
-        {awaitingUserContinue && nextStep && (
+        {showContinueCta && nextStep && (
           <div className="mb-2 flex flex-wrap gap-2" data-testid="pipeline-continue-cta">
             <Button
               type="button"

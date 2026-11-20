@@ -14,10 +14,18 @@ import { startGenerationRun, finishGenerationRun } from '../lib/api/generationRu
 import { updateProject } from '../lib/api/projects'
 import {
   clearGuidedPipelineHandoff,
+  hasGuidedPipelineStarted,
   markGuidedPipelineStarted,
   saveGuidedPipelineHandoff,
   takeGuidedPipelineHandoff,
 } from '../lib/guidedPipelineHandoff'
+import {
+  clearGuidedPipelineResume,
+  completedStepsFromDocTypes,
+  nextAskStep,
+  peekGuidedPipelineResume,
+  saveGuidedPipelineResume,
+} from '../lib/guidedPipelineResume'
 import { useAuthStore } from './authStore'
 import { useChatStore } from './chatStore'
 
@@ -58,8 +66,43 @@ interface GenerationState {
   startPipeline: (input: GenerationInput) => Promise<PipelineResult>
   continuePipeline: () => Promise<PipelineResult>
   pausePipeline: () => void
+  /** Re-show continue CTA after leaving/re-entering the project document. */
+  hydrateGuidedResume: (projectId: string) => boolean
+  /** Infer next step from saved docs when memory/session snapshot is missing. */
+  resumeAwaitingFromDocs: (
+    projectId: string,
+    input: GenerationInput,
+    existingDocTypes: DocumentType[],
+  ) => boolean
   cancelGeneration: () => void
   reset: () => void
+}
+
+function persistAwaitingResume(get: () => GenerationState) {
+  const s = get()
+  const input = s.pipelineInput
+  if (!input?.projectId || !s.nextStep) return
+  if (!(s.awaitingUserContinue || s.phase === 'awaiting' || s.phase === 'paused')) return
+  saveGuidedPipelineResume({
+    projectId: input.projectId,
+    pipelineInput: input,
+    completedSteps: s.completedSteps,
+    nextStep: s.nextStep,
+    phase: s.phase === 'paused' ? 'paused' : 'awaiting',
+    awaitingUserContinue: true,
+    savedAt: new Date().toISOString(),
+  })
+}
+
+function shouldReAskContinue(projectId: string, next: GenerationStep): boolean {
+  const locals = useChatStore.getState().localMessagesByProject[projectId] ?? []
+  const last = locals[locals.length - 1]
+  if (!last || last.role !== 'assistant') return true
+  const label = DOCUMENT_TYPE_LABELS[next]
+  return !(
+    last.content.includes('이어서 작성할까요') ||
+    last.content.includes(label)
+  )
 }
 
 let abortFlag = false
@@ -189,6 +232,7 @@ async function afterStepComplete(
       currentStep: null,
       streamText: '',
     })
+    persistAwaitingResume(get)
     askContinue(input.projectId, next)
     return {
       cancelled: false,
@@ -199,6 +243,7 @@ async function afterStepComplete(
   }
 
   if (abortFlag) {
+    clearGuidedPipelineResume(input.projectId)
     set({
       phase: 'cancelled',
       isGenerating: false,
@@ -247,6 +292,7 @@ async function afterStepComplete(
     'completed',
     completed,
   )
+  clearGuidedPipelineResume(input.projectId)
   set({
     phase: 'done',
     isGenerating: false,
@@ -535,10 +581,92 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
       // Keep awaiting semantics so "진행해줘" still works via continuePipeline
       awaitingUserContinue: Boolean(get().nextStep),
     })
+    persistAwaitingResume(get)
+  },
+
+  hydrateGuidedResume: (projectId) => {
+    const existing = get()
+    if (
+      existing.pipelineInput?.projectId === projectId &&
+      (existing.awaitingUserContinue || existing.isGenerating) &&
+      existing.nextStep
+    ) {
+      persistAwaitingResume(get)
+      return existing.awaitingUserContinue
+    }
+
+    const snap = peekGuidedPipelineResume(projectId)
+    if (!snap) return false
+    const next = snap.nextStep ?? nextAskStep(snap.completedSteps)
+    if (!next) {
+      clearGuidedPipelineResume(projectId)
+      return false
+    }
+
+    set({
+      pipelineInput: snap.pipelineInput,
+      completedSteps: snap.completedSteps,
+      nextStep: next,
+      phase: snap.phase,
+      awaitingUserContinue: true,
+      isGenerating: false,
+      remainingSteps: remainingPipelineSteps(snap.completedSteps),
+      currentStep: null,
+      streamText: '',
+      error: null,
+    })
+    persistAwaitingResume(get)
+    if (shouldReAskContinue(projectId, next)) {
+      askContinue(projectId, next)
+    }
+    return true
+  },
+
+  resumeAwaitingFromDocs: (projectId, input, existingDocTypes) => {
+    const existing = get()
+    if (
+      existing.pipelineInput?.projectId === projectId &&
+      (existing.awaitingUserContinue || existing.isGenerating) &&
+      existing.nextStep
+    ) {
+      return true
+    }
+    if (!hasGuidedPipelineStarted(projectId) && !peekGuidedPipelineResume(projectId)) {
+      return false
+    }
+
+    const completed = completedStepsFromDocTypes(existingDocTypes)
+    const next = nextAskStep(completed)
+    if (!next) {
+      clearGuidedPipelineResume(projectId)
+      return false
+    }
+
+    const pipelineInput = { ...input, projectId }
+    set({
+      pipelineInput,
+      completedSteps: completed,
+      nextStep: next,
+      phase: 'awaiting',
+      awaitingUserContinue: true,
+      isGenerating: false,
+      remainingSteps: remainingPipelineSteps(completed),
+      currentStep: null,
+      streamText: '',
+      error: null,
+      generatedResults: existing.generatedResults,
+    })
+    persistAwaitingResume(get)
+    if (shouldReAskContinue(projectId, next)) {
+      askContinue(projectId, next)
+    }
+    return true
   },
 
   cancelGeneration: () => {
     abortFlag = true
+    const projectId = get().pipelineInput?.projectId
+    if (projectId) clearGuidedPipelineResume(projectId)
     set({
       isGenerating: false,
       phase: get().completedSteps.length > 0 ? 'cancelled' : 'idle',
@@ -549,6 +677,8 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
   reset: () => {
     abortFlag = false
     runLock = false
+    const projectId = get().pipelineInput?.projectId
+    if (projectId) clearGuidedPipelineResume(projectId)
     set({
       currentStep: null,
       completedSteps: [],
