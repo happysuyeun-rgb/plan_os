@@ -5,6 +5,8 @@
 **관련 런북:** [Gate C-LLM](./PAID_LLM_ENABLE_RUNBOOK_2026-10-25.md) · [Gate A-027](./PREVIEW_027_APPLY_RUNBOOK_2026-10-25.md)  
 **일상 체크리스트:** [REMAINING_DEV_CHECKLIST](./REMAINING_DEV_CHECKLIST_2026-10-25.md)
 
+**재개일:** 2026-11-21 · **승인 요약:** Preview(`fydngfylpzdwvjyuqhdm`)에 027+036+037 스키마 적용 + `planos-preview` env(`VITE_AI_REVIEW_STORE=server`, `VITE_F105_SERVER_ASSIGNEE=true`). **제외:** Gate C 유료 LLM · ops DB · Production 배포. 기록: [PREVIEW_027_036_037_APPLY_2026-11-21](./PREVIEW_027_036_037_APPLY_2026-11-21.md)
+
 이 문서는 “승인 게이트에 묶인 남은 구현”만 모은다.  
 **오늘(2026-11-08) 기준 우선 개발 대상이 아니다.** 승인 문장이 오기 전까지 Mock/로컬 경로로 다른 기능을 이어간다.
 

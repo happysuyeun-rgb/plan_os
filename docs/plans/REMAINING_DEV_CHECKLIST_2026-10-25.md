@@ -102,8 +102,8 @@
 
 ## 3. 맨 마지막 (명시 승인) — **보류(급하지 않음)**
 
-- [ ] Preview 호스티드에 027 적용 (Gate A-027)
-- [ ] Preview E2E 전수
+- [x] Preview 호스티드에 027 적용 (Gate A-027) — 2026-11-21 Preview only · [적용 기록](./PREVIEW_027_036_037_APPLY_2026-11-21.md) · **036/037 동시** · Chromium hire→accept는 NOT RUN
+- [ ] Preview E2E 전수 (로그인 Chromium 잔여)
 - [ ] 운영 009/010≡013/014 **읽기 전용** 확인
 - [ ] Production 배포
 
@@ -120,13 +120,13 @@
 
 ---
 
-## 추천 다음 1개 (작음) · 2026-11-19
+## 추천 다음 1개 (작음) · 2026-11-21
 
 **착수 순서 전체:** [UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17](./UNIMPLEMENTED_KICKOFF_PLAN_2026-11-17.md) · [PR-B](./PRB_SKILL_TOOL_REGISTRY_2026-11-19.md)  
 무과금 OSS 매트릭스: [FREE_OPEN_SOURCE_CONNECTIONS](../engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md)
 
-1. **방금:** PR-B Skill Registry + PR-C CrewAI 기본 경로  
-2. **다음:** Preview 027/036/037 apply 승인 후 실데이터 스모크 · 또는 auditor live E2E(워커+키)  
-3. 게이트(C-LLM / ops)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
+1. **방금:** Preview 027/036/037 apply + `planos-preview` env (`server` / F105) — [기록](./PREVIEW_027_036_037_APPLY_2026-11-21.md)  
+2. **다음:** 로그인 Chromium hire→accept·F-105·AI PM CTA 수동 스모크 · 또는 auditor live E2E(워커+키)  
+3. 게이트(C-LLM / ops / Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
 4. P2 잔여: 인력사무소 풀스펙 · #37/#38 실직무 · OpenHands/OpenClaw는 Phase 4
 
