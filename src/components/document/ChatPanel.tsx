@@ -252,24 +252,14 @@ export function ChatPanel({
           onChange={handleFileChange}
         />
 
-        <div className="flex items-end gap-2">
-          <button
-            type="button"
-            title="파일 첨부"
-            aria-label="파일 첨부"
-            disabled={disabled || isStreaming || guidedActive}
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition-colors',
-              !disabled &&
-                !isStreaming &&
-                !guidedActive &&
-                'hover:border-slate-400 hover:bg-white hover:text-slate-900',
-              (disabled || isStreaming || guidedActive) && 'cursor-not-allowed opacity-40',
-            )}
-          >
-            <Paperclip className="h-4 w-4" strokeWidth={2} />
-          </button>
+        <div
+          className={cn(
+            'rounded-xl border border-slate-300 bg-white shadow-sm transition-colors',
+            'focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500',
+            ((!guidedReplyAllowed && disabled) || isStreaming || pipelineBusy) &&
+              'bg-slate-100',
+          )}
+        >
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -284,35 +274,56 @@ export function ChatPanel({
             disabled={(!guidedReplyAllowed && disabled) || isStreaming || pipelineBusy}
             placeholder={placeholder}
             className={cn(
-              'min-h-10 flex-1 resize-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm leading-5 text-slate-900 outline-none',
-              'placeholder:text-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500',
-              'disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500',
+              'min-h-12 w-full resize-none border-0 bg-transparent px-3 pt-2.5 pb-1 text-sm leading-5 text-slate-900 outline-none',
+              'placeholder:text-slate-400',
+              'disabled:cursor-not-allowed disabled:text-slate-500',
             )}
             data-testid="pipeline-chat-input"
           />
-          <button
-            type="button"
-            title="전송"
-            aria-label="전송"
-            onClick={() => void handleSend()}
-            disabled={!canSend || isStreaming}
-            className={cn(
-              'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors',
-              canSend && !isStreaming
-                ? 'bg-brand-600 text-white hover:bg-brand-700'
-                : 'cursor-not-allowed bg-slate-200 text-slate-400',
-            )}
-          >
-            {isStreaming ? (
-              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
-            ) : (
-              <Send className="h-4 w-4" strokeWidth={2} />
-            )}
-          </button>
+          <div className="flex items-center justify-between gap-2 px-2 pb-2">
+            <button
+              type="button"
+              title="파일 첨부"
+              aria-label="파일 첨부"
+              disabled={disabled || isStreaming || guidedActive}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors',
+                !disabled &&
+                  !isStreaming &&
+                  !guidedActive &&
+                  'hover:bg-slate-100 hover:text-slate-800',
+                (disabled || isStreaming || guidedActive) && 'cursor-not-allowed opacity-40',
+              )}
+            >
+              <Paperclip className="h-4 w-4" strokeWidth={2} />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400 tabular-nums">
+                {input.length}/1000
+              </span>
+              <button
+                type="button"
+                title="전송"
+                aria-label="전송"
+                onClick={() => void handleSend()}
+                disabled={!canSend || isStreaming}
+                className={cn(
+                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                  canSend && !isStreaming
+                    ? 'bg-brand-600 text-white hover:bg-brand-700'
+                    : 'cursor-not-allowed bg-slate-200 text-slate-400',
+                )}
+              >
+                {isStreaming ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
+                ) : (
+                  <Send className="h-3.5 w-3.5" strokeWidth={2} />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        <p className="mt-1.5 text-right text-[11px] text-slate-400 tabular-nums">
-          {input.length}/1000
-        </p>
       </div>
     </aside>
   )
