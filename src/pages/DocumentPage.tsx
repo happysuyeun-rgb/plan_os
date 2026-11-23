@@ -827,12 +827,22 @@ export default function DocumentPage() {
               </Button>
             )}
             {projectId && (
-              <Button
-                className="px-3 py-1.5 text-xs"
-                onClick={() => navigate(`/projects/${projectId}/specialists`)}
-              >
-                AI 직원 채용
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  className="px-3 py-1.5 text-xs"
+                  data-testid="document-research-results"
+                  onClick={() => navigate(`/projects/${projectId}/research`)}
+                >
+                  리서치 결과
+                </Button>
+                <Button
+                  className="px-3 py-1.5 text-xs"
+                  onClick={() => navigate(`/projects/${projectId}/specialists`)}
+                >
+                  AI 직원 채용
+                </Button>
+              </>
             )}
             {can('member.view') && (
               <div className="flex items-center gap-2">

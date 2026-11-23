@@ -21,7 +21,7 @@ export const MARKET_RESEARCH_TERMS_SUMMARY = [
   'Deep Research는 사용자가 심층 조사 선택 시에만',
   '외부 게시·메일 발송·임의 파일 수정 금지',
   '예산 상한은 해커톤 크레딧 소프트 한도(USD $5)',
-  'S2 audit manifest가 최신이어야 계약·실행 가능',
+  '계약 시 프로젝트 문서 스냅샷(manifest)은 자동 확보',
 ] as const
 
 export type ResearchRegion = 'KR' | 'US' | 'GLOBAL'

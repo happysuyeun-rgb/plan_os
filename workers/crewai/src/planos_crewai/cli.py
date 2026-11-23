@@ -50,6 +50,17 @@ def main(argv: list[str] | None = None) -> int:
 
     p_poll = sub.add_parser("poll", help="Claim queued ai_runs and run CrewAI auditor")
     p_poll.add_argument("--limit", type=int, default=3)
+    p_poll.add_argument(
+        "--watch",
+        action="store_true",
+        help="Keep polling until interrupted (local/Preview worker loop)",
+    )
+    p_poll.add_argument(
+        "--interval",
+        type=float,
+        default=8.0,
+        help="Seconds between watch polls (default 8)",
+    )
 
     p_local = sub.add_parser(
         "audit-local",
@@ -142,6 +153,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if out.get("output_text") else 1
 
     if args.cmd == "poll":
+        if args.watch:
+            import time
+
+            logging.getLogger("planos.crewai.worker").info(
+                "watch mode on — interval=%.1fs limit=%s", args.interval, args.limit
+            )
+            while True:
+                results = poll_once(limit=args.limit)
+                if results:
+                    print(json.dumps(results, ensure_ascii=False, indent=2, default=str))
+                time.sleep(max(2.0, float(args.interval)))
         results = poll_once(limit=args.limit)
         print(json.dumps(results, ensure_ascii=False, indent=2, default=str))
         return 0

@@ -24,6 +24,7 @@ const ProjectTaskDetailPage = lazy(() => import('./pages/ProjectTaskDetailPage')
 const ProjectAiReviewPage = lazy(() => import('./pages/ProjectAiReviewPage'))
 const SpecialistRequestMockPage = lazy(() => import('./pages/SpecialistRequestMockPage'))
 const MarketResearchRequestPage = lazy(() => import('./pages/MarketResearchRequestPage'))
+const ProjectResearchResultsPage = lazy(() => import('./pages/ProjectResearchResultsPage'))
 const AiStaffCatalogMockPage = lazy(() => import('./pages/AiStaffCatalogMockPage'))
 const AiStaffHubPage = lazy(() => import('./pages/AiStaffHubPage'))
 const PmOpsRoomMockPage = lazy(() => import('./pages/PmOpsRoomMockPage'))
@@ -98,6 +99,7 @@ function App() {
           <Route path="/projects/:projectId/tasks" element={<LazyPage><ProjectTasksPage /></LazyPage>} />
           <Route path="/projects/:projectId/tasks/:taskId" element={<LazyPage><ProjectTaskDetailPage /></LazyPage>} />
           <Route path="/projects/:projectId/ai-review" element={<LazyPage><ProjectAiReviewPage /></LazyPage>} />
+          <Route path="/projects/:projectId/research" element={<LazyPage><ProjectResearchResultsPage /></LazyPage>} />
           <Route path="/projects/:projectId/specialists" element={<LazyPage><AiStaffCatalogMockPage /></LazyPage>} />
           <Route path="/projects/:projectId/specialists/request" element={<LazyPage><SpecialistRequestMockPage /></LazyPage>} />
           <Route

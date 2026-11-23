@@ -162,68 +162,81 @@ class LinerPlatformClient:
         if accept:
             headers["Accept"] = accept
         started = time.perf_counter()
-        try:
-            with httpx.Client(timeout=self.timeout) as client:
-                res = client.post(url, headers=headers, json=body)
-            latency = int((time.perf_counter() - started) * 1000)
-            text = res.text
-            request_id = res.headers.get("x-request-id") or res.headers.get(
-                "x-liner-request-id"
-            )
-            if res.status_code >= 400:
+        last_error: Exception | None = None
+        # Liner intermittently returns 502/503; brief retries keep research runs alive.
+        for attempt in range(4):
+            try:
+                with httpx.Client(timeout=self.timeout) as client:
+                    res = client.post(url, headers=headers, json=body)
+                latency = int((time.perf_counter() - started) * 1000)
+                text = res.text
+                request_id = res.headers.get("x-request-id") or res.headers.get(
+                    "x-liner-request-id"
+                )
+                if res.status_code in {429, 502, 503, 504} and attempt < 3:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                if res.status_code >= 400:
+                    rec = LinerCallRecord(
+                        endpoint=endpoint,
+                        ok=False,
+                        status_code=res.status_code,
+                        latency_ms=latency,
+                        request_id=request_id,
+                        error=text[:800],
+                        estimated_cost_usd=0.0,
+                    )
+                    self.budget.calls.append(rec)
+                    raise RuntimeError(
+                        f"Liner {endpoint} failed: {res.status_code} {text[:500]}"
+                    )
+                data = res.json() if text else {}
+                if isinstance(data, dict):
+                    request_id = (
+                        data.get("requestId")
+                        or data.get("request_id")
+                        or request_id
+                    )
+                usage = {}
+                if isinstance(data, dict) and isinstance(data.get("usage"), dict):
+                    usage = data["usage"]
+                    if usage.get("cost") is not None:
+                        try:
+                            estimated_cost_usd = float(usage["cost"])
+                        except (TypeError, ValueError):
+                            pass
+                rec = LinerCallRecord(
+                    endpoint=endpoint,
+                    ok=True,
+                    status_code=res.status_code,
+                    latency_ms=latency,
+                    request_id=str(request_id) if request_id else None,
+                    estimated_cost_usd=estimated_cost_usd,
+                    usage=usage,
+                )
+                self.budget.calls.append(rec)
+                return data if isinstance(data, dict) else {"raw": data}
+            except RuntimeError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                if attempt < 3:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                latency = int((time.perf_counter() - started) * 1000)
                 rec = LinerCallRecord(
                     endpoint=endpoint,
                     ok=False,
-                    status_code=res.status_code,
+                    status_code=None,
                     latency_ms=latency,
-                    request_id=request_id,
-                    error=text[:800],
+                    error=str(exc)[:800],
                     estimated_cost_usd=0.0,
                 )
                 self.budget.calls.append(rec)
-                raise RuntimeError(
-                    f"Liner {endpoint} failed: {res.status_code} {text[:500]}"
-                )
-            data = res.json() if text else {}
-            if isinstance(data, dict):
-                request_id = (
-                    data.get("requestId")
-                    or data.get("request_id")
-                    or request_id
-                )
-            usage = {}
-            if isinstance(data, dict) and isinstance(data.get("usage"), dict):
-                usage = data["usage"]
-                if usage.get("cost") is not None:
-                    try:
-                        estimated_cost_usd = float(usage["cost"])
-                    except (TypeError, ValueError):
-                        pass
-            rec = LinerCallRecord(
-                endpoint=endpoint,
-                ok=True,
-                status_code=res.status_code,
-                latency_ms=latency,
-                request_id=str(request_id) if request_id else None,
-                estimated_cost_usd=estimated_cost_usd,
-                usage=usage,
-            )
-            self.budget.calls.append(rec)
-            return data if isinstance(data, dict) else {"raw": data}
-        except RuntimeError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            latency = int((time.perf_counter() - started) * 1000)
-            rec = LinerCallRecord(
-                endpoint=endpoint,
-                ok=False,
-                status_code=None,
-                latency_ms=latency,
-                error=str(exc)[:800],
-                estimated_cost_usd=0.0,
-            )
-            self.budget.calls.append(rec)
-            raise
+                raise
+        if last_error:
+            raise last_error
+        raise RuntimeError(f"Liner {endpoint} failed after retries")
 
     def search_agent(
         self,

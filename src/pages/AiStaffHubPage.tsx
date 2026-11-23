@@ -52,14 +52,31 @@ export default function AiStaffHubPage() {
   const detailRole = AI_STAFF_ROSTER.find((r) => r.id === detailRoleId)
   const localHint = isLocalDevAuth()
 
-  const hireHref = (projectId: string) => {
-    if (!selected?.available) return `/projects/${projectId}/specialists`
-    const path = selected.requestPath || 'request'
+  const hireHrefFor = (projectId: string, roleId?: string) => {
+    const role = roleId
+      ? AI_STAFF_ROSTER.find((r) => r.id === roleId)
+      : selected
+    if (!role?.available) return `/projects/${projectId}/specialists`
+    const path = role.requestPath || 'request'
     return `/projects/${projectId}/specialists/${path}`
   }
 
-  const focusHire = (roleId: string) => {
+  /** Prefer current project, else sole active project — so CTA navigates instead of only scrolling. */
+  const resolveHireProjectId = () => {
+    if (currentProject && !currentProject.deleted_at && active.some((p) => p.id === currentProject.id)) {
+      return currentProject.id
+    }
+    if (active.length === 1) return active[0].id
+    return null
+  }
+
+  const onHireClick = (roleId: string) => {
     setSelectedRoleId(roleId)
+    const projectId = resolveHireProjectId()
+    if (projectId) {
+      navigate(hireHrefFor(projectId, roleId))
+      return
+    }
     requestAnimationFrame(() => {
       hirePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
@@ -116,7 +133,7 @@ export default function AiStaffHubPage() {
                     onDetail={() =>
                       setDetailRoleId((prev) => (prev === role.id ? null : role.id))
                     }
-                    onHire={() => focusHire(role.id)}
+                    onHire={() => onHireClick(role.id)}
                   />
                 </li>
               ))}
@@ -147,6 +164,11 @@ export default function AiStaffHubPage() {
           <h2 className="text-base font-bold text-gray-900">
             {selected?.available ? `「${selected.title}」채용할 프로젝트` : '준비 중 역할'}
           </h2>
+          {selected?.available && active.length > 1 && !resolveHireProjectId() && (
+            <p className="text-sm text-amber-800" role="status">
+              프로젝트를 고른 뒤 「이 프로젝트에 채용」을 눌러 주세요.
+            </p>
+          )}
 
           {!selected?.available ? (
             <p className="text-sm text-gray-500">
@@ -179,7 +201,7 @@ export default function AiStaffHubPage() {
                     </p>
                   </div>
                   <Link
-                    to={hireHref(project.id)}
+                    to={hireHrefFor(project.id)}
                     className="shrink-0 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
                     data-testid="ai-staff-hub-hire"
                   >

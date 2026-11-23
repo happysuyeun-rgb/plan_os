@@ -24,9 +24,11 @@ describe('generation prompts', () => {
     assert.match(prdOutline, /REQ-001/)
     assert.match(prdOutline, /P0\/P1\/P2/)
     assert.match(iaSystem, /기능정의서/)
-    assert.match(iaSystem, /Product Planner/)
-    assert.match(iaOutline, /FUNC-001/)
+    assert.match(iaSystem, /시니어 서비스 기획자/)
+    assert.match(iaSystem, /v2\.1/)
+    assert.match(iaOutline, /F-001/)
     assert.match(iaOutline, /표 형식은 사용하지 않습니다/)
+    assert.match(iaOutline, /주요 처리 규칙/)
   })
 
   it('GeminiProvider uses assemblePrompt instead of inline buildPrompt', () => {
