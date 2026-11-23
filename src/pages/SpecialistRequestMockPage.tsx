@@ -37,6 +37,7 @@ import {
   isMockAiRunAllowed,
   isS3E2eFixtureMode,
 } from '../lib/aiExecutionPath'
+import { showProductMockUi } from '../lib/productMockUi'
 import {
   enqueueAndProcessMockRun,
   enqueueForCrewAiWorker,
@@ -69,6 +70,8 @@ function newRequestId(): string {
 const fixtureMode = isS3E2eFixtureMode()
 /** Mock worker CTA — fixture or VITE_ALLOW_MOCK_AI_RUN; never Preview/prod default (PR-C). */
 const mockAiRunAllowed = isMockAiRunAllowed()
+/** Legacy session /ai-review handoff + Mock-labelled continue CTAs. */
+const productMockUi = showProductMockUi()
 
 function decisionComment(decision: 'accepted' | 'rejected' | 'revision_requested'): string {
   if (decision === 'accepted') return '결과 수락 및 S1 연결'
@@ -532,7 +535,7 @@ export default function SpecialistRequestMockPage() {
       ) : !owner ? (
         <div className="space-y-4">
           <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            현재 Mock 업무 요청은 프로젝트 소유자만 작성할 수 있습니다. 멤버는 저장된 계약 조회만 가능합니다.
+            현재 전문가 업무 요청은 프로젝트 소유자만 작성할 수 있습니다. 멤버는 저장된 계약 조회만 가능합니다.
           </div>
           {serverContract && (
             <section
@@ -652,15 +655,17 @@ export default function SpecialistRequestMockPage() {
                       Mock worker (E2E 전용 · 실 AI 아님)
                     </button>
                   )}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={continueToMockReview}
-                    className="rounded-md border px-4 py-2 text-sm disabled:opacity-50"
-                    data-testid="specialist-continue-ai-review"
-                  >
-                    (레거시) 세션 검수 화면으로 이어가기
-                  </button>
+                  {productMockUi && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={continueToMockReview}
+                      className="rounded-md border px-4 py-2 text-sm disabled:opacity-50"
+                      data-testid="specialist-continue-ai-review"
+                    >
+                      (레거시) 세션 검수 화면으로 이어가기
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}
@@ -896,14 +901,16 @@ export default function SpecialistRequestMockPage() {
                   서버에 계약 초안 저장
                 </button>
               )}
-              <button
-                type="button"
-                onClick={continueToMockReview}
-                className="mt-4 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white"
-                data-testid="specialist-continue-ai-review"
-              >
-                Mock 기획 검수로 이어가기
-              </button>
+              {productMockUi && (
+                <button
+                  type="button"
+                  onClick={continueToMockReview}
+                  className="mt-4 ml-2 rounded-md bg-indigo-700 px-4 py-2 font-semibold text-white"
+                  data-testid="specialist-continue-ai-review"
+                >
+                  Mock 기획 검수로 이어가기
+                </button>
+              )}
             </section>
           )}
 

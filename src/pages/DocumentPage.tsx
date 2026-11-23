@@ -59,6 +59,7 @@ import { useUIStore } from '../store/uiStore'
 import { shouldUseStructuredRenderer, usesStructuredView } from '../lib/documentContent'
 import { isProjectTrashed } from '../lib/projectTrash'
 import { TEST_UNLOCK_ALL_DOCUMENTS } from '../config'
+import { showProductMockUi } from '../lib/productMockUi'
 
 const PATH_TO_TYPE: Record<string, DocumentType> = Object.fromEntries(
   Object.entries(DOCUMENT_TYPE_PATHS).map(([type, path]) => [path, type as DocumentType]),
@@ -191,14 +192,12 @@ export default function DocumentPage() {
     isLoading: isCommentsLoading,
     filter: commentFilter,
     search: commentSearch,
-    isCommentMode,
     activeThreadId,
     replyToId,
     fetchThreads,
     fetchCounts,
     setFilter: setCommentFilter,
     setSearch: setCommentSearch,
-    setCommentMode,
     setActiveThreadId,
     setReplyToId,
     createRootComment,
@@ -209,7 +208,8 @@ export default function DocumentPage() {
     reset: resetComments,
   } = useCommentStore()
 
-  const [requestedViewMode, setRequestedViewMode] = useState<'edit' | 'review'>('edit')
+  /** Default to review so document status / read view is what users land on; edit is opt-in. */
+  const [requestedViewMode, setRequestedViewMode] = useState<'edit' | 'review'>('review')
   const [commentsOpen, setCommentsOpen] = useState(() => searchParams.get('panel') === 'comments')
 
   useEffect(() => {
@@ -685,21 +685,12 @@ export default function DocumentPage() {
       showToast('info', '읽기 전용입니다. 리뷰 모드에서 댓글을 남길 수 있습니다.')
       return
     }
-    if (mode === 'edit' && isCommentMode) {
-      setCommentMode(false)
-    }
     setRequestedViewMode(mode)
     if (mode === 'review' && canComment) setCommentsOpen(true)
   }
 
-  const handleCommentModeToggle = () => {
-    if (!can('comment.create')) return
-    if (!isCommentMode) {
-      setRequestedViewMode('review')
-      setCommentsOpen(true)
-    }
-    setCommentMode(!isCommentMode)
-  }
+  /** Review mode includes region drag + comment create (no separate comment-mode toggle). */
+  const canAnnotateInReview = viewMode === 'review' && can('comment.create')
 
   const handleCreateComment = async (anchor: import('../types').RegionAnchor, body: string) => {
     if (!projectId || !activeDoc) return
@@ -825,7 +816,7 @@ export default function DocumentPage() {
         onBack={() => navigate('/dashboard')}
         headerActions={
           <div className="flex items-center gap-2">
-            {projectId && availableTypes.length >= 2 && (
+            {projectId && availableTypes.length >= 2 && showProductMockUi() && (
               <Button
                 variant="ghost"
                 className="px-3 py-1.5 text-xs"
@@ -937,9 +928,7 @@ export default function DocumentPage() {
               canViewHistory={can('project.view')}
               canComment={canComment}
               viewMode={viewMode}
-              isCommentMode={isCommentMode}
               onViewModeChange={handleViewModeChange}
-              onCommentModeToggle={handleCommentModeToggle}
               onSelectVersion={selectVersion}
               onRegenerate={handleRegenerate}
               onSaveVersion={handleSaveVersion}
@@ -1025,7 +1014,7 @@ export default function DocumentPage() {
                 <DocumentReviewPane
                   content={content}
                   threads={threads}
-                  isCommentMode={isCommentMode && can('comment.create')}
+                  isCommentMode={canAnnotateInReview}
                   activeThreadId={activeThreadId}
                   onSelectThread={(id) => {
                     setActiveThreadId(id)

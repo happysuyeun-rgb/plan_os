@@ -22,7 +22,8 @@ Preview/제품 기본 실행 = **CrewAI 큐**. `process_mock_ai_run` / Mock CTA 
 - [x] Mock CTA는 DEV + (S3 fixture \| ALLOW_MOCK)만
 - [x] 카탈로그/요청 화면이 “AI 실행 불가”를 주장하지 않음
 - [x] 정적 계약 테스트 PASS
-- [ ] Chromium CrewAI live — NOT RUN (워커 스택 별도)
+- [x] Chromium 계약→CrewAI enqueue — **PASS** (2026-11-23 Preview) run `02c42ff7…` `queued`
+- [ ] Chromium CrewAI live claim·완료 — NOT RUN (워커 스택 별도)
 
 ## 다음 1코드
 

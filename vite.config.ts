@@ -16,6 +16,14 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       strictPort: true,
+      // CrewAI local venv HTML must not trigger full page reloads (breaks Suspense).
+      watch: {
+        ignored: [
+          '**/workers/**/.venv/**',
+          '**/workers/**/__pycache__/**',
+          '**/.venv/**',
+        ],
+      },
     },
   }
 })

@@ -32,7 +32,7 @@ export function MidProjectAiStaffingNotice({ projectId, className = '' }: Props)
           <Link to={auditsHref} className="underline underline-offset-2">
             검수 문서 선택
           </Link>
-          을 사용하세요 (E-06 Mock).
+          을 사용하세요.
         </p>
       )}
       <p className="mt-2">

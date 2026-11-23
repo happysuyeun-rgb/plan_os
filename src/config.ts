@@ -11,5 +11,11 @@ export const ENABLE_MOCK_ROUTE_GUARDS = true
 export const ENABLE_DEV_LOGIN =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'
 
+/**
+ * true: Mock-only 제품 CTA(N29/F-801·교차검수 Mock·레거시 세션 검수) 노출.
+ * 기본 false — 실기능 테스트 시 목업 진입점을 숨긴다. E2E는 URL 직접 접근 또는 이 플래그.
+ */
+export const SHOW_PRODUCT_MOCK_UI = import.meta.env.VITE_SHOW_MOCK_UI === 'true'
+
 /** @deprecated Supabase Auth 사용 — activities 등에서 session.user.id 사용 */
 export const MOCK_USER_ID = 'mock-user-1'

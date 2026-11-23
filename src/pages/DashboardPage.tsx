@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Clock, Inbox, Plus, RefreshCw, UserPlus } from 'lucide-react'
+import { Clock, Plus, RefreshCw, UserPlus } from 'lucide-react'
 import type { DocumentType, Project } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
@@ -295,42 +295,7 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-400">업무 현황을 불러오는 중입니다...</p>
         ) : workRows && totals ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-medium text-gray-500">접근 가능한 프로젝트</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{totals.projectCount}개</p>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-medium text-gray-500">
-                  등록 업무 완료율 <span className="text-gray-400">(프로젝트 전체 완성도 아님)</span>
-                </p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">
-                  {totals.completionRate !== null
-                    ? `${totals.doneTotal} / ${totals.taskTotal} · ${totals.completionRate}%`
-                    : '업무 미등록'}
-                </p>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-medium text-gray-500">차단된 업무</p>
-                <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
-                  <AlertTriangle className={`h-5 w-5 ${totals.blockedTotal > 0 ? 'text-red-500' : 'text-gray-300'}`} />
-                  {totals.blockedTotal}개
-                </p>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs font-medium text-gray-500">승인 대기 중인 계획</p>
-                {approvalsAvailable ? (
-                  <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-gray-900">
-                    <Inbox className={`h-5 w-5 ${totals.pendingApprovalsTotal > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
-                    {totals.pendingApprovalsTotal}건
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm font-medium text-gray-500">
-                    PM 승인이 연결되지 않은 환경입니다
-                  </p>
-                )}
-              </div>
-            </div>
+            {/* 상단 요약 카드 4종(접근 프로젝트·완료율·차단·승인대기) — 제품 테스트 중 숨김 */}
 
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
