@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Clock, Plus, RefreshCw, UserPlus } from 'lucide-react'
 import type { DocumentType, Project } from '../types'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
-import { MidProjectAiStaffingNotice } from '../components/common/MidProjectAiStaffingNotice'
+import { AiStaffMarketplaceHero } from '../components/aiStaff/AiStaffMarketplaceHero'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { ProjectGrid } from '../components/project/ProjectGrid'
 import { ProjectCardItem } from '../components/project/ProjectCardItem'
@@ -275,7 +275,25 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <MidProjectAiStaffingNotice className="mt-6" />
+      <section
+        aria-label="AI 직원 채용"
+        className="mt-6 rounded-[1.75rem] border border-gray-100 bg-white/90 px-5 py-6 shadow-[0_8px_24px_rgba(88,70,180,0.05)] sm:px-8"
+        data-testid="dashboard-ai-staff-hero"
+      >
+        <AiStaffMarketplaceHero
+          showCategoryFilters={false}
+          subtitle="필요한 전문가를 선택하고 업무를 맡겨보세요. 진행 중 프로젝트에도 투입할 수 있으며, 실제 계약·과금·유료 LLM은 없습니다."
+          cta={
+            <Link
+              to="/ai-staff"
+              className="inline-flex items-center justify-center rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+              data-testid="dashboard-ai-staff-cta"
+            >
+              AI 직원 채용으로 이동
+            </Link>
+          }
+        />
+      </section>
 
       {/* 업무 현황 요약 (C04) — 서버 업무 모드가 켜진 환경에서만 집계한다. */}
       <section aria-label="업무 현황" className="mt-6">
