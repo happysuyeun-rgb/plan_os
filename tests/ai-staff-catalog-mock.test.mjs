@@ -6,13 +6,22 @@ const page = readFileSync(new URL('../src/pages/AiStaffCatalogMockPage.tsx', imp
 const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
 const hub = readFileSync(new URL('../src/pages/AiStaffHubPage.tsx', import.meta.url), 'utf8')
 const catalogSrc = readFileSync(new URL('../src/lib/aiStaffCatalog.ts', import.meta.url), 'utf8')
+const hireCard = readFileSync(
+  new URL('../src/components/aiStaff/AiStaffHireCard.tsx', import.meta.url),
+  'utf8',
+)
+const upcomingRow = readFileSync(
+  new URL('../src/components/aiStaff/AiStaffUpcomingRow.tsx', import.meta.url),
+  'utf8',
+)
 
 test('catalog route is protected and lists hireable mock specialist card', () => {
   assert.match(app, /<Route element=\{<ProtectedRoute \/>\}>[\s\S]*?specialists"/)
   assert.match(app, /AiStaffCatalogMockPage/)
   assert.match(app, /ai-staff/)
   assert.match(app, /AiStaffHubPage/)
-  assert.match(page, /data-testid="ai-staff-catalog-card"/)
+  assert.match(page, /testId="ai-staff-catalog-card"/)
+  assert.match(hireCard, /data-testid=\{testId/)
   assert.match(page, /hireableAiStaff/)
   assert.match(page, /결제·유료 LLM/)
   assert.match(page, /산정 전 · 유료 결제 없음/)
@@ -21,7 +30,7 @@ test('catalog route is protected and lists hireable mock specialist card', () =>
 
 test('catalog does not claim paid hire or invent zero price checkout', () => {
   assert.doesNotMatch(page, /결제하기|지금 채용|₩\s*0|가격\s*0/)
-  assert.match(page, /서버 계약·CrewAI 큐/)
+  assert.match(page, /서버 계약 · CrewAI/)
   assert.match(page, /산정 전 · 유료 결제 없음/)
   assert.match(page, /요청·계약·큐잉 가능/)
 })
@@ -31,7 +40,10 @@ test('hub lists hireable and upcoming staff without requiring project first', ()
   assert.match(hub, /채용 가능/)
   assert.match(hub, /준비 중/)
   assert.match(hub, /data-testid="ai-staff-hub-hire"/)
-  assert.match(hub, /#38|#37/)
+  assert.match(hub, /AiStaffUpcomingRow/)
+  assert.match(hub, /upcomingAiStaff/)
+  assert.match(catalogSrc, /futureRef: '#38'/)
+  assert.match(catalogSrc, /futureRef: '#37'/)
 })
 
 test('roster reserves #37 sales and #38 marketer as unavailable display seats', () => {
@@ -41,9 +53,10 @@ test('roster reserves #37 sales and #38 marketer as unavailable display seats', 
   assert.match(catalogSrc, /futureRef: '#37'/)
   assert.match(catalogSrc, /무단 대량 발송/)
   assert.match(catalogSrc, /실계정 게시/)
-  assert.match(page, /ai-staff-upcoming-\$\{role\.id\}/)
-  assert.match(page, /구현·채용·발송 아님/)
+  assert.match(upcomingRow, /ai-staff-upcoming-\$\{role\.id\}/)
+  assert.match(page, /AiStaffUpcomingRow/)
   assert.match(page, /#37 영업·#38 마케터/)
+  assert.doesNotMatch(page, /무단 대량 발송이 가능|지금 발송/)
 })
 
 test('MOCK_SPECIALIST and market researcher are hireable; FUTURE roles stay unavailable', () => {

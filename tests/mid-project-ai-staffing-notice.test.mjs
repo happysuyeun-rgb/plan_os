@@ -6,6 +6,10 @@ const notice = readFileSync(
   new URL('../src/components/common/MidProjectAiStaffingNotice.tsx', import.meta.url),
   'utf8',
 )
+const digestGate = readFileSync(
+  new URL('../src/components/common/StaffingDigestGateNotice.tsx', import.meta.url),
+  'utf8',
+)
 const dashboard = readFileSync(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8')
 const createPage = readFileSync(new URL('../src/pages/ProjectCreatePage.tsx', import.meta.url), 'utf8')
 const documentPage = readFileSync(new URL('../src/pages/DocumentPage.tsx', import.meta.url), 'utf8')
@@ -18,7 +22,7 @@ test('notice points to single AI staffing entry and unpaid mock (E-03)', () => {
   assert.match(notice, /\/ai-staff/)
   assert.match(notice, /specialists/)
   assert.match(notice, /audits\/new/)
-  assert.match(notice, /E-06 Mock/)
+  assert.match(digestGate, /E-06 Mock/)
 })
 
 test('dashboard and project create surface mid-project AI staffing notice; document page hides it', () => {
