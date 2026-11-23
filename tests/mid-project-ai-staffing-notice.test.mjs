@@ -25,8 +25,11 @@ test('notice points to single AI staffing entry and unpaid mock (E-03)', () => {
   assert.match(digestGate, /E-06 Mock/)
 })
 
-test('dashboard and project create surface mid-project AI staffing notice; document page hides it', () => {
-  assert.match(dashboard, /MidProjectAiStaffingNotice/)
+test('dashboard surfaces AI staff marketplace hero; create keeps notice; document page hides notice', () => {
+  assert.match(dashboard, /AiStaffMarketplaceHero/)
+  assert.match(dashboard, /data-testid="dashboard-ai-staff-hero"/)
+  assert.match(dashboard, /\/ai-staff/)
+  assert.doesNotMatch(dashboard, /MidProjectAiStaffingNotice/)
   assert.match(createPage, /MidProjectAiStaffingNotice/)
   assert.doesNotMatch(documentPage, /MidProjectAiStaffingNotice/)
 })
