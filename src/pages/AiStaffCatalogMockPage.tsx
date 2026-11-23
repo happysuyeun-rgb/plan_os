@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AI_STAFF_ROSTER, hireableAiStaff } from '../lib/aiStaffCatalog'
+import { AiStaffHireCard } from '../components/aiStaff/AiStaffHireCard'
+import { AiStaffMarketplaceHero } from '../components/aiStaff/AiStaffMarketplaceHero'
+import { AiStaffUpcomingRow } from '../components/aiStaff/AiStaffUpcomingRow'
+import {
+  filterAiStaffByCategory,
+  hireableAiStaff,
+  upcomingAiStaff,
+  type AiStaffCategory,
+} from '../lib/aiStaffCatalog'
 import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
 
@@ -14,6 +22,8 @@ export default function AiStaffCatalogMockPage() {
   const { currentProject, setCurrentProject } = useProjectStore()
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
+  const [category, setCategory] = useState<'all' | AiStaffCategory>('all')
+  const [detailRoleId, setDetailRoleId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -37,131 +47,131 @@ export default function AiStaffCatalogMockPage() {
     ready && projectId && currentProject?.id === projectId && !currentProject.deleted_at,
   )
 
-  const hireable = hireableAiStaff()
-  const upcoming = AI_STAFF_ROSTER.filter((r) => !r.available)
+  const hireable = useMemo(
+    () => filterAiStaffByCategory(hireableAiStaff(), category),
+    [category],
+  )
+  const upcoming = useMemo(
+    () => filterAiStaffByCategory(upcomingAiStaff(), category === 'all' ? 'all' : category),
+    [category],
+  )
+  const detailRole = hireableAiStaff()
+    .concat(upcomingAiStaff())
+    .find((r) => r.id === detailRoleId)
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-5 py-10 text-gray-900">
-      <nav className="flex flex-wrap gap-4 text-sm">
-        <Link to="/ai-staff" className="text-gray-500 hover:underline">
-          ← AI 직원 채용
-        </Link>
-        <Link to={projectId ? `/projects/${projectId}` : '/projects'} className="text-gray-500 hover:underline">
-          프로젝트 문서
-        </Link>
-      </nav>
+    <main className="min-h-screen px-5 py-8 text-gray-900 landing-root sm:px-8">
+      <div className="mx-auto max-w-5xl space-y-8">
+        <nav className="flex flex-wrap gap-4 text-sm">
+          <Link to="/ai-staff" className="text-gray-500 hover:underline">
+            ← AI 직원 채용
+          </Link>
+          <Link
+            to={projectId ? `/projects/${projectId}` : '/projects'}
+            className="text-gray-500 hover:underline"
+          >
+            프로젝트 문서
+          </Link>
+        </nav>
 
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700">AI 인력 · CATALOG</p>
-        <h1 className="text-3xl font-bold">AI 직원 카탈로그</h1>
-        <p className="text-sm text-gray-600">
-          채용 가능 역할은 서버 계약·CrewAI 큐로 이어집니다. 준비 중 자리(#37 영업·#38 마케터)는 표시만이며
-          결제·유료 LLM·실발송이 없습니다.
-        </p>
-      </header>
+        <AiStaffMarketplaceHero
+          category={category}
+          onCategoryChange={setCategory}
+          subtitle="이 프로젝트에 맡길 전문가를 고르세요. 채용 가능 역할만 계약·큐로 이어집니다."
+        />
 
-      {error && (
-        <p role="alert" className="rounded bg-red-50 p-3 text-red-700">
-          {error}
-        </p>
-      )}
-      {!ready && projectId && userId ? (
-        <p role="status">프로젝트를 확인하는 중입니다.</p>
-      ) : !accessible ? (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 p-4">
-          프로젝트에 접근할 수 없거나 삭제된 프로젝트입니다.
-        </p>
-      ) : (
-        <div className="space-y-8">
-          <section aria-label="채용 가능 AI 직원" className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700">채용 가능 · {hireable.length}종</h2>
-            {hireable.map((role) => (
-              <article
-                key={role.id}
-                data-testid="ai-staff-catalog-card"
-                data-role-id={role.id}
-                className="rounded-xl border border-indigo-200 bg-white p-5 shadow-sm"
-              >
-                <p className="text-xs font-semibold text-indigo-700">제공 역할</p>
-                <h3 className="mt-2 text-xl font-semibold">{role.title}</h3>
-                <p className="mt-2 text-sm text-gray-700">{role.description}</p>
-                <p className="mt-2 text-sm font-medium text-indigo-900">{role.capability}</p>
-                <dl className="mt-4 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold text-gray-800">역할 ID</dt>
-                    <dd>{role.id}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-gray-800">실행</dt>
-                    <dd>
-                      {role.id === 'ai_market_researcher_v1'
-                        ? 'CrewAI + Liner 실경로'
-                        : 'CrewAI 실실행 큐 (기본) · Mock E2E 전용'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-gray-800">가격</dt>
-                    <dd>산정 전 · 유료 결제 없음</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-gray-800">상태</dt>
-                    <dd>요청·계약·큐잉 가능</dd>
-                  </div>
-                </dl>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Link
-                    to={`/projects/${projectId}/specialists/${role.requestPath || 'request'}`}
-                    className="rounded-md bg-indigo-700 px-4 py-2 text-sm font-semibold text-white"
-                    data-testid="ai-staff-catalog-request-cta"
-                  >
-                    {role.id === 'ai_market_researcher_v1'
-                      ? '이 역할로 시장조사 요청'
-                      : '이 역할로 업무 요청'}
-                  </Link>
-                  <Link
-                    to={`/projects/${projectId}/ai-review`}
-                    className="rounded-md border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-800"
-                  >
-                    AI 기획 검수
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </section>
+        {error && (
+          <p role="alert" className="rounded-2xl bg-red-50 p-3 text-red-700">
+            {error}
+          </p>
+        )}
+        {!ready && projectId && userId ? (
+          <p role="status">프로젝트를 확인하는 중입니다.</p>
+        ) : !accessible ? (
+          <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4">
+            프로젝트에 접근할 수 없거나 삭제된 프로젝트입니다.
+          </p>
+        ) : (
+          <div className="space-y-8">
+            <section aria-label="채용 가능 AI 직원" className="space-y-4">
+              <div className="flex items-end justify-between gap-3">
+                <h2 className="text-lg font-bold text-gray-900">지금 이용할 수 있는 직원</h2>
+                <p className="text-xs text-gray-400">
+                  {hireable.length}종 · 서버 계약 · CrewAI/Liner
+                </p>
+              </div>
 
-          <section aria-label="준비 중 AI 직원" className="space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700">준비 중 · {upcoming.length}종 (표시만)</h2>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {upcoming.map((role) => (
-                <li key={role.id}>
-                  <article
-                    data-testid={`ai-staff-upcoming-${role.id}`}
-                    data-future-ref={role.futureRef ?? ''}
-                    className="h-full rounded-xl border border-gray-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-gray-900">{role.title}</h3>
-                      <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-500">
-                        준비 중
-                      </span>
+              {hireable.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-gray-200 bg-white/70 px-5 py-8 text-center text-sm text-gray-500">
+                  이 카테고리에 채용 가능한 직원이 없습니다.
+                </p>
+              ) : (
+                <ul className="grid gap-4 lg:grid-cols-2" data-testid="ai-staff-catalog-list">
+                  {hireable.map((role) => (
+                    <li key={role.id}>
+                      <AiStaffHireCard
+                        role={role}
+                        testId="ai-staff-catalog-card"
+                        hireHref={`/projects/${projectId}/specialists/${role.requestPath || 'request'}`}
+                        hireLabel={
+                          role.id === 'ai_market_researcher_v1'
+                            ? '시장조사 요청'
+                            : '업무 맡기기'
+                        }
+                        onDetail={() =>
+                          setDetailRoleId((prev) => (prev === role.id ? null : role.id))
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {detailRole && (
+                <aside
+                  className="rounded-2xl border border-brand-100 bg-white/90 px-5 py-4 text-sm text-gray-600"
+                  data-testid="ai-staff-detail-panel"
+                >
+                  <p className="font-semibold text-gray-900">{detailRole.title}</p>
+                  <dl className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
+                    <div>
+                      <dt className="font-semibold text-gray-800">역할 ID</dt>
+                      <dd>{detailRole.id}</dd>
                     </div>
-                    <p className="mt-2 text-sm text-gray-600">{role.description}</p>
-                    <p className="mt-2 text-xs text-gray-500">{role.capability}</p>
-                    {role.futureRef && (
-                      <p className="mt-2 text-xs font-medium text-slate-600">
-                        이슈 {role.futureRef} · 구현·채용·발송 아님
-                      </p>
-                    )}
-                  </article>
-                </li>
-              ))}
-            </ul>
+                    <div>
+                      <dt className="font-semibold text-gray-800">실행</dt>
+                      <dd>{detailRole.capability}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-gray-800">가격</dt>
+                      <dd>산정 전 · 유료 결제 없음</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-gray-800">상태</dt>
+                      <dd>요청·계약·큐잉 가능</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-4">
+                    <Link
+                      to={`/projects/${projectId}/ai-review`}
+                      className="text-sm font-semibold text-brand-700 underline underline-offset-2"
+                    >
+                      AI 기획 검수 화면으로
+                    </Link>
+                  </div>
+                </aside>
+              )}
+            </section>
+
+            <AiStaffUpcomingRow roles={upcoming} />
+
             <p className="text-xs text-gray-500">
-              복수 직무 실실행·경력 티어·인력사무소 풀스펙은 후속(P2)입니다. 사람 PM(`/plans`)과 병행합니다.
+              준비 중 자리(#37 영업·#38 마케터)는 표시만이며 결제·유료 LLM·실발송이 없습니다. 복수 직무
+              실실행·경력 티어는 후속(P2)입니다.
             </p>
-          </section>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </main>
   )
 }

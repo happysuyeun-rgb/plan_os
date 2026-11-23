@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { showProductMockUi } from '../../lib/productMockUi'
 
 type Props = {
   projectId: string
@@ -10,13 +11,14 @@ type Props = {
 /**
  * #34 / DEV-03 entry: when 2+ document types exist, offer cross-doc audit preview.
  * Routes to Mock `/ai-review` only — never claims verified engine PASS or paid hire.
+ * Hidden unless VITE_SHOW_MOCK_UI=true (product mock surface).
  */
 export function CrossDocAuditEntryNotice({
   projectId,
   docTypeCount,
   className = '',
 }: Props) {
-  if (docTypeCount < 2) return null
+  if (!showProductMockUi() || docTypeCount < 2) return null
 
   const reviewHref = `/projects/${projectId}/ai-review`
 

@@ -23,9 +23,7 @@ interface DocumentToolbarProps {
   canViewHistory: boolean
   canComment: boolean
   viewMode: 'edit' | 'review'
-  isCommentMode: boolean
   onViewModeChange: (mode: 'edit' | 'review') => void
-  onCommentModeToggle: () => void
   onSelectVersion: (versionId: string | null) => void
   onRegenerate: () => void
   onSaveVersion: () => void
@@ -50,9 +48,7 @@ export function DocumentToolbar({
   canViewHistory,
   canComment,
   viewMode,
-  isCommentMode,
   onViewModeChange,
-  onCommentModeToggle,
   onSelectVersion,
   onRegenerate,
   onSaveVersion,
@@ -78,6 +74,18 @@ export function DocumentToolbar({
           <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-0.5">
             <button
               type="button"
+              onClick={() => onViewModeChange('review')}
+              className={cn(
+                'flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs',
+                viewMode === 'review' ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700',
+              )}
+              title="읽기 + 영역 드래그로 댓글"
+            >
+              <Eye className="h-3 w-3" />
+              리뷰
+            </button>
+            <button
+              type="button"
               onClick={() => onViewModeChange('edit')}
               className={cn(
                 'flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs',
@@ -86,27 +94,6 @@ export function DocumentToolbar({
             >
               <Pencil className="h-3 w-3" />
               편집
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange('review')}
-              className={cn(
-                'flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs',
-                viewMode === 'review' ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-700',
-              )}
-            >
-              <Eye className="h-3 w-3" />
-              리뷰
-            </button>
-            <button
-              type="button"
-              onClick={onCommentModeToggle}
-              className={cn(
-                'rounded-md px-2.5 py-1.5 text-xs',
-                isCommentMode ? 'bg-orange-50 font-medium text-orange-700' : 'text-gray-500 hover:text-gray-700',
-              )}
-            >
-              댓글모드
             </button>
           </div>
         )}

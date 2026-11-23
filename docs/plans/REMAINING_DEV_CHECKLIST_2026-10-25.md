@@ -126,7 +126,7 @@
 무과금 OSS 매트릭스: [FREE_OPEN_SOURCE_CONNECTIONS](../engineering/FREE_OPEN_SOURCE_CONNECTIONS_2026-11-17.md)
 
 1. **방금:** Preview 027/036/037 apply + `planos-preview` env (`server` / F105) — [기록](./PREVIEW_027_036_037_APPLY_2026-11-21.md)  
-2. **다음:** 로그인 Chromium hire→accept·F-105·AI PM CTA 수동 스모크 · 또는 auditor live E2E(워커+키)  
+2. **다음:** auditor live worker claim(`planos-crewai-worker poll`) · Gate C/ops/Production은 별도 승인 — hire→accept·PM approve·CrewAI enqueue는 [PREVIEW_027 기록](./PREVIEW_027_036_037_APPLY_2026-11-21.md) PASS  
 3. 게이트(C-LLM / ops / Production)는 [보류 문서](./DEFERRED_GATES_REMAINING_IMPL_2026-11-08.md)  
 4. P2 잔여: 인력사무소 풀스펙 · #37/#38 실직무 · OpenHands/OpenClaw는 Phase 4
 
