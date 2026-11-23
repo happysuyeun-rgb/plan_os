@@ -41,11 +41,12 @@ export function ResearchPrdApplyModal({
   useEffect(() => {
     if (!open) return
     let mounted = true
-    setLoading(true)
-    setError('')
-    setPlan(null)
-    void fetchDocument(projectId, 'prd')
-      .then((doc) => {
+    void (async () => {
+      setLoading(true)
+      setError('')
+      setPlan(null)
+      try {
+        const doc = await fetchDocument(projectId, 'prd')
         if (!mounted) return
         if (!doc) {
           setError('PRD 문서가 없습니다. 먼저 PRD를 생성해 주세요.')
@@ -58,13 +59,12 @@ export function ResearchPrdApplyModal({
         if (next.patches.length === 0) {
           setError('리서치에서 PRD에 반영할 섹션을 찾지 못했습니다.')
         }
-      })
-      .catch(() => {
+      } catch {
         if (mounted) setError('PRD를 불러오지 못했습니다.')
-      })
-      .finally(() => {
+      } finally {
         if (mounted) setLoading(false)
-      })
+      }
+    })()
     return () => {
       mounted = false
     }

@@ -56,7 +56,7 @@ function cleanResearchText(raw: string): string {
       const nums = inner.match(/\d+/g) ?? []
       return nums.length ? `[${nums.join(',')}]` : ''
     })
-    .replace(/^[*\-]\s+\*\*([^*\n]+)\*\*\s*$/gm, '\n### $1\n')
+    .replace(/^[*-]\s+\*\*([^*\n]+)\*\*\s*$/gm, '\n### $1\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }

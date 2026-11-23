@@ -100,7 +100,7 @@ export function extractResearchInsights(report: unknown): ResearchInsight[] {
       }
     }
   } else {
-    const boldBullet = /(?:^|\n)[*\-]\s+\*\*([^*]+)\*\*\s*\n([\s\S]*?)(?=(?:\n[*\-]\s+\*\*)|$)/g
+    const boldBullet = /(?:^|\n)[*-]\s+\*\*([^*]+)\*\*\s*\n([\s\S]*?)(?=(?:\n[*-]\s+\*\*)|$)/g
     let match: RegExpExecArray | null
     while ((match = boldBullet.exec(source)) !== null) {
       chunks.push({ title: match[1].trim(), body: match[2].trim() })
