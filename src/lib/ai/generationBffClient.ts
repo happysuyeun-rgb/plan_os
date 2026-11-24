@@ -16,7 +16,8 @@ export type BffGenerateResult = {
   fallbackReason?: string
 }
 
-const BFF_TIMEOUT_MS = 25_000
+/** Allow Preview Gemini model cascade (≈12s × few models) before client abort. */
+const BFF_TIMEOUT_MS = 45_000
 
 export async function generateDocumentViaBff(
   documentType: DocumentType,

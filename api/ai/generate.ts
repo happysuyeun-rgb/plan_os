@@ -17,7 +17,15 @@ type Res = {
   end(body?: string): void
 }
 
+/** Prefer env; then cascade when a model is overloaded / unavailable. */
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite'
+const FALLBACK_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
+  'gemini-flash-latest',
+]
+/** Keep each attempt under the browser BFF timeout budget. */
+const GEMINI_ATTEMPT_TIMEOUT_MS = 12_000
 
 const DOC_TYPES = new Set<ApiDocumentType>([
   'prd',
@@ -75,37 +83,91 @@ function parseVars(raw: unknown): ApiGenerationVars | null {
   }
 }
 
-async function generateWithGemini(
+function modelCandidates(): string[] {
+  const preferred = (process.env.GEMINI_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL
+  return [preferred, ...FALLBACK_MODELS.filter((m) => m !== preferred)]
+}
+
+function isRetryableGeminiError(message: string): boolean {
+  const m = message.toLowerCase()
+  return (
+    m.includes('high demand') ||
+    m.includes('resource_exhausted') ||
+    m.includes('quota') ||
+    m.includes('unavailable') ||
+    m.includes('timed out') ||
+    m.includes('timeout') ||
+    m.includes('503') ||
+    m.includes('429') ||
+    m.includes('not found') ||
+    m.includes('is not found')
+  )
+}
+
+async function generateWithGeminiModel(
+  model: string,
   documentType: ApiDocumentType,
   vars: ApiGenerationVars,
-): Promise<{ content: string; promptKind: string }> {
-  const apiKey = (process.env.GEMINI_API_KEY || '').trim()
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY missing')
-  }
-  const model = (process.env.GEMINI_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL
+  apiKey: string,
+): Promise<{ content: string; promptKind: string; model: string }> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent` +
     `?key=${encodeURIComponent(apiKey)}`
   const { prompt, promptKind } = assembleDocumentPrompt(documentType, vars)
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.55, maxOutputTokens: 8192 },
-    }),
-  })
-  const raw = (await res.json()) as {
-    error?: { message?: string }
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), GEMINI_ATTEMPT_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.55, maxOutputTokens: 8192 },
+      }),
+    })
+    const raw = (await res.json()) as {
+      error?: { message?: string }
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    }
+    if (!res.ok) {
+      throw new Error(raw.error?.message ?? `Gemini HTTP ${res.status}`)
+    }
+    const text = raw.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
+    if (!text.trim()) throw new Error('Gemini returned empty content')
+    return { content: text.trim(), promptKind, model }
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Gemini timed out after ${GEMINI_ATTEMPT_TIMEOUT_MS}ms (${model})`)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
   }
-  if (!res.ok) {
-    throw new Error(raw.error?.message ?? `Gemini HTTP ${res.status}`)
+}
+
+async function generateWithGemini(
+  documentType: ApiDocumentType,
+  vars: ApiGenerationVars,
+): Promise<{ content: string; promptKind: string; model: string }> {
+  const apiKey = (process.env.GEMINI_API_KEY || '').trim()
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY missing')
   }
-  const text = raw.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
-  if (!text.trim()) throw new Error('Gemini returned empty content')
-  return { content: text.trim(), promptKind }
+
+  const errors: string[] = []
+  for (const model of modelCandidates()) {
+    try {
+      return await generateWithGeminiModel(model, documentType, vars, apiKey)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'generation failed'
+      errors.push(`${model}: ${message}`)
+      if (!isRetryableGeminiError(message)) {
+        throw new Error(message)
+      }
+    }
+  }
+  throw new Error(errors.join(' | ') || 'All Gemini models failed')
 }
 
 export default async function handler(req: Req, res: Res): Promise<void> {
@@ -149,6 +211,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   let promptKind = assembleDocumentPrompt(documentType, vars).promptKind
   let content = placeholderContent(documentType, vars)
   let fallbackReason: string | undefined
+  let modelUsed: string | undefined
 
   try {
     if ((process.env.GEMINI_API_KEY || '').trim()) {
@@ -157,6 +220,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
       promptKind = result.promptKind
       mode = 'gemini'
       providerId = 'gemini'
+      modelUsed = result.model
     } else {
       fallbackReason = 'GEMINI_API_KEY missing'
     }
@@ -171,6 +235,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('X-PlanOS-AI-Runtime', 'vercel-preview')
   res.setHeader('X-PlanOS-Prompt-Kind', promptKind)
+  if (modelUsed) res.setHeader('X-PlanOS-Gemini-Model', modelUsed)
   res.end(
     JSON.stringify({
       mode,
@@ -178,6 +243,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
       promptKind,
       content,
       runtime: 'vercel-preview',
+      ...(modelUsed ? { model: modelUsed } : {}),
       ...(fallbackReason ? { fallbackReason } : {}),
       attemptId: typeof body.attemptId === 'string' ? body.attemptId : crypto.randomUUID(),
     }),

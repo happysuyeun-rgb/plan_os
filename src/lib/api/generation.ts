@@ -92,15 +92,13 @@ export async function* generateOneDocument(
 
   // Replace the waiting placeholder with real content chunks.
   yield { step, chunk: '\u0000', done: false }
+  let accumulated = ''
   if (usedFallback) {
-    yield {
-      step,
-      chunk: '(모델 응답이 지연되어 로컬 초안으로 작성합니다.)\n\n',
-      done: false,
-    }
+    const notice = '(모델 응답이 지연되어 로컬 초안으로 작성합니다.)\n\n'
+    accumulated += notice
+    yield { step, chunk: notice, done: false }
   }
 
-  let accumulated = ''
   for (let i = 0; i < content.length; i += STREAM_CHUNK_SIZE) {
     const chunk = content.slice(i, i + STREAM_CHUNK_SIZE)
     await delay(STREAM_DELAY_MS)

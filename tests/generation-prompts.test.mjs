@@ -47,6 +47,8 @@ describe('generation prompts', () => {
     assert.match(api, /from ['\"]\.\/prompts\/assembleDocumentPrompt\.js['\"]/)
     assert.match(assemble, /from ['\"]\.\/registry\.js['\"]/)
     assert.match(registry, /from ['\"]\.\/ia\/outline\.js['\"]/)
+    assert.match(api, /gemini-3\.5-flash-lite/)
+    assert.match(api, /GEMINI_ATTEMPT_TIMEOUT_MS/)
     assert.doesNotMatch(api, /from ['\"]\.\.\/\.\.\/src\//)
     assert.doesNotMatch(api, /function buildPrompt/)
     assert.match(api, /priorDocuments/)
