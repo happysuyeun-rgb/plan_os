@@ -1,7 +1,10 @@
 import type { DocumentType } from '../../types'
 import { generateDocumentViaBff } from '../ai/generationBffClient'
 import { DOCUMENT_TYPE_ORDER, DOCUMENT_TYPE_UI_ORDER } from '../documentTypes'
-import { buildGeneratedContent } from '../generation/placeholderContent'
+import {
+  buildPromptAlignedDraft,
+  isThinGeneratedContent,
+} from '../generation/promptAlignedDraft'
 import { fetchDocument, insertDocument, saveDocumentContentCas } from './documents'
 import { updateProject } from './projects'
 
@@ -69,25 +72,45 @@ export async function* generateOneDocument(
     priorDocuments: input.priorDocuments,
     approvedSourceDocuments: input.priorDocuments,
   }
+  const draftVars = {
+    title: input.title,
+    targetUser: input.targetUser,
+    description: input.description,
+    serviceType: input.service_type,
+    interviewAnswers: input.interviewAnswers,
+  }
+
   let content: string
   let usedFallback = false
+  const tryBff = async () => generateDocumentViaBff(step, vars)
   try {
-    const result = await generateDocumentViaBff(step, vars)
-    content = result.content
-    // Preview may still return HTTP 200 with placeholder if Gemini failed.
-    if (result.mode === 'placeholder') {
-      usedFallback = true
-      if (result.fallbackReason) {
-        content = `(모델 응답 폴백: ${result.fallbackReason})\n\n${content}`
+    let result = await tryBff()
+    // One retry on thin/placeholder — Preview high-demand is often transient.
+    if (
+      result.mode !== 'gemini' ||
+      isThinGeneratedContent(step, result.content)
+    ) {
+      try {
+        const retry = await tryBff()
+        if (retry.mode === 'gemini' && !isThinGeneratedContent(step, retry.content)) {
+          result = retry
+        }
+      } catch {
+        // keep first result
       }
+    }
+    content = result.content
+    if (result.mode !== 'gemini' || isThinGeneratedContent(step, content)) {
+      usedFallback = true
+      const aligned = buildPromptAlignedDraft(step, draftVars)
+      content = result.fallbackReason
+        ? `(모델 응답 폴백: ${result.fallbackReason})\n\n${aligned}`
+        : aligned
     }
   } catch {
     usedFallback = true
-    // Local fallback if BFF/Gemini is unavailable or timed out.
-    content = buildGeneratedContent(step, {
-      title: input.title,
-      targetUser: input.targetUser,
-    })
+    // BFF unavailable — still emit prompt-outline-shaped draft with interview.
+    content = buildPromptAlignedDraft(step, draftVars)
   }
 
   // Replace the waiting placeholder with real content chunks.
@@ -168,9 +191,13 @@ export async function regenerateDocument(
 ): Promise<string> {
   let content: string
   try {
-    content = (await generateDocumentViaBff(type, { title, targetUser })).content
+    const result = await generateDocumentViaBff(type, { title, targetUser })
+    content =
+      result.mode === 'gemini' && !isThinGeneratedContent(type, result.content)
+        ? result.content
+        : buildPromptAlignedDraft(type, { title, targetUser })
   } catch {
-    content = buildGeneratedContent(type, { title, targetUser })
+    content = buildPromptAlignedDraft(type, { title, targetUser })
   }
   await writeGeneratedDocument(projectId, type, content)
   return content
