@@ -5,6 +5,7 @@ import {
   fetchProject as apiFetchProject,
   fetchProjects as apiFetchProjects,
   fetchTrashedProjects as apiFetchTrashedProjects,
+  purgeAllTrashedProjects as apiPurgeAllTrashedProjects,
   purgeProject as apiPurgeProject,
   restoreProject as apiRestoreProject,
   trashProject as apiTrashProject,
@@ -31,6 +32,7 @@ interface ProjectState {
   trashProject: (id: string) => Promise<void>
   restoreProject: (id: string) => Promise<void>
   purgeProject: (id: string) => Promise<void>
+  purgeAllTrashedProjects: () => Promise<number>
   setCurrentProject: (id: string) => Promise<void>
   setSearchQuery: (query: string) => void
   setServiceTypeFilter: (filter: string) => void
@@ -140,17 +142,25 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   purgeProject: async (id) => {
-    const trashed = get().trashedProjects.find((p) => p.id === id)
+    // Do not write project_activities after hard delete — FK to projects fails
+    // and used to surface a false "영구 삭제 실패" even when the row was gone.
     await apiPurgeProject(id)
-    await logProjectActivity({
-      project_id: id,
-      action: 'project_purge',
-      meta: { title: trashed?.title ?? id },
-    })
     set((s) => ({
       trashedProjects: s.trashedProjects.filter((p) => p.id !== id),
       currentProject: s.currentProject?.id === id ? null : s.currentProject,
     }))
+  },
+
+  purgeAllTrashedProjects: async () => {
+    const userId = useAuthStore.getState().user?.id
+    if (!userId) throw new Error('로그인이 필요합니다')
+    const count = await apiPurgeAllTrashedProjects(userId)
+    set((s) => ({
+      trashedProjects: [],
+      currentProject:
+        s.currentProject?.deleted_at != null ? null : s.currentProject,
+    }))
+    return count
   },
 
   setCurrentProject: async (id) => {

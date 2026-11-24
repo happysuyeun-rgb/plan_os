@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import type { ServiceType } from '../types'
 import { UpgradeModal } from '../components/common/UpgradeModal'
 import { InterviewPanel } from '../components/project/InterviewPanel'
-import { PlanningEntryPathPicker } from '../components/project/PlanningEntryPathPicker'
 import { ProjectForm, type ProjectFormData } from '../components/project/ProjectForm'
 import { StepProgress } from '../components/project/StepProgress'
 import { Button } from '../components/common/Button'
@@ -19,8 +18,8 @@ import {
   PLACEHOLDER_PROJECT_CREATE_BLOCKED,
 } from '../lib/localDevAuth'
 import {
+  DEFAULT_PLANNING_ENTRY_PATH,
   withPlanningEntryPath,
-  type PlanningEntryPath,
 } from '../lib/planningEntryPath'
 
 type Step = 1 | 2
@@ -37,7 +36,6 @@ export default function ProjectCreatePage() {
   const [step, setStep] = useState<Step>(1)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
-  const [entryPath, setEntryPath] = useState<PlanningEntryPath | null>(null)
   const [form, setForm] = useState<ProjectFormData>({
     title: '',
     description: '',
@@ -49,7 +47,6 @@ export default function ProjectCreatePage() {
 
   const validateStep1 = () => {
     const e: Record<string, string> = {}
-    if (!entryPath) e.entryPath = '기획 시작 경로를 선택해주세요'
     if (form.title.length < 2) e.title = '2자 이상 입력해주세요'
     if (form.description.length < 10) e.description = '10자 이상 입력해주세요'
     if (!form.service_type) e.service_type = '서비스 유형을 선택해주세요'
@@ -75,6 +72,8 @@ export default function ProjectCreatePage() {
 
     try {
       let projectId = createdProjectId
+      // Path picker hidden: always persist silent default (`direct`).
+      const path = DEFAULT_PLANNING_ENTRY_PATH
       if (!projectId) {
         if (!isLocalDevAuth()) {
           try {
@@ -86,7 +85,6 @@ export default function ProjectCreatePage() {
             return
           }
         }
-        const path = entryPath ?? 'direct'
         const interviewWithEntry = withPlanningEntryPath(answers, path)
         const project = await createProject({
           title: form.title,
@@ -99,7 +97,6 @@ export default function ProjectCreatePage() {
         setCreatedProjectId(projectId)
       }
 
-      const path = entryPath ?? 'direct'
       const pipelineInput = {
         projectId,
         title: form.title,
@@ -130,18 +127,6 @@ export default function ProjectCreatePage() {
 
       {step === 1 && (
         <div className="space-y-6">
-          <PlanningEntryPathPicker
-            value={entryPath}
-            onChange={(path) => {
-              setEntryPath(path)
-              setErrors((prev) => {
-                const next = { ...prev }
-                delete next.entryPath
-                return next
-              })
-            }}
-            error={errors.entryPath}
-          />
           <ProjectForm
             form={form}
             errors={errors}

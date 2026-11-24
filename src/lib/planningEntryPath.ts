@@ -1,9 +1,16 @@
 /**
  * Dual-entry start path (E-01). UX default only — not a mode lock, not billing.
  * Stored in project.interview_answers under a reserved key (no DDL).
+ *
+ * Product UI (2026-11): path picker is hidden; create always records `direct`
+ * (직접 기획) without showing a selection control. `with_pm` remains a valid
+ * stored value for older projects / future re-enable.
  */
 
 export type PlanningEntryPath = 'direct' | 'with_pm'
+
+/** Silent product default when the create UI does not show a path picker. */
+export const DEFAULT_PLANNING_ENTRY_PATH: PlanningEntryPath = 'direct'
 
 export const PLANNING_ENTRY_ANSWER_KEY = '_planning_entry_path'
 

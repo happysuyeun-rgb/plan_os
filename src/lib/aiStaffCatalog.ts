@@ -37,6 +37,8 @@ export type AiStaffCard = {
    * Omit until assets are provided — UI shows a layout placeholder.
    */
   imageSrc?: string
+  /** When true, omit from marketplace hireable + upcoming lists (route may still exist). */
+  catalogHidden?: boolean
 }
 
 /**
@@ -50,8 +52,10 @@ export const AI_STAFF_ROSTER: AiStaffCard[] = [
     title: MOCK_SPECIALIST.title,
     shortTitle: '요구사항 검수',
     description: MOCK_SPECIALIST.description,
-    capability: MOCK_SPECIALIST.capability,
-    available: true,
+    capability: '일시 숨김 · 채용 불가',
+    // Preview focus: market research only — hide requirements auditor from marketplace.
+    available: false,
+    catalogHidden: true,
     category: 'planning',
     tags: ['문서검수', '누락점검', '수락기준'],
     execKind: 'queue',
@@ -135,11 +139,11 @@ export const AI_STAFF_ROSTER: AiStaffCard[] = [
 ]
 
 export function hireableAiStaff(): AiStaffCard[] {
-  return AI_STAFF_ROSTER.filter((r) => r.available)
+  return AI_STAFF_ROSTER.filter((r) => r.available && !r.catalogHidden)
 }
 
 export function upcomingAiStaff(): AiStaffCard[] {
-  return AI_STAFF_ROSTER.filter((r) => !r.available)
+  return AI_STAFF_ROSTER.filter((r) => !r.available && !r.catalogHidden)
 }
 
 export function filterAiStaffByCategory(

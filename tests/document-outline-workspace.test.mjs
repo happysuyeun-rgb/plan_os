@@ -47,5 +47,6 @@ describe('document outline + decision workspace', () => {
     assert.match(structure, /document-structure-panel/)
     assert.match(decision, /document-approve/)
     assert.match(decision, /document-reject/)
+    assert.match(decision, /canDecide && decision === 'pending'/)
   })
 })

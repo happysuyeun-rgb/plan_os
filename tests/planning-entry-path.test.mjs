@@ -15,6 +15,7 @@ const dualDoc = readFileSync(
 
 test('planning entry helper encodes UX-only dual paths without billing', () => {
   assert.match(helper, /export type PlanningEntryPath = 'direct' \| 'with_pm'/)
+  assert.match(helper, /DEFAULT_PLANNING_ENTRY_PATH: PlanningEntryPath = 'direct'/)
   assert.match(helper, /_planning_entry_path/)
   assert.match(helper, /not a mode lock/)
   assert.match(helper, /postCreateDestination/)
@@ -23,15 +24,17 @@ test('planning entry helper encodes UX-only dual paths without billing', () => {
   assert.doesNotMatch(helper, /allowPaidCalls|결제 시작/)
 })
 
-test('create page requires path picker before step1 next and persists entry', () => {
-  assert.match(createPage, /PlanningEntryPathPicker/)
-  assert.match(createPage, /기획 시작 경로를 선택해주세요/)
+test('create page hides path picker and silently defaults to direct', () => {
+  assert.doesNotMatch(createPage, /PlanningEntryPathPicker/)
+  assert.doesNotMatch(createPage, /기획 시작 경로를 선택해주세요/)
+  assert.doesNotMatch(createPage, /PLANNING_ENTRY_LABELS|planning-entry-path-picker/)
+  assert.match(createPage, /DEFAULT_PLANNING_ENTRY_PATH/)
   assert.match(createPage, /withPlanningEntryPath/)
   assert.match(createPage, /queueGuidedPipeline/)
   assert.match(createPage, /\/projects\/\$\{projectId\}\/prd/)
 })
 
-test('picker presents both paths and unpaid disclaimer', () => {
+test('picker component still encodes both paths for optional re-enable', () => {
   assert.match(picker, /data-testid="planning-entry-path-picker"/)
   assert.match(picker, /planning-entry-\$\{path\}/)
   assert.match(picker, /'direct', 'with_pm'/)

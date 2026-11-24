@@ -39,7 +39,7 @@ test('hub lists hireable and upcoming staff without requiring project first', ()
   assert.match(hub, /AI_STAFF_ROSTER/)
   assert.match(hub, /채용 가능/)
   assert.match(hub, /준비 중/)
-  assert.match(hub, /data-testid="ai-staff-hub-hire"/)
+  assert.match(hub, /data-testid=\{[\s\S]*?ai-staff-hub-market-research[\s\S]*?ai-staff-hub-hire/)
   assert.match(hub, /AiStaffUpcomingRow/)
   assert.match(hub, /upcomingAiStaff/)
   assert.match(catalogSrc, /futureRef: '#38'/)
@@ -59,11 +59,15 @@ test('roster reserves #37 sales and #38 marketer as unavailable display seats', 
   assert.doesNotMatch(page, /무단 대량 발송이 가능|지금 발송/)
 })
 
-test('MOCK_SPECIALIST and market researcher are hireable; FUTURE roles stay unavailable', () => {
+test('market researcher alone is hireable; requirements auditor catalog-hidden; FUTURE stay unavailable', () => {
   const availableTrue = catalogSrc.match(/available:\s*true/g) ?? []
-  assert.equal(availableTrue.length, 2)
-  assert.match(catalogSrc, /id: MOCK_SPECIALIST\.id[\s\S]*?available: true/)
+  assert.equal(availableTrue.length, 1)
+  assert.match(
+    catalogSrc,
+    /id: MOCK_SPECIALIST\.id[\s\S]*?available: false[\s\S]*?catalogHidden: true/,
+  )
   assert.match(catalogSrc, /id: MARKET_RESEARCHER\.id[\s\S]*?available: true/)
+  assert.match(catalogSrc, /!r\.catalogHidden/)
   assert.match(
     catalogSrc,
     /id: 'ai_marketer_growth_v1'[\s\S]*?available: false[\s\S]*?futureRef: '#38'/,
