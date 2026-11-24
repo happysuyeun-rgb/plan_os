@@ -1,8 +1,8 @@
-import { IA_OUTLINE } from './ia/outline'
-import { IA_SYSTEM } from './ia/system'
-import { PRD_OUTLINE } from './prd/outline'
-import { PRD_SYSTEM } from './prd/system'
-import type { ApiDocumentType, ApiPromptBundle } from './types'
+import { IA_OUTLINE } from './ia/outline.js'
+import { IA_SYSTEM } from './ia/system.js'
+import { PRD_OUTLINE } from './prd/outline.js'
+import { PRD_SYSTEM } from './prd/system.js'
+import type { ApiDocumentType, ApiPromptBundle } from './types.js'
 
 const LABELS: Record<ApiDocumentType, string> = {
   prd: 'PRD',

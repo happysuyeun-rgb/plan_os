@@ -43,6 +43,10 @@ describe('generation prompts', () => {
     const registry = read('api/ai/prompts/registry.ts')
     const http = read('src/server/ai/generationHttp.ts')
     assert.match(api, /assembleDocumentPrompt/)
+    // Node ESM on Vercel (nodejs24) requires explicit .js extensions.
+    assert.match(api, /from ['\"]\.\/prompts\/assembleDocumentPrompt\.js['\"]/)
+    assert.match(assemble, /from ['\"]\.\/registry\.js['\"]/)
+    assert.match(registry, /from ['\"]\.\/ia\/outline\.js['\"]/)
     assert.doesNotMatch(api, /from ['\"]\.\.\/\.\.\/src\//)
     assert.doesNotMatch(api, /function buildPrompt/)
     assert.match(api, /priorDocuments/)
