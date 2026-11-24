@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { MarketResearchReportView } from '../components/ai/MarketResearchReportView'
 import { ResearchPrdApplyModal } from '../components/ai/ResearchPrdApplyModal'
@@ -65,11 +65,12 @@ export default function ProjectResearchResultsPage() {
   const [items, setItems] = useState<ResearchItem[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [applyOpen, setApplyOpen] = useState(false)
+  const pendingApplyRef = useRef(searchParams.get('apply') === '1')
 
   const accessible = Boolean(
     projectId && currentProject?.id === projectId && !currentProject.deleted_at,
   )
-  const canEditPrd = can('document.edit')
+  const canEditPrd = can('document.edit') || currentProject?.user_id === userId
 
   useEffect(() => {
     let mounted = true
@@ -125,7 +126,9 @@ export default function ProjectResearchResultsPage() {
         )
         setItems(merged)
         setSelectedId((prev) => prev ?? merged[0]?.id ?? null)
-        if (searchParams.get('apply') === '1' && merged.length > 0) {
+        // Capture apply=1 before the URL strip effect clears it (async race).
+        if (pendingApplyRef.current && merged.length > 0) {
+          pendingApplyRef.current = false
           setApplyOpen(true)
         }
       })
@@ -138,12 +141,11 @@ export default function ProjectResearchResultsPage() {
     return () => {
       mounted = false
     }
-    // apply query is read once on load; stripping it separately avoids reload loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: load on project/user only
   }, [projectId, userId, setCurrentProject, fetchMembers])
 
   useEffect(() => {
     if (searchParams.get('apply') !== '1') return
+    pendingApplyRef.current = true
     const next = new URLSearchParams(searchParams)
     next.delete('apply')
     setSearchParams(next, { replace: true })

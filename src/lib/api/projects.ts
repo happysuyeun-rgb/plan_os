@@ -152,9 +152,33 @@ export async function restoreProject(id: string, userId: string): Promise<Projec
   return unwrap(data, error)
 }
 
+/**
+ * Hard-delete a trashed project. Only rows with deleted_at set are removed
+ * (active projects cannot be purged from this path). Child tables cascade.
+ */
 export async function purgeProject(id: string): Promise<void> {
-  const { error } = await supabase.from('projects').delete().eq('id', id)
+  const { data, error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .select('id')
   throwIfError(error)
+  if (!data?.length) {
+    throw new Error('영구 삭제할 휴지통 프로젝트를 찾지 못했습니다. 이미 삭제되었거나 권한이 없습니다.')
+  }
+}
+
+/** Hard-delete every trashed project owned by the user. */
+export async function purgeAllTrashedProjects(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('user_id', userId)
+    .not('deleted_at', 'is', null)
+    .select('id')
+  throwIfError(error)
+  return data?.length ?? 0
 }
 
 /** @deprecated purgeProject 사용 — 하위 호환 */

@@ -69,6 +69,14 @@ const INSIGHT_DEFS: Array<{
   },
 ]
 
+function unwrapReport(report: unknown): ReportLike | null {
+  if (!report || typeof report !== 'object') return null
+  const row = report as Record<string, unknown>
+  if (row.report && typeof row.report === 'object') return row.report as ReportLike
+  if (row.result && typeof row.result === 'object') return row.result as ReportLike
+  return report as ReportLike
+}
+
 function cleanCitations(raw: string): string {
   return raw
     .replace(/\(\((\d+)\)\)/g, '[$1]')
@@ -76,31 +84,34 @@ function cleanCitations(raw: string): string {
       const nums = inner.match(/\d+/g) ?? []
       return nums.length ? `[${nums.join(',')}]` : ''
     })
+    // Match ReportView: bold-only bullets → ### headings for section mapping.
+    .replace(/^[*-]\s+\*\*([^*\n]+)\*\*\s*$/gm, '\n### $1\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
 
-/** Split research summary into labeled chunks (### headings or * **Title** bullets). */
+/** Split research summary into labeled chunks (###/## headings or * **Title** bullets). */
 export function extractResearchInsights(report: unknown): ResearchInsight[] {
-  if (!report || typeof report !== 'object') return []
-  const r = report as ReportLike
+  const r = unwrapReport(report)
+  if (!r) return []
   const source = cleanCitations(
     (r.structuredSummaryKo || r.rawLinerAnswer || r.marketOverview || '').trim(),
   )
   if (!source) return []
 
   const chunks: Array<{ title: string; body: string }> = []
-  const headingSplit = source.split(/\n(?=###\s+)/)
-  if (headingSplit.length > 1 || /^###\s+/m.test(source)) {
+  const headingSplit = source.split(/\n(?=#{2,3}\s+)/)
+  if (headingSplit.length > 1 || /^#{2,3}\s+/m.test(source)) {
     for (const part of headingSplit) {
-      const m = part.match(/^###\s+(.+?)\s*\n([\s\S]*)$/)
+      const m = part.match(/^#{2,3}\s+(.+?)\s*\n([\s\S]*)$/)
       if (m) chunks.push({ title: m[1].trim(), body: m[2].trim() })
       else if (part.trim() && chunks.length === 0) {
         chunks.push({ title: '요약', body: part.trim() })
       }
     }
   } else {
-    const boldBullet = /(?:^|\n)[*-]\s+\*\*([^*]+)\*\*\s*\n([\s\S]*?)(?=(?:\n[*-]\s+\*\*)|$)/g
+    const boldBullet =
+      /(?:^|\n)[*-]\s+\*\*([^*]+)\*\*\s*\n([\s\S]*?)(?=(?:\n[*-]\s+\*\*)|$)/g
     let match: RegExpExecArray | null
     while ((match = boldBullet.exec(source)) !== null) {
       chunks.push({ title: match[1].trim(), body: match[2].trim() })
@@ -142,7 +153,10 @@ function findSectionIndex(
   used: Set<number>,
 ): number {
   for (const re of matchers) {
-    const idx = sections.findIndex((s, i) => !used.has(i) && s.level >= 2 && re.test(s.title))
+    // Prefer ##/### pages, but allow # titles when the PRD outline only has H1 splits.
+    const idx = sections.findIndex(
+      (s, i) => !used.has(i) && s.level >= 1 && re.test(s.title) && s.title !== '빈 문서',
+    )
     if (idx >= 0) return idx
   }
   return -1
@@ -171,7 +185,7 @@ export function buildResearchPrdPatchPlan(
   prdContent: string,
   report: unknown,
 ): ResearchPrdPatchPlan {
-  const r = report && typeof report === 'object' ? (report as ReportLike) : {}
+  const r = unwrapReport(report) ?? {}
   const insights = extractResearchInsights(report)
   const researchTarget = r.researchTarget?.trim() || '시장조사'
   const asOfDate = r.asOfDate ?? null

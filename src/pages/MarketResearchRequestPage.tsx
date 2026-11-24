@@ -92,12 +92,13 @@ export default function MarketResearchRequestPage() {
   const { projectId } = useParams()
   const userId = useAuthStore((s) => s.user?.id)
   const { currentProject, setCurrentProject } = useProjectStore()
-  const [researchTarget, setResearchTarget] = useState('반려동물 예약 서비스 경쟁시장 조사')
+  const [researchTarget, setResearchTarget] = useState('')
   const [region, setRegion] = useState<ResearchRegion>('KR')
   const [researchDepth, setResearchDepth] = useState<ResearchDepth>('standard')
   const [task, setTask] = useState(
     '공개 정보만으로 경쟁사 3~5곳, 기능·가격, 고객 문제, 시장 기회를 조사하세요.',
   )
+  const [targetSeeded, setTargetSeeded] = useState(false)
   const [criteria, setCriteria] = useState('출처 URL이 포함된 구조화 시장조사 보고서')
   const [consentChecked, setConsentChecked] = useState(false)
   const [error, setError] = useState('')
@@ -130,10 +131,18 @@ export default function MarketResearchRequestPage() {
     void setCurrentProject(projectId)
       .then(async () => {
         if (!mounted) return
+        const project = useProjectStore.getState().currentProject
+        if (project?.id === projectId && !targetSeeded) {
+          const seed = `${project.title} 경쟁시장·고객 문제 조사`
+          setResearchTarget((prev) => (prev.trim() ? prev : seed))
+          setTargetSeeded(true)
+        }
         try {
           await ensureResearchAuditManifest(projectId)
-        } catch {
-          /* save path will retry */
+        } catch (e) {
+          if (mounted && e instanceof Error && e.message.includes('문서가 2개')) {
+            setError(e.message)
+          }
         }
         try {
           const rows = await listProjectAgentContracts(projectId)
@@ -395,7 +404,8 @@ export default function MarketResearchRequestPage() {
                       프로젝트에서 보기
                     </Link>
                   )}
-                  {reportRun?.status === 'succeeded' && reportRun.result_json && (
+                  {(reportRun?.status === 'succeeded' && reportRun.result_json) ||
+                  artifact?.content_json ? (
                     <button
                       type="button"
                       disabled={!owner || busy}
@@ -405,7 +415,7 @@ export default function MarketResearchRequestPage() {
                     >
                       리서치 → PRD 반영
                     </button>
-                  )}
+                  ) : null}
                   {reportRun?.status === 'succeeded' && !artifact && (
                     <button
                       type="button"
@@ -598,11 +608,11 @@ export default function MarketResearchRequestPage() {
             </section>
           )}
 
-          {projectId && reportRun?.result_json && (
+          {projectId && (reportRun?.result_json || artifact?.content_json) && (
             <ResearchPrdApplyModal
               open={applyOpen}
               projectId={projectId}
-              reportJson={reportRun.result_json}
+              reportJson={reportRun?.result_json ?? artifact?.content_json}
               canEdit={owner}
               onClose={() => setApplyOpen(false)}
               onApplied={() => showToast('success', '리서치 내용을 PRD 섹션에 반영했습니다')}

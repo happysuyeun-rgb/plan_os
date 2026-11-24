@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   DocumentWriteConflictError,
   fetchDocument,
   saveDocumentContentCas,
 } from '../../lib/api/documents'
+import { createVersion } from '../../lib/api/versions'
 import {
   buildResearchPrdPatchPlan,
   type ResearchPrdPatchPlan,
 } from '../../lib/researchPrdPatch'
 import { useDocumentStore } from '../../store/documentStore'
+import { useVersionStore } from '../../store/versionStore'
 import { DOCUMENT_TYPE_PATHS } from '../../types'
+
+const PRE_APPLY_VERSION_NAME = '리서치 반영 전'
+const POST_APPLY_VERSION_NAME = '리서치 반영'
 
 type Props = {
   open: boolean
@@ -21,6 +27,14 @@ type Props = {
   onApplied?: () => void
 }
 
+function normalizeReportJson(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw
+  const row = raw as Record<string, unknown>
+  if (row.report && typeof row.report === 'object') return row.report
+  if (row.result && typeof row.result === 'object') return row.result
+  return raw
+}
+
 export function ResearchPrdApplyModal({
   open,
   projectId,
@@ -29,22 +43,38 @@ export function ResearchPrdApplyModal({
   onClose,
   onApplied,
 }: Props) {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [applying, setApplying] = useState(false)
   const [error, setError] = useState('')
   const [plan, setPlan] = useState<ResearchPrdPatchPlan | null>(null)
   const [prdId, setPrdId] = useState<string | null>(null)
   const [revision, setRevision] = useState<number | null>(null)
+  const [previousContent, setPreviousContent] = useState('')
+  const reportSnapshotRef = useRef<unknown>(null)
   const fetchDocuments = useDocumentStore((s) => s.fetchDocuments)
   const setActiveDocType = useDocumentStore((s) => s.setActiveDocType)
+  const fetchVersions = useVersionStore((s) => s.fetchVersions)
+  const fetchSummaries = useVersionStore((s) => s.fetchSummaries)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      reportSnapshotRef.current = null
+      return
+    }
+    // Snapshot once per open so parent poll/re-render does not reset the modal mid-apply.
+    if (reportSnapshotRef.current == null) {
+      reportSnapshotRef.current = normalizeReportJson(reportJson)
+    }
+    const snapshot = reportSnapshotRef.current
     let mounted = true
     void (async () => {
       setLoading(true)
       setError('')
       setPlan(null)
+      setPrdId(null)
+      setRevision(null)
+      setPreviousContent('')
       try {
         const doc = await fetchDocument(projectId, 'prd')
         if (!mounted) return
@@ -52,15 +82,19 @@ export function ResearchPrdApplyModal({
           setError('PRD 문서가 없습니다. 먼저 PRD를 생성해 주세요.')
           return
         }
+        const current = doc.content ?? ''
         setPrdId(doc.id)
         setRevision(doc.content_revision)
-        const next = buildResearchPrdPatchPlan(doc.content, reportJson)
+        setPreviousContent(current)
+        const next = buildResearchPrdPatchPlan(current, snapshot)
         setPlan(next)
         if (next.patches.length === 0) {
-          setError('리서치에서 PRD에 반영할 섹션을 찾지 못했습니다.')
+          setError('리서치에서 PRD에 반영할 내용을 찾지 못했습니다. 보고서 요약을 확인한 뒤 다시 시도해 주세요.')
         }
-      } catch {
-        if (mounted) setError('PRD를 불러오지 못했습니다.')
+      } catch (e) {
+        if (mounted) {
+          setError(e instanceof Error ? e.message : 'PRD를 불러오지 못했습니다.')
+        }
       } finally {
         if (mounted) setLoading(false)
       }
@@ -68,20 +102,41 @@ export function ResearchPrdApplyModal({
     return () => {
       mounted = false
     }
-  }, [open, projectId, reportJson])
+  }, [open, projectId])
 
   if (!open) return null
 
   const apply = async () => {
-    if (!canEdit || !plan || !prdId || revision == null) return
+    if (!canEdit) {
+      setError('PRD를 수정할 권한이 없습니다.')
+      return
+    }
+    if (loading) {
+      setError('패치 준비가 끝날 때까지 잠시 기다려 주세요.')
+      return
+    }
+    if (!plan?.patches.length || !prdId || revision == null) {
+      setError(error || '적용할 패치가 없습니다.')
+      return
+    }
     setApplying(true)
     setError('')
     try {
+      // Checkpoint current PRD into immutable history before overwrite (same idea as restore).
+      await createVersion(prdId, previousContent, PRE_APPLY_VERSION_NAME)
       await saveDocumentContentCas(prdId, revision, plan.nextContent)
+      try {
+        await createVersion(prdId, plan.nextContent, POST_APPLY_VERSION_NAME)
+      } catch {
+        // Pre-apply history already stored; post label is best-effort.
+      }
       await fetchDocuments(projectId)
+      await fetchVersions(prdId).catch(() => undefined)
+      await fetchSummaries([prdId]).catch(() => undefined)
       setActiveDocType('prd')
       onApplied?.()
       onClose()
+      navigate(`/projects/${projectId}/${DOCUMENT_TYPE_PATHS.prd}`)
     } catch (e) {
       if (e instanceof DocumentWriteConflictError) {
         setError(e.message)
@@ -93,13 +148,16 @@ export function ResearchPrdApplyModal({
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="research-prd-apply-title"
       data-testid="research-prd-apply-modal"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
         <header className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
@@ -108,7 +166,8 @@ export function ResearchPrdApplyModal({
               리서치 → PRD 섹션 반영
             </h2>
             <p className="mt-1 text-sm text-gray-600">
-              시장·경쟁·고객·기회 내용을 PRD 해당 섹션에만 패치합니다. 적용 전 미리보기를 확인하세요.
+              시장·경쟁·고객·기회 내용을 PRD 해당 섹션에만 패치합니다. 적용 시 현재 PRD는 버전
+              히스토리에 남고, 반영본이 새 버전으로 저장됩니다.
             </p>
           </div>
           <button
@@ -121,9 +180,17 @@ export function ResearchPrdApplyModal({
         </header>
 
         <div className="max-h-[min(60vh,32rem)] space-y-4 overflow-y-auto px-5 py-4">
-          {loading && <p className="text-sm text-gray-500">PRD와 패치를 준비하는 중…</p>}
+          {loading && (
+            <p className="text-sm text-gray-500" data-testid="research-prd-apply-loading">
+              PRD와 패치를 준비하는 중…
+            </p>
+          )}
           {error && (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+              data-testid="research-prd-apply-error"
+            >
               {error}
             </p>
           )}
@@ -196,6 +263,7 @@ export function ResearchPrdApplyModal({
           </div>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -23,7 +23,7 @@ export default function AiStaffHubPage() {
   const { projects, isLoading, fetchProjects, currentProject } = useProjectStore()
   const [category, setCategory] = useState<'all' | AiStaffCategory>('all')
   const [selectedRoleId, setSelectedRoleId] = useState(
-    AI_STAFF_ROSTER.find((r) => r.available)?.id ?? '',
+    () => hireableAiStaff()[0]?.id ?? '',
   )
   const [detailRoleId, setDetailRoleId] = useState<string | null>(null)
   const hirePanelRef = useRef<HTMLElement>(null)
@@ -43,6 +43,13 @@ export default function AiStaffHubPage() {
     () => filterAiStaffByCategory(hireableAiStaff(), category),
     [category],
   )
+
+  useEffect(() => {
+    if (hireable.length === 0) return
+    if (!hireable.some((r) => r.id === selectedRoleId)) {
+      setSelectedRoleId(hireable[0].id)
+    }
+  }, [hireable, selectedRoleId])
   const upcoming = useMemo(
     () => filterAiStaffByCategory(upcomingAiStaff(), category === 'all' ? 'all' : category),
     [category],
@@ -129,10 +136,13 @@ export default function AiStaffHubPage() {
                   <AiStaffHireCard
                     role={role}
                     selected={role.id === selectedRoleId}
-                    hireLabel="업무 맡기기"
-                    onDetail={() =>
-                      setDetailRoleId((prev) => (prev === role.id ? null : role.id))
+                    hireLabel={
+                      role.requestPath === 'market-research' ? '시장조사 요청' : '업무 맡기기'
                     }
+                    onDetail={() => {
+                      setSelectedRoleId(role.id)
+                      setDetailRoleId((prev) => (prev === role.id ? null : role.id))
+                    }}
                     onHire={() => onHireClick(role.id)}
                   />
                 </li>
@@ -162,11 +172,17 @@ export default function AiStaffHubPage() {
           aria-label="채용 진행"
         >
           <h2 className="text-base font-bold text-gray-900">
-            {selected?.available ? `「${selected.title}」채용할 프로젝트` : '준비 중 역할'}
+            {selected?.available
+              ? selected.requestPath === 'market-research'
+                ? `「${selected.title}」시장조사할 프로젝트`
+                : `「${selected.title}」채용할 프로젝트`
+              : '준비 중 역할'}
           </h2>
           {selected?.available && active.length > 1 && !resolveHireProjectId() && (
             <p className="text-sm text-amber-800" role="status">
-              프로젝트를 고른 뒤 「이 프로젝트에 채용」을 눌러 주세요.
+              프로젝트를 고른 뒤 「
+              {selected.requestPath === 'market-research' ? '시장조사 요청' : '이 프로젝트에 채용'}」을
+              눌러 주세요.
             </p>
           )}
 
@@ -201,11 +217,17 @@ export default function AiStaffHubPage() {
                     </p>
                   </div>
                   <Link
-                    to={hireHrefFor(project.id)}
+                    to={hireHrefFor(project.id, selectedRoleId)}
                     className="shrink-0 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-                    data-testid="ai-staff-hub-hire"
+                    data-testid={
+                      selected?.requestPath === 'market-research'
+                        ? 'ai-staff-hub-market-research'
+                        : 'ai-staff-hub-hire'
+                    }
                   >
-                    이 프로젝트에 채용
+                    {selected?.requestPath === 'market-research'
+                      ? '시장조사 요청'
+                      : '이 프로젝트에 채용'}
                   </Link>
                 </li>
               ))}

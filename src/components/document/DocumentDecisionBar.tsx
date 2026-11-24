@@ -44,13 +44,12 @@ export function DocumentDecisionBar({
         </span>
       </div>
 
-      {canDecide ? (
+      {canDecide && decision === 'pending' ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             className="h-8 text-xs"
             onClick={onApprove}
-            disabled={decision === 'approved'}
             data-testid="document-approve"
           >
             <Check className="h-3.5 w-3.5" />
@@ -61,21 +60,25 @@ export function DocumentDecisionBar({
             variant="ghost"
             className="h-8 text-xs text-red-700 hover:bg-red-50"
             onClick={onReject}
-            disabled={decision === 'rejected'}
             data-testid="document-reject"
           >
             <X className="h-3.5 w-3.5" />
             거부
           </Button>
-          {decision !== 'pending' && onReset && (
-            <Button type="button" variant="ghost" className="h-8 text-xs" onClick={onReset}>
-              대기로
-            </Button>
-          )}
         </div>
-      ) : (
+      ) : canDecide && decision !== 'pending' && onReset ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 text-xs text-slate-500"
+          onClick={onReset}
+          data-testid="document-decision-reset"
+        >
+          판정 취소
+        </Button>
+      ) : !canDecide && decision === 'pending' ? (
         <p className="text-[11px] text-slate-400">소유자만 승인·거부할 수 있습니다</p>
-      )}
+      ) : null}
     </div>
   )
 }
