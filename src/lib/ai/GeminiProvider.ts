@@ -9,7 +9,7 @@ import type {
 /** New AI Studio keys reject retired 2.x flash IDs; prefer 3.5 lite, then 3.1. */
 const DEFAULT_MODEL = 'gemini-3.5-flash-lite'
 const FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest']
-const ATTEMPT_TIMEOUT_MS = 12_000
+const ATTEMPT_TIMEOUT_MS = 22_000
 
 /**
  * Google Gemini (AI Studio / Generative Language API).
