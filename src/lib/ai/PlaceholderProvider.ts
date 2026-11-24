@@ -1,5 +1,5 @@
 import type { DocumentType } from '../../types'
-import { buildGeneratedContent } from '../generation/placeholderContent'
+import { buildPromptAlignedDraft } from '../generation/promptAlignedDraft'
 import type {
   GenerationCallOptions,
   GenerationProvider,
@@ -20,6 +20,12 @@ export class PlaceholderProvider implements GenerationProvider {
       err.name = 'AbortError'
       throw err
     }
-    return buildGeneratedContent(type, vars)
+    return buildPromptAlignedDraft(type, {
+      title: vars.title,
+      targetUser: vars.targetUser,
+      description: vars.description,
+      serviceType: vars.serviceType,
+      interviewAnswers: vars.interviewAnswers,
+    })
   }
 }
