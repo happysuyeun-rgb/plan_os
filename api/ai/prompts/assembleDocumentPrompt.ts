@@ -2,10 +2,10 @@
  * Vercel Preview–safe prompt assembly (no imports from src/).
  * Keep in sync with src/lib/generation/prompts/* — drift checked by tests.
  */
-import { apiPromptKind, getApiPromptBundle } from './registry'
-import { SHARED_OUTPUT_RULES } from './shared/outputRules'
-import { SHARED_VOICE } from './shared/voice'
-import type { ApiDocumentType, ApiGenerationVars } from './types'
+import { apiPromptKind, getApiPromptBundle } from './registry.js'
+import { SHARED_OUTPUT_RULES } from './shared/outputRules.js'
+import { SHARED_VOICE } from './shared/voice.js'
+import type { ApiDocumentType, ApiGenerationVars } from './types.js'
 
 function formatInterview(answers?: Record<string, string>): string {
   if (!answers || Object.keys(answers).length === 0) return '(없음)'

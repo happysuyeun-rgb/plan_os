@@ -3,8 +3,8 @@
  * Self-contained under api/ (no src/ imports) — type-specific prompts live in ./prompts.
  * Never enables paid LLM calls.
  */
-import { assembleDocumentPrompt } from './prompts/assembleDocumentPrompt'
-import type { ApiDocumentType, ApiGenerationVars } from './prompts/types'
+import { assembleDocumentPrompt } from './prompts/assembleDocumentPrompt.js'
+import type { ApiDocumentType, ApiGenerationVars } from './prompts/types.js'
 
 type Req = {
   method?: string
