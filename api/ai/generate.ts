@@ -36,20 +36,98 @@ const DOC_TYPES = new Set<ApiDocumentType>([
   'cursor_prompt',
 ])
 
+function formatInterview(answers?: Record<string, string>): string {
+  if (!answers || Object.keys(answers).length === 0) return '- (인터뷰 없음)'
+  return Object.entries(answers)
+    .filter(([k]) => !k.startsWith('_'))
+    .map(([k, v]) => `- ${k}: ${v}`)
+    .join('\n')
+}
+
+/** Prompt-shaped draft when Gemini is unavailable (still document form, not interview dump). */
 function placeholderContent(documentType: string, vars: ApiGenerationVars): string {
   const title = vars.title ?? '프로젝트'
   const target = vars.targetUser ?? '사용자'
+  const desc = vars.description?.trim() || '[결정 필요]'
+  const interview = formatInterview(vars.interviewAnswers)
+  if (documentType === 'prd') {
+    return [
+      `# ${title} PRD`,
+      '',
+      '## 1. 제품 개요',
+      `- 서비스명: ${title}`,
+      `- 서비스 유형: ${vars.serviceType ?? '미정'}`,
+      `- 한 줄 정의: ${desc}`,
+      `- 대상 사용자: ${target}`,
+      '',
+      '## 2. 문제 정의',
+      desc,
+      '',
+      '## 3. 대상 사용자',
+      target,
+      '',
+      '## 4. 사용자 목표',
+      '- 인터뷰·설명 기반 핵심 목표 달성',
+      '',
+      '## 5. 핵심 사용자 시나리오',
+      '진입 → 주요 행동 → 목표 달성 → 종료',
+      '',
+      '## 6. 제품 목표와 성공 기준',
+      '- [결정 필요] 검증 지표',
+      '',
+      '## 7. 핵심 기능 목록',
+      '| ID | 기능 | 우선순위 |',
+      '| --- | --- | --- |',
+      '| REQ-001 | 핵심 서비스 | P0 |',
+      '| REQ-002 | 계정/접근 | P0 |',
+      '',
+      '## 8. MVP 범위',
+      '- Must: REQ-001, REQ-002',
+      '',
+      '## 9. 핵심 비즈니스 규칙 및 제약사항',
+      interview,
+      '',
+      '## 10. 비기능 요구사항',
+      '- 보안·성능: [결정 필요]',
+      '',
+      '## 11. 기능별 수용 기준',
+      '- REQ-001 플로우 완료',
+      '',
+      '## 12. 가정·위험 요소·추가 결정 필요 사항',
+      '- 모델 폴백 초안 — 재생성으로 보강',
+    ].join('\n')
+  }
+  if (documentType === 'ia') {
+    return [
+      `# ${title} 전체 기능정의서`,
+      '',
+      '## 문서 개요',
+      `${title} 기능 범위. 대상: ${target}`,
+      '',
+      '## 01. 핵심 서비스',
+      '',
+      '### F-001. 기본 기능',
+      '',
+      '**기능 상세 설명**',
+      '',
+      desc,
+      '',
+      '**주요 처리 규칙**',
+      '',
+      interview,
+    ].join('\n')
+  }
   return [
-    `# ${documentType.toUpperCase()} (템플릿)`,
+    `# ${title} ${documentType}`,
     '',
     `## 개요`,
-    `${title} 문서 초안입니다.`,
+    desc,
     '',
     `## 목표 사용자`,
     target,
     '',
-    `## 설명`,
-    vars.description ?? '',
+    '## 인터뷰 반영',
+    interview,
   ].join('\n')
 }
 
